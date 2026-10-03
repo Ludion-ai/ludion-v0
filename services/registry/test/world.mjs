@@ -13,6 +13,7 @@ import { generateSiteKey } from "@ludion/gate-core";
 import { generateRegistryKey } from "@ludion/gate-core/staple";
 import { createDiverSigner, createRegistryClient, createStapleKeeper, directoryDocument } from "@ludion/diver";
 import { createRegistry, createMemoryStore } from "../src/index.mjs";
+import { testStore } from "./support.mjs";
 import { nodeListener } from "../src/node.mjs";
 import { diverStore } from "./support.mjs";
 
@@ -41,7 +42,7 @@ export async function registryProcess({ dir, args = [] }) {
 /** The Registry in this process, with a clock the test drives. */
 export async function registryServer({ now, sseRetryMs = 200, contactsVerified = true } = {}) {
   const key = await generateRegistryKey();
-  const registry = await createRegistry({ key: key.privateJwk, store: createMemoryStore(), now, sseRetryMs, contactsVerified, heartbeatMs: 5000 });
+  const registry = await createRegistry({ key: key.privateJwk, store: await testStore(), now, sseRetryMs, contactsVerified, heartbeatMs: 5000 });
   const server = http.createServer(nodeListener(registry, { scheme: "http" }));
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   return { registry, server, url: `http://127.0.0.1:${server.address().port}`, close: () => { registry.close(); server.closeAllConnections?.(); server.close(); } };

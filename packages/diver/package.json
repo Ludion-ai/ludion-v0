@@ -17,6 +17,7 @@
   "main": "src/index.mjs",
   "exports": {
     ".": "./src/index.mjs",
+    "./card": "./src/card.mjs",
     "./cli": "./bin/ludion.mjs"
   },
   "bin": {
