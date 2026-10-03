@@ -19,6 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
+import { initScreen, screenLang, shouldAsk, askWhy, ANSWER_URL } from "../src/init-screen.mjs";
 import { generateEd25519, diverIdFromRoot, directoryDocument, cardDocument, createDiverSigner, sealRootKey, openRootKey, isSealedRoot, MIN_PASSPHRASE_LENGTH,
   rotateSession, RotationPendingError, DEFAULT_OVERLAP_S, createRegistryClient } from "../src/index.mjs";
 
@@ -88,14 +89,18 @@ async function init() {
   fs.mkdirSync(".well-known", { recursive: true });
   fs.writeFileSync(path.join(".well-known", "http-message-signatures-directory"), JSON.stringify(dir, null, 2));
   fs.writeFileSync("card", JSON.stringify(card, null, 2));
-  out(`✔ Diver created: ${diverId}`);
-  out(`  Signature-Agent: ${origin}`);
+  // One screen (spec §9.2, DIV-5): the name, the same name on the web and on MCP, how to erase it, a badge.
+  const lang = screenLang();
+  for (const line of initScreen({ diverId, origin, lang })) out(line);
   if (DEV) devBanner();
+  out("");
   out(`  Wrote ludion.json (KEEP PRIVATE — ${DEV ? "DEV MODE: Root key in plaintext" : "Root key sealed with your passphrase; the passphrase is not stored"})`);
-  out(`  Wrote .well-known/http-message-signatures-directory  ← publish at ${origin}/.well-known/http-message-signatures-directory`);
-  out(`  Wrote card                                            ← publish at ${origin}/card (Content-Type: application/json)`);
-  out(`\nNext: host those two files at ${origin} (or run \`npx ludion register\` once the Registry is live), then:`);
-  out(`  npx ludion sign GET https://example.com/`);
+  out(`  Wrote .well-known/http-message-signatures-directory and card: publish them at ${origin} (or run \`npx ludion register\` once the Registry is live)`);
+  out(`  Next: npx ludion sign GET https://example.com/`);
+  // One optional question (DIV-6): only at a terminal, never in CI; skipping sends nothing.
+  if (shouldAsk({ force: has("ask"), refuse: has("no-question"), stdinTTY: process.stdin.isTTY, stdoutTTY: process.stdout.isTTY })) {
+    await askWhy({ lang, input: process.stdin, output: process.stdout, url: process.env.LUDION_INIT_ANSWER_URL || ANSWER_URL });
+  }
 }
 
 async function loadSigner() {

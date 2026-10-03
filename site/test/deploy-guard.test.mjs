@@ -73,3 +73,23 @@ test("deploy secrets: the secrets file is uploaded whole, so only SIGNUP_WEBHOOK
   assert.deepEqual(secretKeys("SIGNUP_WEBHOOK_URL=https://x\n"), ["SIGNUP_WEBHOOK_URL"]);
   assert.deepEqual(secretKeys("# c\nexport SIGNUP_WEBHOOK_URL=\"u\"\r\nCLOUDFLARE_API_TOKEN=t"), ["SIGNUP_WEBHOOK_URL", "CLOUDFLARE_API_TOKEN"]);
 });
+
+// WEB-8 plants its faults in a copy of site/edge's .mjs files (2026-10-04: a fixed file list broke when
+// worker.mjs gained routes, and the copy did not build). Pinned: the Worker is exactly those files.
+test("edge Worker: every module worker.mjs loads is a sibling .mjs in site/edge, with no package import", () => {
+  const edge = path.join(SITE, "edge"), seen = new Set(), problems = [];
+  const visit = (file) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    for (const m of fs.readFileSync(file, "utf8").matchAll(/^\s*(?:import|export)[^"';]*?from\s*["']([^"']+)["']/gm)) {
+      const spec = m[1];
+      if (!spec.startsWith("./")) { problems.push(`${path.basename(file)} imports ${spec}`); continue; }
+      const target = path.join(edge, spec.slice(2));
+      if (path.dirname(target) !== edge || !target.endsWith(".mjs") || !fs.existsSync(target)) problems.push(`${path.basename(file)} imports ${spec}`);
+      else visit(target);
+    }
+  };
+  visit(path.join(edge, "worker.mjs"));
+  assert.deepEqual(problems, []);
+  assert.ok(seen.size >= 3, `worker.mjs and its modules: ${[...seen].map((f) => path.basename(f)).join(", ")}`);
+});

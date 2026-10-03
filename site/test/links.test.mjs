@@ -10,6 +10,8 @@ import path from "node:path";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import { extract, cssUrls, siteUrlsIn, publicPath, githubSlug, repoLinkProblem, checkRefs, checkSite, checkExternal } from "./links.mjs";
+import { INIT_ANSWER_ENDPOINT } from "../edge/init-answer.mjs";
+import { badgeResponse, BADGE_PREFIX } from "../edge/badge.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const SITE = "https://ludion.ai";
@@ -150,6 +152,14 @@ test("links: every https://ludion.ai/ URL the code hands out has a page, in Engl
   for (const d of ["packages", "services", "site/src"]) walk(path.join(ROOT, d));
   assert.ok(seen.has("https://ludion.ai/gate"), "the scan, the report and the Gate's User-Agent link to /gate");
   for (const [url, file] of seen) {
+    // Not a page but the site Worker's (site/edge): init's answer endpoint and its README badge. Each
+    // must be a route the Worker answers, a badge for a real Diver id included.
+    const pathname = new URL(url.replace(/\$\{[^}]*\}|\{[^}]*\}/g, "CODE")).pathname;
+    if (pathname === INIT_ANSWER_ENDPOINT) continue;
+    if (pathname.startsWith(BADGE_PREFIX)) {
+      assert.equal(badgeResponse(pathname.replace("CODE", "dvr-aaaaaaaaaaaaaaaa"))?.status, 200, `${url} (in ${file}): the Worker draws no badge there`);
+      continue;
+    }
     // A templated /e/<code>: WEB-3 checks every code; here, the index they sit under.
     const p = new URL(url.replace(/\$\{[^}]*\}|\{[^}]*\}/g, "CODE")).pathname.replace(/\/CODE$/, "").replace(/^\/|\/$/g, "");
     for (const lang of ["", "ja"]) {
