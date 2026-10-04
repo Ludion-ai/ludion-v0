@@ -5,7 +5,7 @@
 export const STRINGS = {
   ja: {
     title: "Ludion 日次レポート",
-    subject: (s, n, m) => `[Ludion] ${s.site} ${s.date}：重要経路への未検証の自動化 ${n} 件、検証済みの行為 ${m} 件`,
+    subject: (s, headline) => `[Ludion] ${s.site} ${s.date}：${headline}`,
     meta: (s) => `${s.site}・${s.date}（${s.tz}）`,
     // The one number and the one decision (spec §12.3). The share, not a count: a count alone reads
     // like a spam tally.
@@ -82,7 +82,7 @@ export const STRINGS = {
   },
   en: {
     title: "Ludion daily report",
-    subject: (s, n, m) => `[Ludion] ${s.site} ${s.date}: ${n} unverified automated requests on critical routes, ${m} verified actions`,
+    subject: (s, headline) => `[Ludion] ${s.site} ${s.date}: ${headline}`,
     meta: (s) => `${s.site} · ${s.date} (${s.tz})`,
     headline: {
       share: ["Of this day's automated requests,", "% named themselves with a signature"],

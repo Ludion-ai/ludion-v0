@@ -1,6 +1,6 @@
 # STATE
 
-最終更新：2026-10-04 午前（Claude Code、1本目のレーン。実装の順の1〜4。4 の MCP-1 は Keycloak の不具合で FAIL、判断は人間待ちの先頭）
+最終更新：2026-10-04 夕方（Claude Code、1本目のレーン。実装の順の1〜7、ローンチの条件、人間の「全部許可する」を受けて MCP-1 の案 C、件名、README）
 
 ## 現在地
 
@@ -39,14 +39,17 @@
    - `ludion` 1本に CLI と `ludion/gate/{next,node,workers}`、`ludion/diver` を束ね、PUB-1〜4 をその形に。
    - 1画面には Web と MCP の例、revoke の一行、バッジ、任意の1問。
    - オラクルも足す。「断ったら何も送らない」を含める。
-3. ✅（PR は #94 の後）**決定6の設定と PRIV-5**（ADR-041）：本番の名簿（`registry.ludion.ai`）と Card Host（`*.agents.ludion.ai`）の Workers の設定、docs/DEPLOY.md の手順。デプロイは人間。
-4. 🟥（PR は 3 の後）**MCP-1**（ADR-039）：Keycloak は CI の別ジョブ `mcp` で並列に回し、LOOP-2 の10分に入れない。
-   - e2e と負の対（MCP-2）はできた。Keycloak 26.8.0 が名札の `web_bot_auth` と `ludion` を読めずに拒むので FAIL（keycloak/keycloak#51236）。この2つを外した名札なら、同じ e2e で通る。判断は人間待ちの先頭。
-5. **ONE-1・ONE-2・ONE-3・BLK-1・ONE-5**。
-6. **PUR-1〜6**。
-7. **日本語の README**。
+3. ✅（#95）**決定6の設定と PRIV-5**（ADR-041）：本番の名簿（`registry.ludion.ai`）と Card Host（`*.agents.ludion.ai`）の Workers の設定、docs/DEPLOY.md の手順。デプロイは人間。
+4. ✅（#96、案 C の PR）**MCP-1**（ADR-039）：Keycloak は CI の別ジョブ `mcp` で並列に回し、LOOP-2 の10分に入れない。
+   - e2e と負の対（MCP-2）。Keycloak 26.8.0 が名札の `web_bot_auth` と `ludion` を読めずに拒む（keycloak/keycloak#51236）ので、人間の許可で MCP の client_id を `…/client`（拡張のない CIMD）に分けた。MCP-1、MCP-2 PASS。
+5. ✅（#97）**ONE-1・ONE-2・ONE-3・BLK-1・ONE-5**。
+   - ONE-1：自動化の最初の1件を記録した時に、サイトのコンソールに1行（`announce`）。npm install から、その1行まで：Express 1.5 秒、Next.js（`next dev`）3.8 秒（手元、3回の中央値）。
+   - ONE-3・BLK-1：`decisions`（`who`／`action`：allow・wall・block／`scope`：writes・経路／`until`：日時）と、経路の `"writes": false`。通す・壁・止めるは設定の1行で効き、消せば戻る。止めると `403 blocked_by_site`。
+   - ONE-2・ONE-5（サブエージェントが作った）：朝のレポートの見出しは「署名で名乗った割合」1つ、決めることは1つ。クローラーを名乗る送信は「偽物の疑い」。
+6. ✅（#98）**PUR-1〜6**：`Ludion-Purpose`（read／act と一文）。署名で覆われた時だけ本人の言葉。read と言って書いたら矛盾。一文は Gate の外に出ない（サイトの記録に7日）。diver は個人の情報を含む一文を送らない。`purpose_required` には一度だけ出し直す。レポートは一文をエスケープし、リンクにならない形（`hxxps[:]//`、`[.]`、`[at]`）で出す。
+7. ✅（この PR）**日本語の README**（`README.ja.md`）。spec v2.0 §9 の一点に沿って書いた。英語の README（レーン2の担当）は v1 のまま（Ballast と Mandate を前に出している）。
 
-あいだに入れるもの：#90 の ID の振り直し（GATE-13 と WEB-12）、DIV-1 の setup-python（ADR-042）、gitleaks のオラクル（ADR-042）。
+あいだに入れるもの：済み。GATE-13（GATE-3 の負の対。#90 の WEB-10 はレーン2の WEB-11 と重なるので落とした）、DIV-1 の setup-python と STD-3（#99）、gitleaks（SEC-1、#99）、ONE-4（#99）、REG-5（名簿の丸ごと配布）、対のない正のオラクルに負の対（ONE-6、ONE-7、PUR-7）。
 
 **切る線**
 
@@ -58,11 +61,11 @@
 **ローンチの条件（§20.2）**。全て満たすまで出さない。
 
 - [ ] scan のサンプル（ludion.ai/scan）：WEB-4。プレビューでは動く。ludion.ai への切り替えは人間（DEPLOY.md §3）。
-- [ ] `npx ludion init` から VERIFIED まで3分以内（新しい環境で3回）：DIV-1、ONE-4
-- [ ] 名札の URL が MCP の client_id として通る：MCP-1
+- [x] `npx ludion init` から VERIFIED まで3分以内（新しい環境で3回）：DIV-1、ONE-4（#99。手元で TS 3.4 秒、Python 5.8 秒、拒否からの道 5〜8 秒）
+- [x] client 文書の URL が MCP の client_id として通る：MCP-1（案 C、Keycloak 26.8.0）
 - [ ] tracecheck.dev の7日分のデータ：PILOT-2（レーン2。デプロイと読み取りのトークンは人間）
-- [ ] README（日英）、ドキュメント、security@ の受信（受信は人間）
-- [ ] git の秘密情報が0件（gitleaks）
+- [ ] README（日英）、ドキュメント、security@ の受信（受信は人間）。README は日英とも v2.0 §9 の一点に合わせた（この PR）。security@ の受信は人間。
+- [x] git の秘密情報が0件（gitleaks）：SEC-1（#99）
 - [ ] npm に `ludion` を公開済み（初版は手で、2版目から Trusted Publishing）
 
 **一点の外で続いていること**
@@ -105,13 +108,9 @@
 
 ## 人間待ち
 
-- [ ] **判断（急ぎ、MCP-1 と 10/10 の切る線）**：Keycloak 26.8.0（最新、2026-10-01）の CIMD は、知らない項目のある名札を拒む（`Unrecognized field "web_bot_auth"`。keycloak/keycloak#51236、修正の PR #51235 は未マージ）。名札は spec §11.2 どおり `web_bot_auth` と `ludion` を持つので、MCP-1 は認可の要求で止まる。
-  - 確かめたこと（手元、Keycloak 26.8.0）：その2つを外した同じ名札なら、loopback（任意のポート）、PKCE、同意、Session 鍵（Ed25519）の private_key_jwt で、名札の URL にトークンが出る（`azp` が名札の URL）。負の6つ（Root 鍵、他人の鍵、別の宛先、使い回し、名札にない redirect、失効）も、それぞれの段で拒まれる。ES256 の別の jwks は要らなかった。
-  - 案 C（推す）：MCP の client_id を、拡張のない CIMD（例：`<origin>/oauth-client`）に分ける。`/card` は Web Bot Auth の名札のまま（DIV-2 はそのまま）。名前（オリジン）は同じ。厳しい認可サーバーにも通り、Keycloak の修正を待たない。client_id は認可サーバーでの身元なので、決めたら変えない。spec §11.2 と §13.1 の例（`MCP client_id = …/card`）と init の画面（DIV-5）を直す。
-  - 案 A：spec のまま、Keycloak の修正を待つ。#51236 へのコメントの下書きは `docs/outbox/keycloak-51236-comment.md`（投稿は人間）。10/10 までに修正版が出なければ、切る線どおり HN から MCP を外す。
-  - 案 B：`/card` から `web_bot_auth` と `ludion` を外す。DIV-2（ラチェット済み）の緩和になる。推さない。
-  - 決まったら：C なら半日で入れる（e2e はそのまま使える）。A なら何もしない。
-
+- [x] **判断（朝のレポートのメールの件名）**：2026-10-04、人間の許可で、件名も見出しの数字1つにした（RPT-1 の件名の検査も合わせた）。
+- [ ] **ludion.ai のトップの文面**：まだ v1 の売り方（誰の代理か・何を許されているか・誰が払うか）。英語と日本語の README は、2026-10-04 に人間の許可で spec v2.0 §9 の一点に合わせて書き直した。トップの文面（2026-10-01 に人間が承認したもの）を一点に合わせるかは、まだ決めていない。
+- [x] **判断（MCP-1）**：2026-10-04、人間が「全部許可する」。案 C にした：MCP の client_id は拡張のない CIMD（`<origin>/client`）、`/card` は Web Bot Auth の名札のまま。spec v2.0.2（§11.2、§13.1、§9.3、§23.4）、docs/adr/2026-10-04-mcp-client-document.md。Keycloak 26.8.0 で MCP-1、MCP-2 が PASS。keycloak/keycloak#51236 には、再現つきのコメントを投稿した（https://github.com/keycloak/keycloak/issues/51236#issuecomment-5977718433）。
 - [x] **spec v2.0 の判断**（2026-10-03）：決定1〜9（ADR-035〜039、041、042）。spec v2.0.1 と CLAUDE.md の芯を直した。
 - [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（2段目のワイルドカード、お金の判断、§4）は人間。
 - [ ] **npm の初版**：`ludion` の1本（ADR-036、実装の順の2のあと）を、人間が手で出す。2版目から release ワークフロー。
@@ -197,6 +196,9 @@
 
 ## 既知の問題
 
+- 壁（`friction`）を実際に当てるのは gate-node の `onFriction` だけ。Next.js と Workers の Gate は、判定（`friction`）を記録して通す。サイトの摩擦につなぐ口はまだない。
+- 朝のレポートは、経路の `"writes": false` を知らない（記録にも1時間の件数にも載らない）。読むだけの POST も「送信」として数える（ONE-5 の「偽物の疑い」にも入りうる）。outbox に書いた。
+- 目的の一文（note）は、サイトの記録（既定はメモリ、7日）にしか残らない。サイトの手元の `ludion report` は、その記録を読めるときだけ「言ったことと、やったこと」を出す。1時間の件数だけでは出ない。
 - GATE-8（案 A）：Gate は寿命1時間まで受け入れ、60秒を超える署名には nonce を求める。本物の ChatGPT agent の2件は nonce が別々だったが、同じ1時間の窓で同じ署名を使い回すかは未確認。使い回すなら、2回目以降はリプレイ（SPOOFED）になる。LIVE-2 で連続した本物の要求を取れたら確かめる。nonce キャッシュはプロセスごとなので、複数のインスタンスでは1時間のうちに別のインスタンスへ送り直せる（前は90秒）。
 - `ludion doctor` の時計チェックは未実装（ローカル時刻を表示するだけ）。
 - 署名された本文（GATE-11）：Node の読み取りは IncomingMessage の `complete`（他のストリームは内部の `_readableState.ended`）に頼る。HTTP/2 の互換 API と Fastify では確かめていない。chunked で0バイトの本文は、Node では `'end'` が先に出る。本文の上限 1 MiB は gate-node だけ変えられる。
@@ -254,6 +256,24 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-04 午後（Claude Code、1本目）：ローンチの条件と、対のない正のオラクル。
+  - #99：DIV-1（`interop/std3-div1` を今の main に。`ludion` 1本、GATE-11 の本文、CI に Python）、STD-3、ONE-4（拒否 → help のページ → init → VERIFIED）、SEC-1（gitleaks、版とハッシュを固定）。
+    - この機械に Python がなかったので、NuGet の `python` パッケージ（3.12.10、展開するだけ）を `~/.cache/ludion-tools` に置いた。Keycloak と JDK も同じ場所。
+  - REG-5：名簿の丸ごと配布（`GET /v0/bulk?since=V`、署名、版、差分）。配っても店に何も残さず、何もログに書かない。
+  - 負の対：GATE-13（GATE-3 の測りを関数にして、仕込んだ導入と記録で）、ONE-6（黙る Gate、訪問者を名指しする Gate）、ONE-7（ONE-2 の判定）、PUR-7（出し直しは繰り返さない）。UNPAIRED は0になる。
+  - 教訓：
+    - ヒアドキュメントのバックスラッシュで、今日も3回つまずいた（`\d`、`\u0000` が NUL の文字に、`\n` が改行に）。正規表現や \ を含む編集は、Write で書いたスクリプトのファイルを node で走らせる。
+    - テストの中で同じプロセスのサーバーに curl を spawnSync すると、イベントループが止まってサーバーが答えない（ONE-4 で5分固まった）。子プロセスは spawn で待つ。
+
+- 2026-10-04 昼（Claude Code、1本目）：実装の順の5〜7。
+  - 5：ONE-1、ONE-3、BLK-1 を自分で、ONE-2、ONE-5 をサブエージェント（fork、別の作業ツリー）で並べて作り、1本の PR にまとめた。
+  - 6：PUR-1〜6。突然変異で、検査が噛むことを確かめた（被覆を無視、読むだけでも矛盾、受領証に一文、レポートで無害化しない）。
+  - 7：README.ja.md。
+  - 見つけて直したこと：
+    - ONE-3 と BLK-1 の最初の版は、時刻を進めると署名が期限切れになり、検査が空振りしていた（期限の突然変異を捕まえられなかった）。訪問者を毎回、サイトの時計で署名し直し、全員が自分として分類されたことを毎回確かめるようにした。
+    - WEB-3 は、Gate のコードにある `error: "..."` を全部 Ludion-Error と読む。目的の解析の失敗は `problem` と名付けた。
+  - scoreboard（手元、Windows、4分割、6 の先頭）：結果は PR に書く。
 
 - 2026-10-04 午前（Claude Code、1本目）：実装の順の2の残り、3、4。
   - **2（#94）init の1画面**：DIV-5、DIV-6 PASS。手元の全オラクルで、WEB-8 の「仕込んだ故障」の複製が新しいルートの import を持たずに組めず、失敗の後に通知先が開いたままでプロセスが残る（ローカルの1時間のハング）のを捕まえた。複製は site/edge の .mjs を全部取るようにし、失敗時に閉じる。速いテスト（deploy-guard）に降ろした。
