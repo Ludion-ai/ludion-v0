@@ -226,7 +226,7 @@ async function rotate() {
 }
 
 async function doctor() {
-  const problems = [];
+  const problems = [], warnings = [];
   let store;
   try { ({ store } = await loadSigner()); out(`✔ keys load (session kid ${store.session.kid})`); } catch (e) { return out(`✖ ${e.message}`); }
   if (isSealedRoot(store.root)) out(`✔ Root sealed (${store.root.sealed.kdf} + ${store.root.sealed.cipher}), kid ${store.root.kid}`);
@@ -245,12 +245,17 @@ async function doctor() {
         const j = await r.json();
         if (p.startsWith("/.well-known") && !j.keys?.some((k) => k.kid === store.session.kid)) problems.push("directory does not contain the current session key");
         if ((p === "/card" || p === "/client") && j.client_id !== `${origin}${p}`) problems.push(`${p.slice(1)} client_id must equal its URL`);
+        // The client_id is public: only private_key_jwt (the agent's key at the token endpoint) keeps it the agent's own (MCP-3).
+        if ((p === "/card" || p === "/client") && j.token_endpoint_auth_method !== "private_key_jwt") {
+          warnings.push(`${p} says token_endpoint_auth_method ${JSON.stringify(j.token_endpoint_auth_method ?? null)}, not "private_key_jwt": ${j.token_endpoint_auth_method === "none" ? "a public client — " : ""}an authorization server may then give a token to anyone who uses your client_id. Publish the ${p.slice(1)} file init wrote.`);
+        }
         if (!problems.length) out(`✔ ${origin}${p}`);
       }
     } catch (e) { problems.push(`${p} unreachable: ${e.message}`); }
   }
   if (problems.length) { out(`\n${problems.length} problem(s):`); problems.forEach((p) => out(`  ✖ ${p}`)); process.exitCode = 1; }
-  else out(`\nAll good. Sites running Ludion Gate will see you as VERIFIED (depth 0 until you register).`);
+  if (warnings.length) { out(`\n${warnings.length} warning(s):`); warnings.forEach((w) => out(`  ⚠ ${w}`)); process.exitCode = 1; }
+  if (!problems.length && !warnings.length) out(`\nAll good. Sites running Ludion Gate will see you as VERIFIED (depth 0 until you register).`);
 }
 
 // ---- scan: the log-first Gate (@ludion/scan) ---------------------------------

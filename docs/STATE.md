@@ -123,7 +123,7 @@
 - [x] **spec v2.0 の判断**（2026-10-03）：決定1〜9（ADR-035〜039、041、042）。spec v2.0.1 と CLAUDE.md の芯を直した。
 - [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（買うと決めた。ACM のワイルドカード1枚と DNS のワイルドカード1つ、§4）は人間。
 - [ ] **npm の初版**：`ludion` の1本（ADR-036、実装の順の2のあと）を、人間が手で出す。2版目から release ワークフロー。
-- [x] **判断（LOOP-2 と `preview` ジョブ）**：人間の形（2026-10-04 の指示の1）で入れた（docs/adr/2026-10-04-preview-versions-and-split-lighthouse.md）。main への push は毎回、PR は `site/` とビルドの元に触れた時だけ。版ごとの preview URL を測るので、ジョブをまたぐ鍵は要らない。Lighthouse は3台に分けて並列。版の URL に Cloudflare が足す `X-Robots-Tag: noindex` は、live に無いことを確かめてから、その1つだけを外す中継で測る。手元で全体を流して PASS（36ページ、最低 100）。CI での時間は secret が入ってから3回測って報告する。
+- [x] **判断（LOOP-2 と `preview` ジョブ）**：人間の形（2026-10-04 の指示の1）で入れた（docs/adr/2026-10-04-preview-versions-and-split-lighthouse.md）。main への push は毎回、PR は `site/` とビルドの元に触れた時だけ。版ごとの preview URL を測るので、ジョブをまたぐ鍵は要らない。Lighthouse は3台に分けて並列。版の URL に Cloudflare が足す `X-Robots-Tag: noindex` は、live に無いことを確かめてから、その1つだけを外す中継で測る（2026-10-04、人間が承認。条件の「本番が noindex を送らない」は LIVE-4 が夜間に見る）。手元で全体を流して PASS（36ページ、最低 100）。CI での時間は secret が入ってから3回測って報告する。
 - [ ] **CI の `preview` ジョブの secret**（人間がトークンを作って登録すると決めた）：`CLOUDFLARE_PREVIEW_API_TOKEN`（`Ludion Agents` の Workers Scripts の編集だけ）と `CLOUDFLARE_PREVIEW_ACCOUNT_ID`。登録されたら、Claude が main への push の実行で LOOP-2 を3回測って報告する（人間の指示）。それまで `preview-deploy` は赤で、WEB-1 は CI で強制されない。
 - [x] 確認（#69、2026-10-02 に人間が確認）：ルートの重なりの読み。「一番厳しいものが勝つ」を、一致する全てのルートの最高の Pressure と、要件の全部を合わせる（Depth は最大、Ballast、scope は全部）と読んだ。一つを選ぶより厳しくなる場合がある。この読みで正しい（Pressure と Depth は最大、Ballast はどれかが求めれば必須、scope は全部）。
 - [x] 確認（#71、2026-10-02 に人間が確認）：「上限付きの Mandate を受け付けない」を、数える上限（`per_day`）のある Mandate の決済を拒否する、と読んだ。`checkout_max` と通貨は記録なしでどの Gate でも効く。正しい。加えて、期間の中で累計する上限（1日の合計金額など）も記録が要り、無ければ拒否。v0 が強制できない上限は、記録があっても拒否する（`unenforceable_limit`、PRS-3）。
@@ -136,7 +136,11 @@
   - Claude を起動したターミナルの窓を閉じる（環境変数に古いトークンの値が残っている）。
   - wrangler のログインは 11:05 に消えていた。済み。
 - [ ] **`privacy@ludion.ai` でメールが届くようにする**（Cloudflare の Email Routing、人間がやる）。登録フォームの告知が、削除の宛先として案内している。
-- [ ] **ludion.ai を新しいサイトに切り替える**（docs/DEPLOY.md §3、15分、クリック単位）。旧は Worker `ludion` のカスタムドメイン。`ludion-site` を作って付け替える。
+- [x] **ludion.ai を新しいサイトに切り替える**：2026-10-04 に確かめた。ludion.ai はこのサイトのビルド（`/_build.json` の site `3ccaa46d52d696d1`）を配っていて、noindex はどのページにもない（LIVE-4 PASS）。
+- [ ] **本番の ludion.ai を main のビルドで出し直す**（人間。docs/DEPLOY.md §3 の手順 1 と同じ）：本番のビルドは古く、`/quickstart` と `/agent` が 404（2026-10-04）。ローンチの前に。出し直したら LIVE-4 がもう一度見る。
+- [ ] **ローンチの下書き**（docs/outbox/launch/、英語）：Show HN の本文と最初のコメント（tracecheck の数字は空欄）、想定問答、60秒のデモの台本。出すのと録るのは人間。
+- [ ] **名簿の事前登録の10件**（spec §14.2）：データは手元の作業ツリーにだけある（`docs/outbox/launch/private/registry-preseed.json`、.gitignore。公開のリポジトリに入れると公開になるため）。各社の公開文書から 2026-10-04 に確かめた。Q21（各社へ事前に連絡するか）は人間の判断。
+- [ ] **CI の preview の secret が入ったら**：Claude が main への push を3回回して、10分に収まるかを報告する（2026-10-04 の夜の時点で、まだ入っていない）。
 - [ ] **旧資源の削除**（docs/DEPLOY.md §1.3、Ludion の16件だけ）。消す前に：
   - 提供元で秘密を失効させる：`ludion-api` の OpenAI と楽天のキー、`ludion-fallback-relay` の `PROVIDER_API_KEY`、`ludion` の GitHub OAuth アプリ。Worker を消してもキーは生きている。
   - D1 3つ、KV 2つ、R2 2つの中身を書き出す。提出物や登録者の情報なら、残すか消すかを決める。
@@ -237,6 +241,11 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-04 深夜（Claude Code、1本目）：人間の承認1つと追加1つ、ローンチの準備。
+  - LIVE-4（±、L2、夜間）：本番の ludion.ai はサイトのビルドを配り、どのページも noindex を言わない（ヘッダーも meta も）。中継の承認の条件。いま PASS（26ページ、トップ、404）。
+  - MCP-4（±、L0）：Card Host は private_key_jwt でない名札と client 文書を出さない（500 `not_private_key_jwt`）。公開クライアントやシークレットを求めて登録しても private_key_jwt が出る。13の値を両方の道で出さない。守りを外すと落ちる。doctor は、自前のドメインの名札や client 文書が private_key_jwt でなければ警告する（終了コード 1）。
+  - ローンチの下書き：`docs/outbox/launch/`（Show HN の本文と最初のコメント、想定問答、60秒のデモの台本）。名簿の事前登録のデータは公開しないので、リポジトリに入れず手元にだけ置いた（下の人間待ち）。
 
 - 2026-10-04 夜遅く（Claude Code、1本目）：人間の決定1〜5（貼り付けの指示）。
   - 5（返事を先に）：前回の指示の3と4はこのセッションに届いていなかったので、その旨と、決定の一覧、案 C の1行を返した。#111 MCP-3（−、mcp）：鍵の署名のない交換（認証なし、alg none、署名の切り取り、シークレット）に Keycloak はトークンを出さない。公開クライアントを名乗る client 文書を、公開クライアントを許す realm に置くと落ちる（噛むことを確かめた）。

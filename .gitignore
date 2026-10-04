@@ -25,3 +25,6 @@ SCOREBOARD.json
 .env.*
 *.env
 packages/ludion/lib/
+
+# Launch material that is not to be published (registry pre-seed data: Q21 awaits the human).
+docs/outbox/launch/private/
