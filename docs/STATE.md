@@ -1,6 +1,6 @@
 # STATE
 
-最終更新：2026-10-04 夜（Claude Code、1本目のレーン。spec v2.0.3、不変条件14と16のオラクル、ドキュメントをテストに（WEB-12、WEB-13））
+最終更新：2026-10-04 夜遅く（Claude Code、1本目のレーン。人間の決定1〜5：LOOP-2 の形、writes: false、WEB-7、証明書、MCP-3）
 
 ## 現在地
 
@@ -77,7 +77,7 @@
 
 1. 人間の手が要るもの（人間待ちの表）：npm の初版、本番の名簿と Card Host のデプロイ（`*.agents.ludion.ai` の証明書はお金の判断）、ludion.ai の切り替え、`preview` の secret、security@ と privacy@ の受信、PILOT-2 のトークン。
 2. secret が入ったら：LOOP-2 を main への push の実行で3回測り、人間に報告する（仕組みは入れた。ADR 2026-10-04-preview-versions-and-split-lighthouse）。
-3. WEB-7（ドキュメントをテストに）：Express と CLI（WEB-10）、`/gate` の Express・Next.js・Workers（WEB-12）、TypeScript（`/agent`、WEB-13）は済み。残りは FastAPI と WordPress（GATE-9 の Gate が要る）、Python（PyPI の公開は人間）、scan の CLI（npm の公開のあと）。
+3. WEB-7 は Node・Next.js・Workers で PASS（人間の決定）。FastAPI・WordPress・Python は「対応予定」の1行だけで、GATE-9 と PyPI はローンチの後。
 4. spec の残りの食い違い（outbox）：C7（名簿の事前登録、ローンチの後）。
 5. 夜間の Windows（`nightly-windows`）の結果を毎朝見る。赤なら最優先で直す。
 6. 余力で GATE-9（`@php-wasm/node` で WordPress）。
@@ -237,6 +237,14 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-04 夜遅く（Claude Code、1本目）：人間の決定1〜5（貼り付けの指示）。
+  - 5（返事を先に）：前回の指示の3と4はこのセッションに届いていなかったので、その旨と、決定の一覧、案 C の1行を返した。#111 MCP-3（−、mcp）：鍵の署名のない交換（認証なし、alg none、署名の切り取り、シークレット）に Keycloak はトークンを出さない。公開クライアントを名乗る client 文書を、公開クライアントを許す realm に置くと落ちる（噛むことを確かめた）。
+  - 2：#112 RPT-2（±、L0）。書き込みかは Gate が決め、記録と1時間の集計のキー `access`（read か write）に入れる。集計からメソッドは消えた。レポートと不審の規則はそのキーだけを見る。tracecheck の行にも列を足した（古い行は、読み取り専用の経路がない設定なので、メソッドから同じ判定）。
+  - 3：#113 WEB-7（+、WEB-12 と対）。`/gate` を Gate を入れる前の参照アプリに節ごとに当てて動かす（Express、Next.js、Workers）。README、`/gate`、`/agent` に「対応予定」の1行。python/README.md から手順を外した。
+  - 4：#114 DEPLOY.md §4：ACM のワイルドカードの証明書1枚と DNS のワイルドカード1つの手順。
+  - 1：#115 LOOP-2 の形。push は毎回、PR はサイトに触れた時だけ。版ごとの preview URL を測るので鍵が要らない。Lighthouse は3台。Cloudflare が版の URL に足す `X-Robots-Tag: noindex`（live には無い）で SEO が 66 になったので、その1つだけを外す中継で測る（ADR 2026-10-04-preview-versions-and-split-lighthouse）。CI での時間は secret が入ってから3回測る。
+  - 全オラクル：PASS 94 / FAIL 1（LOOP-2、secret だけ）/ PENDING 4（GATE-9、LIVE-1〜3）/ SKIP 1（PILOT-2）。ラチェット 91 → 94（MCP-3、RPT-2、WEB-7）。
 
 - 2026-10-04 夜（Claude Code、1本目）：
   - #105（トップを一点に、ONE-8）をマージし、プレビューを main から出し直した。全オラクルを回してラチェットを固めた：PASS 87 / FAIL 1（LOOP-2：`preview` の secret だけ）/ PENDING 5 / SKIP 1、ラチェットは ONE-8 を足した。
