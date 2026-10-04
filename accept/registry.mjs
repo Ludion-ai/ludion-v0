@@ -149,9 +149,12 @@ export const ORACLES = [
     timeoutMs: 1_800_000, run: nodeTest(["reference/test/harness.test.mjs", "reference/test/gate1.test.mjs"], "^GATE-1:", { timeoutMs: 1_750_000 }) },
   { id: "GATE-2", m: "M1", kind: "-", level: 1, property: "pressure-on-automation", title: "pressure bites: 100% of denials carry Ludion-Error + help Link (+Accept-Signature)",
     run: nodeTest(["packages/gate-node/test/gate2.test.mjs"], "^GATE-2:") },
-  { id: "GATE-3", m: "M1", kind: "+", level: 1, title: "install ≤3 app lines, ≤1 config file, first classified event ≤60s (3 reference apps)",
+  { id: "GATE-3", m: "M1", kind: "+", level: 1, pair: "GATE-13", property: "install-effort", title: "install ≤3 app lines, ≤1 config file, first classified event ≤60s (3 reference apps)",
     timeoutMs: 1_800_000, run: nodeTest(["reference/test/gate3.test.mjs"], "^GATE-3:", { timeoutMs: 1_750_000,
       metric: (out) => [...out.matchAll(/^# (express|next|workers): (\d+) app lines, (\d+) config file, first event ([^\n]+)$/gm)].map((m) => `${m[1]} ${m[2]}L/${m[3]}cfg/${m[4]}`).join(", ") }) },
+  // GATE-3's other side: its measures (reference/gate3-measure.mjs) catch planted installs and records.
+  { id: "GATE-13", m: "M1", kind: "-", level: 0, property: "install-effort", title: "GATE-3's measures cannot be passed by a bigger install or a Gate that does not deliver: planted installs (every line twice, edits beside it, a second config, a hand-edited package.json, a line the README does not show, nothing changed) and planted first records are caught; its limits are 60 s, 3 lines, 1 config",
+    run: nodeTest(["reference/test/gate13.test.mjs"], "^GATE-13:", { metric: (out) => (/^# GATE-13: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "GATE-4", m: "M1", kind: "+", level: 1, pair: "GATE-5", property: "added-latency", title: "added latency p99 ≤2ms warm (10k mixed requests)", timeoutMs: 180_000, run: async () => {
     // The real gate-node middleware timed per request, keys cached, every class in the mix; see the script.
     const r = sh(process.execPath, ["packages/gate-node/bench/gate4.mjs"], 170_000);
@@ -398,10 +401,14 @@ export const ORACLES = [
   // One line gives an AI its own key and name, the same on MCP and the web, and one line erases it;
   // the Gate reads the name, matches the declared purpose, and a block is one line in the site's
   // own config. Added PENDING (2026-10-03); wired when built.
-  { id: "ONE-1", m: "M9", kind: "+", level: 1, title: "an empty Next.js and Express app: Gate install → first record visible ≤60s (median of 3)",
+  { id: "ONE-1", m: "M9", kind: "+", level: 1, pair: "ONE-6", property: "first-record", title: "an empty Next.js and Express app: Gate install → first record visible ≤60s (median of 3)",
     timeoutMs: 1_500_000, run: nodeTest(["reference/test/one1.test.mjs"], "^ONE-1:", { timeoutMs: 1_480_000, metric: (out) => [...out.matchAll(/^# ONE-1: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
-  { id: "ONE-2", m: "M9", kind: "+", level: 1, title: "the morning report has one headline number and one main decision",
+  { id: "ONE-6", m: "M9", kind: "-", level: 1, property: "first-record", title: "a Gate that does not tell, tells who the visitor is, or tells every visit fails ONE-1's measure (planted Gates, run for real on Express)",
+    timeoutMs: 900_000, run: nodeTest(["reference/test/one1.test.mjs"], "^ONE-6:", { timeoutMs: 880_000, metric: (out) => (/^# ONE-6: (.+)$/m.exec(out) ?? [])[1] }) },
+  { id: "ONE-2", m: "M9", kind: "+", level: 1, pair: "ONE-7", property: "morning-report", title: "the morning report has one headline number and one main decision",
     run: nodeTest(["packages/report/test/one2.test.mjs"], "^ONE-2:", { metric: (out) => (/^# ONE-2: (.+)$/m.exec(out) ?? [])[1] }) },
+  { id: "ONE-7", m: "M9", kind: "-", level: 0, property: "morning-report", title: "a report with two headline numbers, no decision or two decisions is caught by ONE-2's judge (planted reports)",
+    run: nodeTest(["packages/report/test/one2.test.mjs"], "^ONE-7:") },
   { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)",
     run: nodeTest(["packages/gate-node/test/one3.test.mjs"], "^ONE-3:", { metric: (out) => (/^# ONE-3: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "ONE-4", m: "M9", kind: "+", level: 1, title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min",

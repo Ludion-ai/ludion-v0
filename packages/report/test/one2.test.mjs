@@ -89,7 +89,7 @@ export function headlineProblems({ text, html }) {
   return out;
 }
 
-test("ONE-2: the judge catches two numbers in the headline, no decision, two decisions (planted)", () => {
+test("ONE-7: the judge catches two numbers in the headline, no decision, two decisions (planted)", () => {
   const s = report(records(DAYS[0]));
   const good = { text: renderText(s, "en"), html: renderHtml(s, "en") };
   assert.deepEqual(headlineProblems(good), []);
@@ -121,5 +121,5 @@ test("ONE-2: one headline number and one decision, from per-visit records and fr
     }
     seen.push(`${"pct" in day.truth ? `${day.truth.pct}%` : "0 automation"} → ${day.truth.decision.action}${day.truth.decision.kind ? ` ${day.truth.decision.kind}` : ""}${day.truth.decision.token ? ` ${day.truth.decision.token}` : ""}`);
   }
-  console.log(`ONE-2: ${DAYS.length} days × 2 inputs × ${LANGS.join("/")} × text/HTML: one headline number and one decision each (${seen.join("; ")}); 4 planted reports caught`);
+  console.log(`ONE-2: ${DAYS.length} days × 2 inputs × ${LANGS.join("/")} × text/HTML: one headline number and one decision each (${seen.join("; ")})`);
 });
