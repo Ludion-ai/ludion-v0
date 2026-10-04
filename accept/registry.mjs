@@ -378,6 +378,12 @@ export const ORACLES = [
     timeoutMs: 1_200_000, run: nodeTest(["site/test/web10.test.mjs"], "^WEB-10:", { timeoutMs: 1_180_000,
       metric: (out) => (/^# WEB-10: (.+)$/m.exec(out) ?? [])[1] }) },
 
+  // The Install-the-Gate page as a test (the /gate part of WEB-7, which stays open for the rest): its
+  // Express, Next.js and Workers sections, in both languages, are exactly the reference installs GATE-1
+  // and GATE-3 run (site/test/gate-page.mjs); planted pages and a planted install are caught.
+  { id: "WEB-12", m: "M7", kind: "±", level: 0, title: "/gate (en, ja) shows exactly the installs GATE-1 and GATE-3 run — Express, Next.js, Workers: npm install ludion, every installed line shown and nothing else, the same config; planted pages and installs caught",
+    run: nodeTest(["site/test/web12.test.mjs"], "^WEB-12", { metric: (out) => (/^# WEB-12: (.+)$/m.exec(out) ?? [])[1] }) },
+
   // WEB-4's comparison (site/test/scan-check.mjs) run against copies of the built site with a fault
   // planted in the worker, the page or the shipped sample: each is caught by its rule, an untouched copy passes.
   { id: "WEB-11", m: "M7", kind: "-", level: 1, property: "scan-equivalence", title: "WEB-4's check bites: a scan worker that miscounts or leaves a file out, a headline from another field, a swapped or cut-short sample are each caught; an untouched copy passes",
