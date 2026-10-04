@@ -48,7 +48,7 @@ test("PUR-4: told purpose_required, the diver sends the write again once, signed
   console.log("PUR-4: purpose_required → the same write sent once more as act, signed → 200; the site saw it once, VERIFIED");
 });
 
-test("PUR-4: never a loop — a request that said something is not sent again, nor a stream body; a read is not asked", async () => {
+test("PUR-7: never a loop — a request that said something is not sent again, nor a stream body; a read is not asked", async () => {
   const a = counted();
   const r1 = await ludionFetch(`http://127.0.0.1:${port}/contact`, { method: "POST", body: "x", purpose: { kind: "read" } }, { signer, fetch: a.f });
   assert.equal(r1.status, 403);
