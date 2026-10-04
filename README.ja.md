@@ -74,6 +74,7 @@ app.use(await ludion());
 
 - **止めるのはサイトだけ。** Ludion のサーバーには、誰かを止める経路がない。判断はサイトの設定の中にだけある。
 - **朝のレポート**（`npx ludion report`）は、見出しの数字が1つ（自動化のうち署名で名乗った割合）、決めることが1つ。クローラーを名乗る送信は「偽物の疑い」、署名して「読むだけ」と言いながら書き込んだ相手は、その言葉と並べて出す。
+- 対応予定（ローンチの後）：FastAPI と WordPress の Gate、Python のエージェント側。
 - Next.js（`proxy.js` の1行）と Cloudflare Workers の入れ方は [ludion.ai/gate](https://ludion.ai/gate)。Gate の拒否には、どれにも説明のページがある：[ludion.ai/e](https://ludion.ai/e)。
 
 ## 外に出るもの
