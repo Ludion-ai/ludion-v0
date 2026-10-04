@@ -392,6 +392,11 @@ export const ORACLES = [
   // and GATE-3 run (site/test/gate-page.mjs); planted pages and a planted install are caught.
   { id: "WEB-12", m: "M7", kind: "±", level: 0, title: "/gate (en, ja) shows exactly the installs GATE-1 and GATE-3 run — Express, Next.js, Workers: npm install ludion, every installed line shown and nothing else, the same config; planted pages and installs caught",
     run: nodeTest(["site/test/web12.test.mjs"], "^WEB-12", { metric: (out) => (/^# WEB-12: (.+)$/m.exec(out) ?? [])[1] }) },
+  // The "Sign from code" page as a test (the TypeScript part of WEB-7): its blocks in order in a clean
+  // directory with the publish set's tarball — a signed request VERIFIED, a purpose on the receipt, and
+  // the MCP token exchange MCP-1 makes, at a stub that checks the assertion; en and ja carry the same code.
+  { id: "WEB-13", m: "M7", kind: "±", level: 1, title: "/agent (en = ja) runs as written: ludionFetch → 200 VERIFIED, a purpose → 200 read, token.mjs → the private_key_jwt exchange MCP-1 makes (client_id = name + /client); planted pages caught",
+    timeoutMs: 1_200_000, run: nodeTest(["site/test/web13.test.mjs"], "^WEB-13", { timeoutMs: 1_180_000, metric: (out) => (/^# WEB-13: (.+)$/m.exec(out) ?? [])[1] }) },
 
   // WEB-4's comparison (site/test/scan-check.mjs) run against copies of the built site with a fault
   // planted in the worker, the page or the shipped sample: each is caught by its rule, an untouched copy passes.

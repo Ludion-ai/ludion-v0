@@ -1,0 +1,93 @@
+---
+title: コードから署名する
+description: エージェントの名前を Node.js から使う。ludionFetch で署名したリクエスト、目的の申告、MCP のクライアントとしての同じ名前。
+---
+
+[`npx ludion init`](/ja/quickstart#身元を作る) のあと、エージェントの鍵は `ludion.json` にあります。Node.js からは、`ludion/diver` がその鍵でリクエストごとに署名します。Gate のあるサイトには、ほかの場所と同じ名前で見えます。
+
+## リクエストに署名する
+
+`init` を実行したディレクトリで：
+
+```sh
+npm install ludion
+```
+
+```js title="agent.mjs"
+import fs from "node:fs";
+import { createDiverSigner, ludionFetch } from "ludion/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
+
+const res = await ludionFetch("http://localhost:3000/", {}, { signer });
+const receipt = JSON.parse(Buffer.from(res.headers.get("ludion-receipt"), "base64url"));
+console.log(res.status, receipt.class);
+```
+
+```sh
+node agent.mjs
+```
+
+```text
+200 VERIFIED
+```
+
+URL は[クイックスタート](/ja/quickstart)で作ったサイトです（鍵のディレクトリを公開したあと）。`ludionFetch` は `fetch` と同じ引数を取り、リクエストのたびに署名を作り直します。署名はすぐに期限が切れ、Gate は一度見た署名をリプレイとみなします。本文のあるリクエストには、本文のダイジェストも署名の下に付きます。
+
+## 何をしに来たかを言う
+
+同じ署名の下で、読むだけか、何かをするか、その理由を一文で言えます。
+
+```js title="purpose.mjs"
+import fs from "node:fs";
+import { createDiverSigner, ludionFetch } from "ludion/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
+
+const res = await ludionFetch("http://localhost:3000/", { purpose: { kind: "read", note: "Compare prices for the user" } }, { signer });
+const receipt = JSON.parse(Buffer.from(res.headers.get("ludion-receipt"), "base64url"));
+console.log(res.status, receipt.purpose);
+```
+
+```sh
+node purpose.mjs
+```
+
+```text
+200 read
+```
+
+サイトはその一文を7日だけ持ち、どこにも送りません（[spec §11.7](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#117-目的の申告ludion-purpose)）。メールアドレス、電話番号、URL、長い数字を含む一文は、送る前に断ります。サイトが `purpose_required` と答えたら、`ludionFetch` は一度だけ送り直します。書き込みなら `act`、それ以外は `read` と言います。
+
+## MCP のクライアントとして、同じ名前で
+
+エージェントの `client_id` は、名前に `/client` を付けたものです：`` `${me.signature_agent}/client` ``。Client ID Metadata Document を読む認可サーバーはこれを取りに行き、そこでエージェントの鍵を見つけます。トークンのエンドポイントでは、同じ Session 鍵で署名した `private_key_jwt` のアサーションで、そのクライアントであることを示します。保管するクライアントのシークレットはありません。
+
+```js title="token.mjs"
+import fs from "node:fs";
+import { clientAssertion } from "ludion/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const clientId = `${me.signature_agent}/client`;
+
+const res = await fetch(tokenEndpoint, {
+  method: "POST",
+  headers: { "content-type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams({
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: codeVerifier,
+    client_id: clientId,
+    client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    client_assertion: clientAssertion(me.session, { clientId, audience: tokenEndpoint }),
+  }),
+});
+const token = await res.json();
+```
+
+`tokenEndpoint` は認可サーバーのメタデータから、`code`、`redirectUri`、`codeVerifier` はその前の認可の段階から来ます（PKCE。リダイレクトは `http://127.0.0.1/callback` か `http://[::1]/callback` で、ポートは任意）。このやり取りは、Client ID Metadata Document を有効にした Keycloak で、端から端まで確かめています（[MCP-1](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m9-一点spec-v20-93234)）。
+
+`npx ludion revoke` は、その名前をどこでも一度に終わらせます。Web でも、名前を読むすべての認可サーバーでも。

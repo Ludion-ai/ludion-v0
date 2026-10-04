@@ -1,0 +1,93 @@
+---
+title: Sign from code
+description: Use your agent's name from Node.js — signed requests with ludionFetch, a stated purpose, and the same name as an MCP client.
+---
+
+After [`npx ludion init`](/quickstart#create-an-identity), your agent's keys are in `ludion.json`. From Node.js, `ludion/diver` signs each request with them, so every site that runs a Gate sees the same name your agent uses everywhere else.
+
+## Sign your requests
+
+In the directory where you ran `init`:
+
+```sh
+npm install ludion
+```
+
+```js title="agent.mjs"
+import fs from "node:fs";
+import { createDiverSigner, ludionFetch } from "ludion/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
+
+const res = await ludionFetch("http://localhost:3000/", {}, { signer });
+const receipt = JSON.parse(Buffer.from(res.headers.get("ludion-receipt"), "base64url"));
+console.log(res.status, receipt.class);
+```
+
+```sh
+node agent.mjs
+```
+
+```text
+200 VERIFIED
+```
+
+The URL is the site from [the quickstart](/quickstart), once your key directory is published. `ludionFetch` takes the same arguments as `fetch` and signs every request anew: a signature expires quickly, and a Gate takes one it has seen before for a replay. A request with a body also gets a digest of the body, under the signature.
+
+## Say what you came to do
+
+A request can say, under the same signature, whether it only reads or acts, and why, in one sentence:
+
+```js title="purpose.mjs"
+import fs from "node:fs";
+import { createDiverSigner, ludionFetch } from "ludion/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
+
+const res = await ludionFetch("http://localhost:3000/", { purpose: { kind: "read", note: "Compare prices for the user" } }, { signer });
+const receipt = JSON.parse(Buffer.from(res.headers.get("ludion-receipt"), "base64url"));
+console.log(res.status, receipt.purpose);
+```
+
+```sh
+node purpose.mjs
+```
+
+```text
+200 read
+```
+
+The site keeps the sentence for 7 days and never sends it anywhere ([spec §11.7](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#117-目的の申告ludion-purpose)). A sentence with an email address, a phone number, a URL or a long number is refused before anything is sent. If a site answers `purpose_required`, `ludionFetch` sends the request once more, saying `act` for a write and `read` for anything else.
+
+## The same name as an MCP client
+
+Your agent's `client_id` is its name plus `/client`: `` `${me.signature_agent}/client` ``. An authorization server that reads Client ID Metadata Documents fetches it, and finds your agent's keys there. At the token endpoint your agent proves it is that client with a `private_key_jwt` assertion signed by the same session key, so there is no client secret to store:
+
+```js title="token.mjs"
+import fs from "node:fs";
+import { clientAssertion } from "ludion/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const clientId = `${me.signature_agent}/client`;
+
+const res = await fetch(tokenEndpoint, {
+  method: "POST",
+  headers: { "content-type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams({
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: codeVerifier,
+    client_id: clientId,
+    client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    client_assertion: clientAssertion(me.session, { clientId, audience: tokenEndpoint }),
+  }),
+});
+const token = await res.json();
+```
+
+`tokenEndpoint` comes from the authorization server's metadata; `code`, `redirectUri` and `codeVerifier` come from the authorization step before it (PKCE, with a loopback redirect to `http://127.0.0.1/callback` or `http://[::1]/callback` on any port). This exchange is checked end to end against Keycloak with Client ID Metadata Documents on ([MCP-1](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m9-一点spec-v20-93234)).
+
+`npx ludion revoke` ends the name everywhere at once: on the web and at every authorization server that reads it.
