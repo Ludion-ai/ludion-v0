@@ -196,6 +196,7 @@ export async function start(app, dir, port, { env = {}, ready = true, readyTimeo
   if (app === "stub") args = ["-e", env.LUDION_STUB_SCRIPT ?? ""]; // harness self-test only
   else if (app === "express") args = ["server.mjs"];
   else if (app === "next") args = ["node_modules/next/dist/bin/next", "start", "-p", String(port), "-H", "127.0.0.1"];
+  else if (app === "next-dev") args = ["node_modules/next/dist/bin/next", "dev", "-p", String(port), "-H", "127.0.0.1"]; // what a developer runs first (ONE-1)
   else if (app === "workers") {
     const inspector = await freePort();
     state = fs.mkdtempSync(path.join(os.tmpdir(), "ludion-wrangler-state-")); // parallel instances must not share .wrangler/state (SQLite)

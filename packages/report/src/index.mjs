@@ -3,14 +3,14 @@
 // Reads the Gate's metadata events (spec §11.7) and nothing else; writes a summary (JSON) and
 // email-ready renderings in Japanese and English (HTML and plain text). Sending is not this
 // package's job. Zero network.
-import { parseEvents, summarize, sitesOf, readEvent, count, displayRoute, agentName, REPORT_CLASSES, TOP_AGENTS, TOP_ROUTES, UNNAMED } from "./summarize.mjs";
-import { renderText, renderHtml, subject, model, fmt, GATE_URL } from "./render.mjs";
+import { parseEvents, summarize, sitesOf, readEvent, readBatch, count, displayRoute, agentName, isSuspectedFake, mainDecision, REPORT_CLASSES, GROUPS, GROUP_OF, TOP_AGENTS, TOP_ROUTES, TOP_DID, TOP_FAKES, UNNAMED } from "./summarize.mjs";
+import { renderText, renderHtml, subject, model, decisionText, fmt, GATE_URL } from "./render.mjs";
 import { dayWindow, addDays, dateIn, isValidDate, isValidTimeZone } from "./window.mjs";
 import { STRINGS, LANGS } from "./strings.mjs";
 
 export {
-  parseEvents, summarize, sitesOf, readEvent, count, displayRoute, agentName, REPORT_CLASSES, TOP_AGENTS, TOP_ROUTES, UNNAMED,
-  renderText, renderHtml, subject, model, fmt, GATE_URL, dayWindow, addDays, dateIn, isValidDate, isValidTimeZone, STRINGS, LANGS,
+  parseEvents, summarize, sitesOf, readEvent, readBatch, count, displayRoute, agentName, isSuspectedFake, mainDecision, REPORT_CLASSES, GROUPS, GROUP_OF, TOP_AGENTS, TOP_ROUTES, TOP_DID, TOP_FAKES, UNNAMED,
+  renderText, renderHtml, subject, model, decisionText, fmt, GATE_URL, dayWindow, addDays, dateIn, isValidDate, isValidTimeZone, STRINGS, LANGS,
 };
 
 /**

@@ -9,6 +9,40 @@
   "end": "2026-09-30T00:00:00.000Z"
  },
  "expect": {
+  "headline": {
+   "named_pct": 19
+  },
+  "groups": {
+   "named": {
+    "count": 122,
+    "did": [
+     "browse",
+     "checkout",
+     "search"
+    ]
+   },
+   "claimed": {
+    "count": 351,
+    "did": [
+     "browse",
+     "checkout",
+     "login"
+    ]
+   },
+   "unnamed": {
+    "count": 161,
+    "did": [
+     "browse",
+     "checkout",
+     "login"
+    ]
+   }
+  },
+  "decision": {
+   "action": "wall",
+   "kind": "checkout"
+  },
+  "suspected_fakes": [],
   "events": 634,
   "classes": {
    "VERIFIED": 115,

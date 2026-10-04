@@ -55,6 +55,10 @@ function output(t, lang, format) {
 /** key → number, and key → name, from the truth alone (the test's own list, not the renderer's). */
 function expected(t) {
   const x = t.expect, nums = new Map(), names = new Map();
+  // The headline first (ONE-2): one number, then each group's count; then the suspected fakes.
+  if (x.headline.named_pct == null) nums.set("headline.events", x.events); else nums.set("headline.named_pct", x.headline.named_pct);
+  for (const g of ["named", "claimed", "unnamed"]) nums.set(`groups.${g}.count`, x.groups[g].count);
+  x.suspected_fakes.forEach((f, i) => { nums.set(`suspected_fakes.${i}.writes`, f.writes); names.set(`suspected_fakes.${i}.token`, f.token); });
   for (const k of ["unverified", "allowed", "friction", "denied"]) nums.set(`critical.${k}`, x.critical[k]);
   nums.set("verified_actions", x.verified_actions);
   nums.set("verified_agents", x.verified_agents);
@@ -161,6 +165,9 @@ test("RPT-1: every number in all four renderings equals the truth, and ja and en
       assert.deepEqual(numbersIn(subj, t), [t.expect.critical.unverified, t.expect.verified_actions], `${at}: subject`);
       assert.ok(subj.includes(t.site) && subj.includes(t.date), `${at}: subject names the site and day`);
       assert.equal(decode(/<title>([\s\S]*?)<\/title>/.exec(html)[1]), subj, `${at}: HTML title is the subject`);
+      // One decision, the truth's.
+      assert.deepEqual([...html.matchAll(/data-decision="([^"]+)"/g)].map((d) => d[1]), [t.expect.decision.action], `${at}: the decision`);
+      assert.equal(text.split("\n").filter((l) => l.startsWith("→ ")).length, 1, `${at}: one decision line in the text`);
       seqs[lang] = ms;
     }
     assert.deepEqual(seqs.ja, seqs.en, `${t.case}: ja and en carry different numbers`);

@@ -10,7 +10,7 @@ import VerifyPath from "../../../partials/verify-path.en.mdx";
 
 ## What happened
 
-The operator of this site has chosen to stop your agent, or automation that does not identify itself, on this route. The decision is the site's own: it lives in the site's configuration, and Ludion has no switch on its servers to stop anyone ([spec §12.4](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#124-通す壁止める)). This code is part of Ludion Protocol v0; the open-source Gate does not send it yet.
+The operator of this site has chosen to stop your agent, or automation that does not identify itself, on this route. The decision is the site's own: it lives in the site's configuration, and Ludion has no switch on its servers to stop anyone ([spec §12.4](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#124-通す壁止める)). The line that does it reads like `{ "who": "GPTBot", "action": "block", "scope": "writes" }`, and deleting it lifts the block.
 
 ## Why this site asks
 

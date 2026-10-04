@@ -10,7 +10,7 @@ import { createResolver } from "./resolver.mjs";
 import { createStapleVerifier, issueStaple } from "./staple.mjs";
 import { classify, createPolicy, createNonceCache, decide, ERROR_HELP, ERRORS, AUTOMATION, compileRoute, CLASSES } from "./classify.mjs";
 import { createReceipts, importSiteKey, generateSiteKey, metadataEvent, countryCode, templatePath, hashIp } from "./receipt.mjs";
-import { KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal } from "./agents.mjs";
+import { KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, READ_ONLY_KINDS, knownAgentToken, isReadOnlyAgent } from "./agents.mjs";
 import { GateFault, within, clock } from "./budget.mjs";
 import { isPublicAddress, isIpLiteral } from "./address.mjs";
 import { createAuthorities, requestAuthority } from "./authority.mjs";
@@ -21,19 +21,31 @@ import { memoryLedger, isLedger } from "./ledger.mjs";
 import { bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS } from "./digest.mjs";
 import { createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR } from "./hourly.mjs";
 import { memoryRecords, RECORD_DAYS } from "./records.mjs";
+import { createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED } from "./decisions.mjs";
 
 export {
   createResolver, createStapleVerifier, issueStaple, classify, createPolicy, createNonceCache, decide, compileRoute, CLASSES,
   ERROR_HELP, ERRORS, AUTOMATION, createReceipts, importSiteKey, generateSiteKey, metadataEvent, countryCode, templatePath, hashIp,
-  KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, GateFault, isPublicAddress, isIpLiteral,
+  KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, READ_ONLY_KINDS, knownAgentToken, isReadOnlyAgent, GateFault, isPublicAddress, isIpLiteral,
   createAuthorities, requestAuthority, createRevocationList, subscribeRevocations, REVOCATION_TYP,
   routeKind, isCritical, pathOf, originForm, routeCandidates, queryKeys, templateSegment, publicTemplateSegment, publicTemplatePath, isRouteWord, ROUTE_KINDS, CRITICAL_KINDS, WRITE_METHODS,
   verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, memoryLedger, isLedger,
   bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS,
   createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR, memoryRecords, RECORD_DAYS,
+  createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED,
 };
 
 export const LUDION_VERSION = "0";
+
+/**
+ * The one line a site sees when its Gate records its first automated visit (ONE-1): proof the Gate
+ * is in and recording, the moment it is. What the record holds, and nothing that names a person
+ * (no IP, no time, no query, no header value).
+ */
+export function firstRecordLine(record, operator) {
+  const who = operator && operator !== "none" ? ` ${operator}` : "";
+  return `ludion: recorded the first automated visit — ${record.class}${who}, ${record.method} ${record.route} → ${record.decision}${record.error ? ` (${record.error})` : ""}. Records stay on this server for ${RECORD_DAYS} days; only hourly counts may leave it.`;
+}
 
 /** RFC 9421 §5.1 Accept-Signature sent with signature_required (draft §5.3). */
 export const ACCEPT_SIGNATURE = 'sig1=("@authority" "signature-agent";key="sig1" "@method" "@path");tag="web-bot-auth"';
@@ -84,6 +96,10 @@ export function denialHeaders(decision) {
  * @property {boolean} [requireNonce]
  * @property {{ maxEntries?: number, perOwnerMax?: number }} [nonceCache]  replay cache bounds; default
  *           100,000 live entries, and once half full at most a quarter of them per signer identifier
+ * @property {object[]} [decisions]               the site's own let-through / wall / block lines (spec §12.4,
+ *           ADR-032; decisions.mjs). Only ever from the site's config: nothing the Gate fetches can add one
+ * @property {(line: string) => void} [announce]  told once, when the first automated visit is recorded
+ *           (firstRecordLine); the adapters' file-config entry points print it. Never awaited, never blocks
  * @property {() => number} [now]
  */
 
@@ -164,6 +180,7 @@ export async function createGate(config) {
   }
 
   const policy = createPolicy({ pressure: config.pressure, routes: config.routes });
+  const decisions = createDecisions(config.decisions, { now });
   const nonceCache = createNonceCache({ now, ...(config.nonceCache ?? {}) });
   const categories = config.categories == null ? [] : config.categories;
   if (!Array.isArray(categories) || !categories.every((c) => typeof c === "string" && /^[a-z0-9-]{1,32}$/.test(c))) {
@@ -178,6 +195,8 @@ export async function createGate(config) {
   const ipSalt = config.ipSalt ?? config.siteId;
   const sendMetadata = config.sendMetadata ?? (config.sink != null);
   const records = config.records ?? memoryRecords({ now });
+  const announce = typeof config.announce === "function" ? config.announce : null;
+  let announced = false;
 
   /** Call a site hook without waiting: a slow or broken one costs the request nothing. */
   const quietly = (fn, arg) => {
@@ -228,7 +247,9 @@ export async function createGate(config) {
       gateError = e;
       cls = faultClass(route, e);
     }
-    let decision = decide(cls, route);
+    const write = WRITE_METHODS.has(String(req.method ?? "").toUpperCase()) && !route.readOnly;
+    const site = decisions.match(cls, { path, write });
+    let decision = decide(cls, route, site);
     const unprovable = (cls.stapleError === "no_registry_keys" && STANDING_ERRORS.has(decision.error))
       || (cls.mandateError === "no_registry_keys" && decision.error === "mandate_required");
     if (decision.action === "deny" && unprovable && !failClosed) {
@@ -243,9 +264,11 @@ export async function createGate(config) {
     } catch (e) { gateError ??= e; } // a receipt is evidence, not the decision: losing it never changes the response
     if (receipt && AUTOMATION.has(cls.class)) {
       // The visit's record stays on the site (7 days); outside, it is one more in its hour's count.
-      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country });
+      const operator = operatorOf(cls);
+      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country, operator });
       quietly((r) => records.put(r), record);
-      if (hourly) { try { hourly.add(record, operatorOf(cls)); } catch { /* counting never fails a request */ } }
+      if (announce && !announced) { announced = true; quietly(announce, firstRecordLine(record, operator)); }
+      if (hourly) { try { hourly.add(record, operator); } catch { /* counting never fails a request */ } }
     }
     if (hourly) { try { hourly.flushClosed(); } catch { /* idem */ } }
     return { cls, decision, receipt, headers, route, ...(gateError ? { gateError: String(gateError?.message ?? gateError).slice(0, 200) } : {}) };

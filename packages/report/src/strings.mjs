@@ -7,6 +7,27 @@ export const STRINGS = {
     title: "Ludion 日次レポート",
     subject: (s, n, m) => `[Ludion] ${s.site} ${s.date}：重要経路への未検証の自動化 ${n} 件、検証済みの行為 ${m} 件`,
     meta: (s) => `${s.site}・${s.date}（${s.tz}）`,
+    // The one number and the one decision (spec §12.3). The share, not a count: a count alone reads
+    // like a spam tally.
+    headline: {
+      share: ["この日の自動化のうち、署名で名乗ったのは", "%"],
+      empty: ["この日の自動化は", "件でした"],
+      groups: { named: "名乗った（署名あり）", claimed: "名乗っただけ（証明なし）", unnamed: "名乗らない" },
+      nothing: "なし",
+      sep: "、",
+    },
+    decision: {
+      wall: (kind) => `名乗らない自動化の${kind}に、壁を当てる（人間と、名乗った AI には影響しません）`,
+      wall_fakes: (token) => `「${token}」を名乗る送信に、壁を当てる（本物の ${token} は送信しません）`,
+      none: "今日、決めることはありません。",
+    },
+    fakes: {
+      title: "偽物の疑い：クローラーを名乗る送信",
+      lead: "読むだけのはずのクローラーや検索のボットを User-Agent で名乗りながら、送信（POST・PUT・PATCH・DELETE）したリクエストです。本物は送信しないので、その名乗りは偽物と見られます。",
+      head: ["名乗り", "送信", "理由"],
+      why: (token) => `本物の ${token} は送信しません`,
+      none: "ありませんでした。",
+    },
     critical: {
       title: "重要経路に触れた未検証の自動化",
       lead: "決済・ログイン・登録・アカウントの経路と、書き込み（POST・PUT・PATCH・DELETE）に届いた自動化のうち、署名を検証できなかったものです。誰のエージェントか、何を許されているか、何かあったとき誰が責任を持つのかが分からないまま応答しています。",
@@ -49,13 +70,32 @@ export const STRINGS = {
       none: "前日のデータはありません。",
     },
     input: { title: "入力", skipped: "読めなかった行（数えていません）" },
-    footer: "このレポートは、Gate が送ったメタデータ（時刻、経路のテンプレート、メソッド、分類、判定、検証済みエージェントの識別子）だけから作っています。IP アドレス、クエリの値、本文、クッキーは含みません。",
+    footer: "このレポートは、Gate が送ったメタデータ（時刻、経路のテンプレート、メソッド、分類、判定、検証済みエージェントの識別子、User-Agent で名乗った名前）だけから作っています。IP アドレス、クエリの値、本文、クッキーは含みません。",
     link: "Gate の設定",
   },
   en: {
     title: "Ludion daily report",
     subject: (s, n, m) => `[Ludion] ${s.site} ${s.date}: ${n} unverified automated requests on critical routes, ${m} verified actions`,
     meta: (s) => `${s.site} · ${s.date} (${s.tz})`,
+    headline: {
+      share: ["Of this day's automated requests,", "% named themselves with a signature"],
+      empty: ["Automated requests this day:", ""],
+      groups: { named: "Named (signed)", claimed: "Claimed a name (unproven)", unnamed: "Unnamed" },
+      nothing: "none",
+      sep: ", ",
+    },
+    decision: {
+      wall: (kind) => `Put a wall in front of unnamed automation on ${kind.toLowerCase()} routes. People and AIs that name themselves are not affected.`,
+      wall_fakes: (token) => `Put a wall in front of submissions claiming to be ${token}. The real ${token} does not submit.`,
+      none: "Nothing to decide today.",
+    },
+    fakes: {
+      title: "Suspected fakes: submissions claiming to be a crawler",
+      lead: "Requests that wrote (POST, PUT, PATCH, DELETE) while their User-Agent claimed a crawler or a search bot, which only read pages. The real ones do not submit, so the claim is likely false.",
+      head: ["Claimed name", "Submissions", "Why"],
+      why: (token) => `The real ${token} does not submit`,
+      none: "None.",
+    },
     critical: {
       title: "Unverified automation on critical routes",
       lead: "Automated requests to checkout, login, sign-up and account routes, and every write (POST, PUT, PATCH, DELETE), whose signature could not be verified. Each was answered without knowing whose agent it was, what it was allowed to do, or who is accountable if something goes wrong.",
@@ -98,7 +138,7 @@ export const STRINGS = {
       none: "No data for the previous day.",
     },
     input: { title: "Input", skipped: "Unreadable lines (not counted)" },
-    footer: "This report is built only from the metadata the Gate sent (time, route template, method, class, decision, and verified agents' identifiers). It contains no IP addresses, query values, bodies or cookies.",
+    footer: "This report is built only from the metadata the Gate sent (time, route template, method, class, decision, verified agents' identifiers, and the name an agent declared in its User-Agent). It contains no IP addresses, query values, bodies or cookies.",
     link: "Gate settings",
   },
 };

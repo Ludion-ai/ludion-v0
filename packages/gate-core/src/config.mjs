@@ -14,11 +14,12 @@
 import { generateSiteKey } from "./receipt.mjs";
 import { SCOPES } from "./mandate.mjs";
 import { memoryLedger } from "./ledger.mjs";
+import { parseDecisions } from "./decisions.mjs";
 
-const TOP = new Set(["$schema", "site_id", "pressure", "routes", "report", "fail_mode", "timeout_ms", "friction_hook", "trust_proxy", "authorities", "registry", "categories", "mandate_ledger"]);
+const TOP = new Set(["$schema", "site_id", "pressure", "routes", "report", "fail_mode", "timeout_ms", "friction_hook", "trust_proxy", "authorities", "registry", "categories", "mandate_ledger", "decisions"]);
 const REGISTRY = new Set(["keys", "issuer", "revocations"]);
 const REPORT = new Set(["email", "endpoint", "send_metadata"]);
-const ROUTE = new Set(["match", "pressure", "require"]);
+const ROUTE = new Set(["match", "pressure", "require", "writes"]);
 const REQUIRE = new Set(["depth", "scope", "ballast"]);
 
 const fail = (msg) => { throw new TypeError(`ludion config: ${msg}`); };
@@ -68,6 +69,10 @@ export async function gateConfig(spec, { siteKey, fetch, onEphemeralKey } = {}) 
       if (typeof r.match !== "string" || !r.match.startsWith("/")) fail(`routes[${i}].match must be a path starting with "/"`);
       const route = { match: r.match };
       if (r.pressure != null) route.pressure = pressureOf(r.pressure, `routes[${i}].pressure`);
+      if (r.writes != null) {
+        if (typeof r.writes !== "boolean") fail(`routes[${i}].writes must be true or false`);
+        route.writes = r.writes;
+      }
       if (r.require != null) {
         if (!isObject(r.require)) fail(`routes[${i}].require must be an object`);
         onlyKeys(r.require, REQUIRE, `routes[${i}].require`);
@@ -129,6 +134,12 @@ export async function gateConfig(spec, { siteKey, fetch, onEphemeralKey } = {}) 
     // Mandate categories the site belongs to (spec §10.6: a Mandate for "cat:ecommerce").
     if (!Array.isArray(spec.categories) || !spec.categories.every((c) => typeof c === "string" && /^[a-z0-9-]{1,32}$/.test(c))) fail('categories must be lowercase names, e.g. ["ecommerce"]');
     out.categories = [...spec.categories];
+  }
+  if (spec.decisions != null) {
+    // The site's own let-through / wall / block lines (spec §12.4, ADR-032). Checked here, so a typo
+    // stops the site at start rather than silently letting through what it meant to stop.
+    parseDecisions(spec.decisions);
+    out.decisions = spec.decisions.map((d) => ({ ...d }));
   }
   if (spec.trust_proxy != null) {
     if (typeof spec.trust_proxy !== "boolean") fail("trust_proxy must be true or false");

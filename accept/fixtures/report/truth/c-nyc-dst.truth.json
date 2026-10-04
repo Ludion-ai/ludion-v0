@@ -9,6 +9,40 @@
   "end": "2026-11-02T05:00:00.000Z"
  },
  "expect": {
+  "headline": {
+   "named_pct": 21
+  },
+  "groups": {
+   "named": {
+    "count": 120,
+    "did": [
+     "browse",
+     "checkout",
+     "search"
+    ]
+   },
+   "claimed": {
+    "count": 310,
+    "did": [
+     "browse",
+     "checkout",
+     "login"
+    ]
+   },
+   "unnamed": {
+    "count": 136,
+    "did": [
+     "browse",
+     "checkout",
+     "login"
+    ]
+   }
+  },
+  "decision": {
+   "action": "wall",
+   "kind": "checkout"
+  },
+  "suspected_fakes": [],
   "events": 566,
   "classes": {
    "VERIFIED": 108,

@@ -23,7 +23,10 @@ const CLASSES = ["VERIFIED", "UNVERIFIED", "SPOOFED", "REVOKED", "DECLARED", "SU
 const KINDS = ["checkout", "login", "signup", "account", "form", "search", "api", "asset", "browse", "malformed"];
 const CRITICAL_KINDS = new Set(["checkout", "login", "signup", "account"]);
 const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const TOP_AGENTS = 5, TOP_ROUTES = 8;
+const TOP_AGENTS = 5, TOP_ROUTES = 8, TOP_DID = 3;
+// The headline's rows (README): proved a name (signature good), claimed one (no proof), gave none.
+const GROUP_OF = { VERIFIED: "named", REVOKED: "named", DECLARED: "claimed", UNVERIFIED: "claimed", SPOOFED: "claimed", SUSPECTED: "unnamed" };
+const GROUPS = ["named", "claimed", "unnamed"];
 
 const SITE = "site-7f3a9c2e", OTHER_SITE = "site-b41d07aa";
 const H = 3600_000;
@@ -203,8 +206,13 @@ function count(labels) {
   const kinds = {}, agents = {}, routes = {};
   const critical = { unverified: 0, allowed: 0, friction: 0, denied: 0 };
   const p1 = { friction: 0, exempt: 0, applies: false };
+  const groups = Object.fromEntries(GROUPS.map((g) => [g, { count: 0, kinds: {} }])), wall = {};
   for (const l of labels) {
     classes[l.cls]++; decisions[l.decision]++;
+    const g = groups[GROUP_OF[l.cls]];
+    g.count++; g.kinds[l.kind] = (g.kinds[l.kind] ?? 0) + 1;
+    // A wall's candidates: unproven automation let through on a critical kind (README: the decision).
+    if (l.cls !== "VERIFIED" && CRITICAL_KINDS.has(l.kind) && l.decision === "allow") wall[l.kind] = (wall[l.kind] ?? 0) + 1;
     const k = (kinds[l.kind] ??= { automation: 0, verified: 0, denied: 0 });
     k.automation++; if (l.cls === "VERIFIED") k.verified++; if (l.decision === "deny") k.denied++;
     if (l.cls === "VERIFIED") agents[l.agent] = (agents[l.agent] ?? 0) + 1;
@@ -216,7 +224,15 @@ function count(labels) {
     if (l.p === 0) { p1.applies = true; if (l.cls === "VERIFIED") p1.exempt++; else p1.friction++; }
   }
   const byCount = (a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1);
+  const byKind = (a, b) => b[1] - a[1] || KINDS.indexOf(a[0]) - KINDS.indexOf(b[0]);
+  const wallKind = ["checkout", "login", "signup", "account"].filter((k) => wall[k] > 0).sort((a, b) => wall[b] - wall[a] || KINDS.indexOf(a) - KINDS.indexOf(b))[0];
   return {
+    headline: { named_pct: labels.length ? Math.round((100 * groups.named.count) / labels.length) : null },
+    groups: Object.fromEntries(GROUPS.map((g) => [g, { count: groups[g].count, did: Object.entries(groups[g].kinds).sort(byKind).slice(0, TOP_DID).map(([k]) => k) }])),
+    // These events name no declared agent (no `operator`), so no crawler's claim can be seen: no
+    // suspected fakes, and the decision is a wall or nothing (ONE-5 has its own fixture).
+    decision: wallKind ? { action: "wall", kind: wallKind } : { action: "none" },
+    suspected_fakes: [],
     events: labels.length, classes, decisions,
     verified_actions: classes.VERIFIED,
     verified_agents: Object.keys(agents).filter((a) => a !== "(unnamed)").length,
