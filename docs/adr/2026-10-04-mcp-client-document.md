@@ -1,6 +1,6 @@
-# MCP の client_id は、拡張のない CIMD（`<origin>/client`）に分ける。`/card` は Web Bot Auth の名札のまま（案。人間の承認待ち）
+# MCP の client_id は、拡張のない CIMD（`<origin>/client`）に分ける。`/card` は Web Bot Auth の名札のまま
 
-日付：2026-10-04（案。spec §11.2・§13.1 の変更を含むので、人間が承認するまで main に入れない。ブランチ `mcp/client-document`）
+日付：2026-10-04（人間が承認した。「全部許可する」。spec v2.0.2 で §11.2・§13.1・§9.3・§23.4 を直した）
 
 ## 状況
 
@@ -8,7 +8,7 @@
 - CIMD を有効にした Keycloak 26.8.0（2026-10-01 の最新）は、知らない項目のある文書を拒む（`Unrecognized field "web_bot_auth"`。keycloak/keycloak#51236、修正の PR #51235 は未マージ）。MCP-1 は認可の要求で止まる（#96）。
 - その2つを外した同じ文書なら、loopback、PKCE、同意、Session 鍵の private_key_jwt で通る（#96 の対照）。
 
-## 決定（案 C）
+## 決定
 
 - エージェントの原点に、もう一つの文書 `/client` を置く。中身は OAuth の client metadata だけ：`client_id`（`<origin>/client`）、`client_name`、`contacts`、`jwks_uri`（同じ鍵の一覧）、loopback の `redirect_uris`、`grant_types`、`response_types`、`token_endpoint_auth_method: private_key_jwt`。
 - MCP の client_id は `<origin>/client`。`init` の画面の MCP の行もそれにする。`init` は `client` も書き、Card Host は `/client` も配る（名簿から作る）。

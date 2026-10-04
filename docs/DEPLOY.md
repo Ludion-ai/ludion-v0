@@ -384,7 +384,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://registry.ludion.ai/__card/dvr-a
 curl -s -o /dev/null -w "%{http_code}\n" https://dvr-aaaaaaaaaaaaaaaa.agents.ludion.ai/card
 ```
 
-  - 登録のない Diver なので `404`。`npx ludion register`（既定の名簿は `https://registry.ludion.ai`）で登録した Diver なら、`/card` が名札（`client_id` が `https://<diver_id>.agents.ludion.ai/card`）、`/.well-known/http-message-signatures-directory` が承認済みのセッション鍵だけを返す。
+  - 登録のない Diver なので `404`。`npx ludion register`（既定の名簿は `https://registry.ludion.ai`）で登録した Diver なら、`/card` が名札（`client_id` が `https://<diver_id>.agents.ludion.ai/card`）、`/client` が MCP 用の client 文書（`client_id` が `https://<diver_id>.agents.ludion.ai/client`）、`/.well-known/http-message-signatures-directory` が承認済みのセッション鍵だけを返す。
 
 ### 6.6 終わったら
 
