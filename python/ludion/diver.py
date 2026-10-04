@@ -64,6 +64,8 @@ def init(directory=".", *, name="Unnamed agent", contact="mailto:change-me@examp
         json.dumps(keys.directory_document([keys.public_jwk(session)]), indent=2), encoding="utf-8", newline="\n")
     card = keys.card_document(origin, name, [contact], did, keys.thumbprint(store["root"]["x"]))
     (base / "card").write_text(json.dumps(card, indent=2), encoding="utf-8", newline="\n")
+    client = keys.client_document(origin, name, [contact])
+    (base / "client").write_text(json.dumps(client, indent=2), encoding="utf-8", newline="\n")
     if dev:
         print(f"⚠ {DEV_BANNER}", file=sys.stderr)
     return store
