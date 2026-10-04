@@ -48,7 +48,7 @@ function records(day) {
   let i = 0;
   for (const [cls, method, path, decision, operator, n] of day.visits) {
     for (let k = 0; k < n; k++) {
-      out.push({ v: 0, rid: `rcp-${i}`, site: SITE, ts: T0 + 60 * i++, method, route: path, class: cls, decision, error: null, pressure: 0,
+      out.push({ v: 0, rid: `rcp-${i}`, site: SITE, ts: T0 + 60 * i++, method, access: method === "GET" ? "read" : "write", route: path, class: cls, decision, error: null, pressure: 0,
         diver: cls === "VERIFIED" ? (operator.startsWith("dvr-") ? operator : `https://${operator}`) : null, operator, country: null, ip_h: null });
     }
   }

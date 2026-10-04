@@ -22,7 +22,7 @@ function visits() {
     const cls = CLASSES[Math.floor(rnd() * CLASSES.length)], [method, route] = ROUTES[Math.floor(rnd() * ROUTES.length)];
     const diver = cls === "VERIFIED" ? ["dvr-aaaaaaaaaaaaaaaa", "dvr-bbbbbbbbbbbbbbbb", "https://chatgpt.com/.well-known/x"][i % 3] : null;
     out.push({
-      v: 0, rid: `rcp-${i}`, site: SITE, ts: DAY0 - 3 * 3600 + Math.floor(rnd() * 30 * 3600), method, route, class: cls,
+      v: 0, rid: `rcp-${i}`, site: SITE, ts: DAY0 - 3 * 3600 + Math.floor(rnd() * 30 * 3600), method, access: method === "GET" ? "read" : "write", route, class: cls,
       decision: DECISIONS[Math.floor(rnd() * DECISIONS.length)], error: null, pressure: 0, diver,
       // As the Gate names them (operatorOf): a Diver id, a signer's host, a declared token, or none.
       operator: diver ? (diver.startsWith("dvr-") ? diver : "chatgpt.com") : cls === "DECLARED" ? DECLARED[i % DECLARED.length] : "none",
@@ -55,7 +55,7 @@ test("report: hourly counts give the per-visit records' numbers for whole hours;
 });
 
 test("report: a malformed hourly batch is skipped, never counted", () => {
-  const good = { v: 0, kind: "ludion.hourly", site: SITE, hour: DAY0, rows: [{ route: "/", method: "GET", class: "SUSPECTED", decision: "allow", operator: "none", count: 2 }] };
+  const good = { v: 0, kind: "ludion.hourly", site: SITE, hour: DAY0, rows: [{ route: "/", access: "read", class: "SUSPECTED", decision: "allow", operator: "none", count: 2 }] };
   for (const bad of [{ ...good, hour: DAY0 + 1 }, { ...good, rows: [{ ...good.rows[0], count: 0 }] }, { ...good, rows: [{ ...good.rows[0], class: "HUMAN" }] }, { ...good, site: 7 }]) {
     const r = parseEvents(JSON.stringify(bad));
     assert.equal(r.events.length, 0, JSON.stringify(bad));

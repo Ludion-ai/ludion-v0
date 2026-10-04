@@ -1,5 +1,5 @@
 // PRIV-4 (−): only hourly counts leave the Gate (ADR-038, spec §12.9, §23.4). The key of a count
-// is the route template, the method, the class, the decision and the operator; the value is the
+// is the route template, read or write, the class, the decision and the operator; the value is the
 // count. No visit's time, IP hash or country leaves; per-visit records stay on the site 7 days.
 // Whether a visit is "user-initiated" is not judged: every visit is treated the same.
 //
@@ -64,7 +64,7 @@ const col = await collector();
 after(() => col.close());
 
 test("PRIV-4: the judge catches a delivery that is not an hourly count (planted)", () => {
-  const good = JSON.stringify({ v: 0, kind: BATCH_KIND, site: SITE, hour: 1790000000 - (1790000000 % HOUR_S), rows: [{ route: "/products/:id", method: "GET", class: "SUSPECTED", decision: "allow", operator: "none", count: 3 }] });
+  const good = JSON.stringify({ v: 0, kind: BATCH_KIND, site: SITE, hour: 1790000000 - (1790000000 % HOUR_S), rows: [{ route: "/products/:id", access: "read", class: "SUSPECTED", decision: "allow", operator: "none", count: 3 }] });
   assert.deepEqual(deliveryProblems([good]), [], "control");
   const receipt = { rid: "rcp-x", site: SITE, ts: 1790000123, method: "GET", route: "/p/:id", class: "SUSPECTED", decision: "allow", error: null, pressure: 0, diver: null };
   const planted = [

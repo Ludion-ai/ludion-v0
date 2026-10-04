@@ -78,7 +78,7 @@
 1. 人間の手が要るもの（人間待ちの表）：npm の初版、本番の名簿と Card Host のデプロイ（`*.agents.ludion.ai` の証明書はお金の判断）、ludion.ai の切り替え、`preview` の secret、security@ と privacy@ の受信、PILOT-2 のトークン。
 2. secret が入ったら：LOOP-2 の案 B（`preview` は main への push の後だけ、WEB-1 の Lighthouse を分ける）。LOOP-2 を PASS にする。
 3. WEB-7（ドキュメントをテストに）：Express と CLI（WEB-10）、`/gate` の Express・Next.js・Workers（WEB-12）、TypeScript（`/agent`、WEB-13）は済み。残りは FastAPI と WordPress（GATE-9 の Gate が要る）、Python（PyPI の公開は人間）、scan の CLI（npm の公開のあと）。
-4. spec の残りの食い違い（outbox）：C6（証明書、お金）、C7（名簿の事前登録、ローンチの後）、§12.5 とレポートの `writes: false`（記録に1ビット足すかの判断）。
+4. spec の残りの食い違い（outbox）：C7（名簿の事前登録、ローンチの後）。
 5. 夜間の Windows（`nightly-windows`）の結果を毎朝見る。赤なら最優先で直す。
 6. 余力で GATE-9（`@php-wasm/node` で WordPress）。
 
@@ -181,7 +181,6 @@
 ## 既知の問題
 
 - 壁（`friction`）を実際に当てるのは gate-node の `onFriction` だけ。Next.js と Workers の Gate は、判定（`friction`）を記録して通す。サイトの摩擦につなぐ口はまだない。
-- 朝のレポートは、経路の `"writes": false` を知らない（記録にも1時間の件数にも載らない）。読むだけの POST も「送信」として数える（ONE-5 の「偽物の疑い」にも入りうる）。outbox に書いた。
 - 目的の一文（note）は、サイトの記録（既定はメモリ、7日）にしか残らない。サイトの手元の `ludion report` は、その記録を読めるときだけ「言ったことと、やったこと」を出す。1時間の件数だけでは出ない。
 - GATE-8（案 A）：Gate は寿命1時間まで受け入れ、60秒を超える署名には nonce を求める。本物の ChatGPT agent の2件は nonce が別々だったが、同じ1時間の窓で同じ署名を使い回すかは未確認。使い回すなら、2回目以降はリプレイ（SPOOFED）になる。LIVE-2 で連続した本物の要求を取れたら確かめる。nonce キャッシュはプロセスごとなので、複数のインスタンスでは1時間のうちに別のインスタンスへ送り直せる（前は90秒）。
 - `ludion doctor` の時計チェックは未実装（ローカル時刻を表示するだけ）。

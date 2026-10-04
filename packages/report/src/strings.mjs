@@ -77,7 +77,7 @@ export const STRINGS = {
       none: "前日のデータはありません。",
     },
     input: { title: "入力", skipped: "読めなかった行（数えていません）" },
-    footer: "このレポートは、Gate が送ったメタデータ（時刻、経路のテンプレート、メソッド、分類、判定、検証済みエージェントの識別子、User-Agent で名乗った名前）だけから作っています。IP アドレス、クエリの値、本文、クッキーは含みません。",
+    footer: "このレポートは、Gate が送ったメタデータ（時刻、経路のテンプレート、読み取りか書き込みか、分類、判定、検証済みエージェントの識別子、User-Agent で名乗った名前）だけから作っています。IP アドレス、クエリの値、本文、クッキーは含みません。",
     link: "Gate の設定",
   },
   en: {
@@ -152,7 +152,7 @@ export const STRINGS = {
       none: "No data for the previous day.",
     },
     input: { title: "Input", skipped: "Unreadable lines (not counted)" },
-    footer: "This report is built only from the metadata the Gate sent (time, route template, method, class, decision, verified agents' identifiers, and the name an agent declared in its User-Agent). It contains no IP addresses, query values, bodies or cookies.",
+    footer: "This report is built only from the metadata the Gate sent (time, route template, read or write, class, decision, verified agents' identifiers, and the name an agent declared in its User-Agent). It contains no IP addresses, query values, bodies or cookies.",
     link: "Gate settings",
   },
 };

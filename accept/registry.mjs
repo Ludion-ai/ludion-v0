@@ -280,6 +280,10 @@ export const ORACLES = [
     run: nodeTest(["packages/scan/test/scan6.test.mjs"], "^SCAN-6:", { metric: (out) => (/^# SCAN-6: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "RPT-1", m: "M4", kind: "±", level: 1, title: "daily report equals ground truth; ja + en, HTML + text",
     run: nodeTest(["packages/report/test/rpt1.test.mjs"], "^RPT-1:") },
+  // Read or write is the Gate's call ("writes": false is a read), carried as `access` in the record and the
+  // hourly key; the suspicious rules and the morning report go by it alone, never the method or the config.
+  { id: "RPT-2", m: "M4", kind: "±", level: 0, title: "read or write is the Gate's call (a route marked writes: false is a read): the record and the hourly key carry access, no method; suspected fakes, critical touches and said-vs-did go by it alone; the report imports no site config; planted Gate, report and count caught",
+    run: nodeTest(["packages/report/test/rpt2.test.mjs"], "^RPT-2", { metric: (out) => (/^# RPT-2: (.+)$/m.exec(out) ?? [])[1] }) },
 
   // ── M5 pressure, neutrality, crypto ────────────────────────────────────────────
   { id: "PRS-1", m: "M5", kind: "±", level: 1, title: "100k random cases: UNKNOWN always passes; denials only at P≥2 on matching routes",

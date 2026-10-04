@@ -215,8 +215,10 @@ test("the morning report is @ludion/report over exactly yesterday in Tokyo, save
   assert.equal(r.date, "2026-10-04");
   assert.deepEqual(r.problems, []);
 
-  // The same numbers @ludion/report computes from the same events as NDJSON.
-  const ndjson = rows.map((x) => JSON.stringify(x)).join("\n");
+  // The same numbers @ludion/report computes from the same events as NDJSON. These rows are shaped as
+  // rows stored before the Gate recorded read or write: this site marks no route read-only, so the
+  // Gate's call was the method's (a POST is a write).
+  const ndjson = rows.map((x) => JSON.stringify({ ...x, access: x.method === "POST" ? "write" : "read" })).join("\n");
   const expected = buildReport(ndjson, { date: "2026-10-04", tz: "Asia/Tokyo", site: "tracecheck.dev" });
   assert.deepEqual(r.summary, expected);
   assert.equal(r.summary.events, 5);
