@@ -75,6 +75,8 @@ export function createReceipts({ siteId, siteKey, now = () => Date.now() }) {
         decision: x.decision.action,
         error: x.decision.error ?? null,
         pressure: x.pressure,
+        // What the agent said it came to do, when its signature covers it (spec §11.7). Never the note.
+        purpose: x.purpose ?? null,
         req_digest: x.signature ? `sha-256=:${createHash("sha256").update(x.signature).digest("base64")}:` : null,
         kid: siteKey.kid,
       };
@@ -103,7 +105,7 @@ export function countryCode(country) {
  * Metadata event for Ludion Cloud (spec §11.7). Strictly no content: the route is the off-site
  * template of `path` (route words only, PRIV-1), the method a known token, the country a code.
  */
-export function metadataEvent({ receipt, path, ip, ipSalt, country, operator }) {
+export function metadataEvent({ receipt, path, ip, ipSalt, country, operator, purpose, verdict }) {
   const method = String(receipt.method ?? "").toUpperCase();
   return {
     v: 0,
@@ -115,6 +117,10 @@ export function metadataEvent({ receipt, path, ip, ipSalt, country, operator }) 
     // Who it was, as the hourly count names it (hourly.mjs operatorOf): a Diver id, a signer's host, a
     // declared token such as "GPTBot", or "none". Lets the site's own report name a crawler's claim.
     operator: typeof operator === "string" ? operator : "none",
+    // What it said it came to do, set against what it did (spec §11.7, PUR-1, PUR-3). The note is the
+    // agent's own sentence, unchecked; it stays in this record on the site (7 days), never in a count.
+    purpose: purpose && !purpose.problem ? { kind: purpose.kind, signed: !!purpose.signed, note: purpose.note ?? null } : null,
+    said: verdict?.said ?? null, said_by: verdict?.by ?? null, verdict: verdict?.verdict ?? "undeclared",
     country: countryCode(country),
     ip_h: hashIp(ip, ipSalt),
   };

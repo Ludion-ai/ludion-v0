@@ -59,6 +59,7 @@ function expected(t) {
   if (x.headline.named_pct == null) nums.set("headline.events", x.events); else nums.set("headline.named_pct", x.headline.named_pct);
   for (const g of ["named", "claimed", "unnamed"]) nums.set(`groups.${g}.count`, x.groups[g].count);
   x.suspected_fakes.forEach((f, i) => { nums.set(`suspected_fakes.${i}.writes`, f.writes); names.set(`suspected_fakes.${i}.token`, f.token); });
+  x.said_vs_did.forEach((s, i) => { nums.set(`said_vs_did.${i}.writes`, s.writes); names.set(`said_vs_did.${i}.agent`, s.agent); });
   for (const k of ["unverified", "allowed", "friction", "denied"]) nums.set(`critical.${k}`, x.critical[k]);
   nums.set("verified_actions", x.verified_actions);
   nums.set("verified_agents", x.verified_agents);

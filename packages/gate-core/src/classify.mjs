@@ -301,6 +301,9 @@ export function compileRoute(pattern) {
   return new RegExp(`^${re}${deep ? "(?:/.*)?" : "/?"}$`, "i");
 }
 
+/** Two routes' purpose words: a named word outranks "any"; read and act together leave act (a write acts). */
+const strictestPurpose = (a, b) => (!a || a === "any" ? b : b === "any" || a === b ? a : "act");
+
 /** The strictest of several routes' requirements: the highest depth, ballast if any asks, every scope. */
 function strictest(requires) {
   const out = {}, scopes = [];
@@ -308,6 +311,7 @@ function strictest(requires) {
     if (!q) continue;
     if (q.depth !== undefined) out.depth = Math.max(out.depth ?? 0, q.depth);
     if (q.ballast === "active") out.ballast = "active";
+    if (q.purpose) out.purpose = strictestPurpose(out.purpose, q.purpose);
     for (const s of [].concat(q.scope ?? [])) if (!scopes.includes(s)) scopes.push(s);
   }
   if (scopes.length) out.scope = scopes.length === 1 ? scopes[0] : scopes;
@@ -385,6 +389,12 @@ function decideRoute(cls, route) {
   if (cls.stapleError === "staple_expired") return { action: "deny", status: 401, error: "staple_expired" };
   if (req.depth !== undefined && (cls.depth ?? 0) < req.depth) return { action: "deny", status: 403, error: "depth_insufficient" };
   if (req.ballast === "active" && cls.ballast?.status !== "active") return { action: "deny", status: 403, error: "ballast_required" };
+  if (req.purpose && route.write) {
+    // The site asks writes on this route to say what they came to do (spec §11.7): in the agent's
+    // own, signed word, and the word it requires ("any" takes either).
+    const p = cls.purpose;
+    if (!p?.signed || (req.purpose !== "any" && p.kind !== req.purpose)) return { action: "deny", status: 403, error: "purpose_required" };
+  }
   if (req.scope) {
     // Overlapping routes can each name a scope: the Mandate must carry every one (PRS-4).
     const m = cls.mandate;
@@ -400,5 +410,5 @@ export const ERROR_HELP = (code) => `<https://ludion.ai/e/${code}>; rel="help"`;
 export const ERRORS = Object.freeze({
   signature_required: 401, invalid_signature: 401, staple_expired: 401,
   revoked: 403, depth_insufficient: 403, ballast_required: 403, mandate_required: 403, mandate_scope: 403,
-  blocked_by_site: 403,
+  blocked_by_site: 403, purpose_required: 403,
 });

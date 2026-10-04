@@ -23,7 +23,7 @@ const CLASSES = ["VERIFIED", "UNVERIFIED", "SPOOFED", "REVOKED", "DECLARED", "SU
 const KINDS = ["checkout", "login", "signup", "account", "form", "search", "api", "asset", "browse", "malformed"];
 const CRITICAL_KINDS = new Set(["checkout", "login", "signup", "account"]);
 const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const TOP_AGENTS = 5, TOP_ROUTES = 8, TOP_DID = 3;
+const TOP_AGENTS = 5, TOP_ROUTES = 8, TOP_DID = 3, TOP_SAID = 5;
 // The headline's rows (README): proved a name (signature good), claimed one (no proof), gave none.
 const GROUP_OF = { VERIFIED: "named", REVOKED: "named", DECLARED: "claimed", UNVERIFIED: "claimed", SPOOFED: "claimed", SUSPECTED: "unnamed" };
 const GROUPS = ["named", "claimed", "unnamed"];
@@ -102,6 +102,9 @@ function gateDecision(cls, p) {
   return { decision: "deny", error: "signature_required" };
 }
 
+const SAID_NOTE = "Compare prices at https://evil.example/deal and mail offers@evil.example";
+// The note as the report must show it: written out here by hand, not computed by the report's code.
+const DEFANGED = { [SAID_NOTE]: "Compare prices at hxxps[:]//evil[.]example/deal and mail offers[at]evil[.]example" };
 const canaries = { ip: new Set(), rid: new Set(), ip_h: new Set(), value: new Set(), host: new Set() };
 
 /** One event; `o` overrides the random choices. Returns [event, label]. */
@@ -125,7 +128,7 @@ function makeEvent(site, ts, o = {}) {
     pressure: p, diver, country: o.country !== undefined ? o.country : pick(COUNTRIES), ip_h, ...(o.extra ?? {}),
   };
   const shownRoute = o.shownRoute ?? rt.route, kind = o.kind ?? rt.kind;
-  return [ev, { site, ts: ev.ts * 1000, cls, kind, method, decision, p, agent, route: shownRoute }];
+  return [ev, { site, ts: ev.ts * 1000, cls, kind, method, decision, p, agent, route: shownRoute, said: o.said ?? null }];
 }
 
 // ── the event stream ──────────────────────────────────────────────────────────────────────
@@ -161,12 +164,18 @@ for (const when of ["AB", "C"]) {
     agent: { diver: "https://198.51.100.9/card", show: "(unnamed)" } }));
   // Spoofed claims of another identity, some carrying a session value.
   for (let i = 0; i < 20; i++) items.push(makeEvent(SITE, at(when), { class: "SPOOFED", victim: "https://victim.example/card?sid=CANARYVICTIM" }));
+  // A verified agent that signed "read" and wrote (spec §11.7, PUR-3), its sentence carrying a link
+  // that must never become one (PUR-5): shown only defanged, the raw URL is a canary.
+  const contact = ROUTES.find((x) => x.route === "/contact");
+  for (let i = 0; i < 7; i++) items.push(makeEvent(SITE, at(when), { class: "VERIFIED", method: "POST", routeRow: contact, decision: "allow",
+    agent: { diver: "https://reader.agent.example", show: "reader.agent.example" }, said: SAID_NOTE,
+    extra: { purpose: { kind: "read", signed: true, note: SAID_NOTE }, said: "read", said_by: "signature", verdict: "contradiction" } }));
   // Would-be-sensitive fields a broken Gate might add, and bad country values.
   for (let i = 0; i < 30; i++) items.push(makeEvent(SITE, at(when), { country: pick(["Tokyo CANARYCITY", "198.51.100.23"]),
     extra: { ip: "198.51.100.23", xff: "2001:db8::77, 203.0.113.9", cookie: "sid=CANARYCOOKIE", query: "q=CANARYQUERY", ua: "Mozilla/5.0 CANARYUA", body: "card=CANARYBODY" } }));
 }
 for (const v of ["4829-1733-canary", "CANARYCOUPON", "zelda-canary", "CANARYNEXT", "CANARYAGENTTOKEN", "CANARYVICTIM", "victim.example",
-  "CANARYCITY", "CANARYCOOKIE", "CANARYQUERY", "CANARYUA", "CANARYBODY"]) canaries.value.add(v);
+  "CANARYCITY", "CANARYCOOKIE", "CANARYQUERY", "CANARYUA", "CANARYBODY", "https://evil.example", "evil.example", "offers@"]) canaries.value.add(v);
 for (const v of ["203.0.113.77", "198.51.100.9", "198.51.100.23", "2001:db8::77", "203.0.113.9"]) canaries.ip.add(v);
 
 // Day boundaries, exactly on and one second off (case A: JST 09-29 = [09-28T15:00Z, 09-29T15:00Z)).
@@ -206,7 +215,7 @@ function count(labels) {
   const kinds = {}, agents = {}, routes = {};
   const critical = { unverified: 0, allowed: 0, friction: 0, denied: 0 };
   const p1 = { friction: 0, exempt: 0, applies: false };
-  const groups = Object.fromEntries(GROUPS.map((g) => [g, { count: 0, kinds: {} }])), wall = {};
+  const groups = Object.fromEntries(GROUPS.map((g) => [g, { count: 0, kinds: {} }])), wall = {}, said = {};
   for (const l of labels) {
     classes[l.cls]++; decisions[l.decision]++;
     const g = groups[GROUP_OF[l.cls]];
@@ -221,6 +230,7 @@ function count(labels) {
       critical[{ allow: "allowed", friction: "friction", deny: "denied" }[l.decision]]++;
       routes[l.route] = (routes[l.route] ?? 0) + 1;
     }
+    if (l.said != null) { const x = (said[`${l.agent}|${l.said}`] ??= { agent: l.agent, note: l.said, writes: 0, kinds: {} }); x.writes++; x.kinds[l.kind] = (x.kinds[l.kind] ?? 0) + 1; }
     if (l.p === 0) { p1.applies = true; if (l.cls === "VERIFIED") p1.exempt++; else p1.friction++; }
   }
   const byCount = (a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1);
@@ -233,6 +243,9 @@ function count(labels) {
     // suspected fakes, and the decision is a wall or nothing (ONE-5 has its own fixture).
     decision: wallKind ? { action: "wall", kind: wallKind } : { action: "none" },
     suspected_fakes: [],
+    // Signed "read", then wrote: the agent's sentence, defanged as every rendering shows it (README).
+    said_vs_did: Object.values(said).sort((a, b) => b.writes - a.writes || (a.agent < b.agent ? -1 : 1)).slice(0, TOP_SAID)
+      .map((x) => ({ agent: x.agent, note: DEFANGED[x.note], writes: x.writes, did: Object.entries(x.kinds).sort(byKind).slice(0, TOP_DID).map(([k]) => k) })),
     events: labels.length, classes, decisions,
     verified_actions: classes.VERIFIED,
     verified_agents: Object.keys(agents).filter((a) => a !== "(unnamed)").length,

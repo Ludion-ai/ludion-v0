@@ -4,4 +4,5 @@ export { generateEd25519, diverIdFromRoot, directoryDocument, cardDocument, base
 export { createRegistryClient, createStapleKeeper, RegistryError } from "./registry.mjs";
 export { BALLAST_V0 } from "./ballast.mjs";
 export { createDiverSigner, ludionFetch, DEFAULT_LIFETIME_S } from "./sign.mjs";
+export { purposeField, noteProblem, purposeForMethod, PurposeError, PURPOSE_KINDS, NOTE_MAX } from "./purpose.mjs";
 export { rotateSession, RotationPendingError, DEFAULT_OVERLAP_S } from "./rotate.mjs";

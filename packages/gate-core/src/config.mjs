@@ -20,7 +20,7 @@ const TOP = new Set(["$schema", "site_id", "pressure", "routes", "report", "fail
 const REGISTRY = new Set(["keys", "issuer", "revocations"]);
 const REPORT = new Set(["email", "endpoint", "send_metadata"]);
 const ROUTE = new Set(["match", "pressure", "require", "writes"]);
-const REQUIRE = new Set(["depth", "scope", "ballast"]);
+const REQUIRE = new Set(["depth", "scope", "ballast", "purpose"]);
 
 const fail = (msg) => { throw new TypeError(`ludion config: ${msg}`); };
 const isObject = (v) => v != null && typeof v === "object" && !Array.isArray(v);
@@ -81,6 +81,8 @@ export async function gateConfig(spec, { siteKey, fetch, onEphemeralKey } = {}) 
         // A misspelt scope would hold the route to a delegation no Mandate can carry.
         if (scope != null && !SCOPES.includes(scope)) fail(`routes[${i}].require.scope must be one of ${SCOPES.join(", ")} (got ${JSON.stringify(scope)})`);
         if (ballast != null && ballast !== "active") fail(`routes[${i}].require.ballast must be "active"`);
+        const { purpose } = r.require;
+        if (purpose != null && !["read", "act", "any"].includes(purpose)) fail(`routes[${i}].require.purpose must be "read", "act" or "any" (got ${JSON.stringify(purpose)})`);
         route.require = { ...r.require };
       }
       return route;
