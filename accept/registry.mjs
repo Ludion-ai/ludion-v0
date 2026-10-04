@@ -155,6 +155,10 @@ export const ORACLES = [
   // GATE-3's other side: its measures (reference/gate3-measure.mjs) catch planted installs and records.
   { id: "GATE-13", m: "M1", kind: "-", level: 0, property: "install-effort", title: "GATE-3's measures cannot be passed by a bigger install or a Gate that does not deliver: planted installs (every line twice, edits beside it, a second config, a hand-edited package.json, a line the README does not show, nothing changed) and planted first records are caught; its limits are 60 s, 3 lines, 1 config",
     run: nodeTest(["reference/test/gate13.test.mjs"], "^GATE-13:", { metric: (out) => (/^# GATE-13: (.+)$/m.exec(out) ?? [])[1] }) },
+  // spec §8 invariant 16: the Gate asks in HTTP, never in the page — through gate-node, gate-workers and
+  // gate-next's proxy; planted adapters that append to the page or say more in a refusal are caught.
+  { id: "GATE-14", m: "M1", kind: "±", level: 0, title: "the Gate never asks an AI in the page (spec §8 invariant 16): let through, the site's bytes, status and headers plus Ludion-* only; refused, Ludion-Error + Link and a body that says only { error, help } (node, workers, next); planted asks caught",
+    run: nodeTest(["accept/gate14/gate14.test.mjs"], "^GATE-14", { metric: (out) => [...out.matchAll(/^# GATE-14 (node|workers|next|planted): (.+)$/gm)].map((m) => `${m[1]} ${m[2]}`).join("; ") }) },
   { id: "GATE-4", m: "M1", kind: "+", level: 1, pair: "GATE-5", property: "added-latency", title: "added latency p99 ≤2ms warm (10k mixed requests)", timeoutMs: 180_000, run: async () => {
     // The real gate-node middleware timed per request, keys cached, every class in the mix; see the script.
     const r = sh(process.execPath, ["packages/gate-node/bench/gate4.mjs"], 170_000);
@@ -248,6 +252,11 @@ export const ORACLES = [
   // spec v2.0 §23.4: added PENDING (2026-10-03). Wired when built; until then they are the backlog.
   { id: "REG-5", m: "M3", kind: "±", level: 1, title: "the registry's bulk distribution is signed, and the recipients' lookups are not recorded",
     run: nodeTest(["services/registry/test/reg5.test.mjs"], "^REG-5:", { metric: (out) => [...out.matchAll(/^# REG-5: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
+  // spec §8 invariant 14: trust is not sold — the Staple's standing (Depth, Ballast, operator check)
+  // moves with the confirmed contact and the commitments only; money in a statement or a record does
+  // not move it; planted standings that money raises are caught.
+  { id: "REG-6", m: "M3", kind: "±", level: 0, title: "Depth does not rise with money (spec §8 invariant 14): the Staple's standing moves with the confirmed contact and the commitments only — not with a paid statement, a plan written into the record, or any other field; no route takes a payment; planted standings caught",
+    run: nodeTest(["services/registry/test/reg6.test.mjs"], "^REG-6", { metric: (out) => (/^# REG-6: (.+)$/m.exec(out) ?? [])[1] }) },
 
   // ── M4 fear → number ───────────────────────────────────────────────────────────
   { id: "SCAN-1", m: "M4", kind: "+", level: 1, pair: "SCAN-5", property: "parse-rate", title: "scan parse rate ≥99% across the log-format corpus",
