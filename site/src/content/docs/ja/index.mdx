@@ -1,27 +1,34 @@
 ---
 title: Ludion
-description: 誰の代理か。何を許されているか。壊したら、誰が払うか。アクセスログを落とすだけで、未検証の自動化が決済やログインに何回触れたかが分かる。ログは外に出ない。
+description: AI が自分の鍵と名前を持つ。コマンドで作れて、MCP でも Web でも同じ名前で通じ、世界中から消せる。サイトには、その名前を読む無料の関所を。
 template: splash
 head:
   - tag: title
-    content: Ludion — AIエージェントの責任を検証する関所
+    content: Ludion — AI エージェントに、自分の鍵と名前を
 hero:
-  title: 誰の代理か。何を許されているか。壊したら、誰が払うか。
-  tagline: アクセスログを落とすだけで、未検証の自動化が決済やログインに何回触れたかが分かる。ログは外に出ない。
+  title: AI エージェントに、自分の鍵と名前を。
+  tagline: コマンドで作れて、MCP でも Web でも同じ名前で通じ、いつでも世界中から消せる。
   actions:
-    - text: アクセスログを落とす
-      link: /ja/scan
+    - text: エージェントに名前を付ける
+      link: /ja/quickstart
       icon: right-arrow
+    - text: 自分のサイトに来る AI を見る
+      link: /ja/scan
+      variant: minimal
 ---
 import SignupForm from "../../../components/SignupForm.astro";
 
-- **サイトには**、[コード3行以内](/ja/gate)（[測った値](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)）で入る無料でオープンソースの関所（Gate）。まず「どのエージェントが来て、何に触れたか」を見せます。
-- **エージェントには**、無料の身分証（Diver）。署名・状態・委任を、一度の登録で持ち運べます。
-- **何かが壊れたとき**、誰が応答するかを Ballast が裏打ちします。Ludion が検証するのは、検知でも身元でもなく、責任です。
+```sh
+npx ludion init --name "My Agent" --contact mailto:you@example.com
+```
+
+- **エージェントには**、このコマンドで名前が付きます：`https://dvr-….agents.ludion.ai`。Web ではそれが `Signature-Agent`（[Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)）に、MCP のサーバーには `/client` が `client_id` になり、自分の鍵で名乗ります。共有の秘密は持ちません。`npx ludion revoke` で、1時間以内に世界中で通らなくなります（[仕様](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)）。
+- **サイトには**、その名前を読む無料でオープンソースの関所（Gate）。[コード3行以内](/ja/gate)（[測った値](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)）で入り、どのエージェントが来て何に触れたかを見せ、通す・壁・止めるを、自分の設定の1行で決められます（[確かめている](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md)）。決めるのはサイトだけで、Ludion には誰かを止めるスイッチがありません。
+- **ログから始める**：[scan のページ](/ja/scan)にアクセスログを落とすと、署名のない自動化が決済やログインに何回触れたかが分かります。ログは外に出ません。
 
 ## 先行登録
 
-サイトを運営していて、どのエージェントが来ているかを見たい方。エージェントを作っていて、身分証が欲しい方。メールアドレスを残してください。
+サイトを運営していて、どのエージェントが来ているかを見たい方。エージェントを作っていて、名前が欲しい方。メールアドレスを残してください。
 
 <SignupForm lang="ja" />
 

@@ -70,8 +70,17 @@
 
 **一点の外で続いていること**
 
-- LOOP-2：push の実行は 4:14〜4:37。FAIL の理由は `preview` ジョブが赤いことだけ（secret と測り方の決めは人間待ち）。
-- 棚上げ（再開は人間の判断）：A と B2（`fast-loop-shelf`）、GATE-9（PHP の道具待ち）。
+- LOOP-2：push の実行は 4:28（2026-10-04）。FAIL の理由は `preview` ジョブが赤いことだけ（secret は人間待ち。測り方は案 B に決まった）。
+- 棚上げ：A と B2（`fast-loop-shelf`）。GATE-9 は道具が許された（`@php-wasm/node`）。ローンチの範囲の外なので余力で。
+
+**次の一手**（2026-10-05 から、ローンチ 10/13 22:00 JST まで）
+
+1. 人間の手が要るもの（人間待ちの表）：npm の初版、本番の名簿と Card Host のデプロイ（`*.agents.ludion.ai` の証明書はお金の判断）、ludion.ai の切り替え、`preview` の secret、security@ と privacy@ の受信、PILOT-2 のトークン。
+2. secret が入ったら：LOOP-2 の案 B（`preview` は main への push の後だけ、WEB-1 の Lighthouse を分ける）。LOOP-2 を PASS にする。
+3. WEB-7（ドキュメントをテストに）：クイックスタートの Next.js、Workers、Python の分。
+4. spec の食い違い（`docs/outbox/spec-v2-diff.md`）を v2.0.x に反映する（人間の許可済み、2026-10-04）：§12.7 の `until` と `decisions` の例、§12.3 の見出し、§11.2 の `ludion` の中身など。
+5. 夜間の Windows（`nightly-windows`）の結果を毎朝見る。赤なら最優先で直す。
+6. 余力で GATE-9（`@php-wasm/node` で WordPress）。
 
 ### やらない（§9.5 の凍結。稼働 Gate 300 まで。画面と宣伝からは消すが、コードは捨てない）
 
@@ -109,16 +118,12 @@
 ## 人間待ち
 
 - [x] **判断（朝のレポートのメールの件名）**：2026-10-04、人間の許可で、件名も見出しの数字1つにした（RPT-1 の件名の検査も合わせた）。
-- [ ] **ludion.ai のトップの文面**：まだ v1 の売り方（誰の代理か・何を許されているか・誰が払うか）。英語と日本語の README は、2026-10-04 に人間の許可で spec v2.0 §9 の一点に合わせて書き直した。トップの文面（2026-10-01 に人間が承認したもの）を一点に合わせるかは、まだ決めていない。
+- [x] **ludion.ai のトップの文面**：spec v2.0 §9 の一点に書き直した（英日。PR `site/one-point`）（2026-10-04、人間の「全部許可する」で確定）。
 - [x] **判断（MCP-1）**：2026-10-04、人間が「全部許可する」。案 C にした：MCP の client_id は拡張のない CIMD（`<origin>/client`）、`/card` は Web Bot Auth の名札のまま。spec v2.0.2（§11.2、§13.1、§9.3、§23.4）、docs/adr/2026-10-04-mcp-client-document.md。Keycloak 26.8.0 で MCP-1、MCP-2 が PASS。keycloak/keycloak#51236 には、再現つきのコメントを投稿した（https://github.com/keycloak/keycloak/issues/51236#issuecomment-5977718433）。
 - [x] **spec v2.0 の判断**（2026-10-03）：決定1〜9（ADR-035〜039、041、042）。spec v2.0.1 と CLAUDE.md の芯を直した。
 - [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（2段目のワイルドカード、お金の判断、§4）は人間。
 - [ ] **npm の初版**：`ludion` の1本（ADR-036、実装の順の2のあと）を、人間が手で出す。2版目から release ワークフロー。
-- [ ] **判断（LOOP-2 と `preview` ジョブ）**：WEB-1 は手元で 9 分（28ページ × Lighthouse 3回、プレビューの URL へ）。secret が入ると、`preview` ジョブだけで LOOP-2 の10分を越える。Lighthouse を同じ機械で並べると揺れるので、分けるなら別のランナー。ただしプレビューは1つの Worker なので、デプロイとその検査を、複数のジョブにまたがって1つの鍵で守る必要がある。
-  - 案 B（推す）：`preview` は main への push の後だけで回し、WEB-1 の Lighthouse を3つのランナーに分ける（ワークフロー単位の鍵）。プレビューはいつも main を見せる。PR では、同じ成果物を workerd で測る WEB-9 が守る。決まり2（マージ後の赤は最優先）と同じ形。「secret が入ったら `preview` を PR の必須チェックにする」の予定は取り下げになる。
-  - 案 A：PR でも回し、同じく分ける。両レーンの PR がプレビューの鍵を待ち合い、その待ちが main の LOOP-2 に入る日がある（揺れる）。
-  - どちらにしても、LOOP-2 が PASS するのは secret が入ってから。
-
+- [x] **判断（LOOP-2 と `preview` ジョブ）**：案 B（2026-10-04、人間の「全部許可する」で確定）。`preview` は main への push の後だけで回し、WEB-1 の Lighthouse を分ける。実装は secret が入ってから（Claude）。それまで LOOP-2 は `preview` の赤で FAIL のまま。
 - [ ] **CI の `preview` ジョブの secret**（人間がトークンを作って登録すると決めた）：`CLOUDFLARE_PREVIEW_API_TOKEN`（`Ludion Agents` の Workers Scripts の編集だけ）と `CLOUDFLARE_PREVIEW_ACCOUNT_ID`。登録したら、`preview` を main の必須チェックに足す。それまで `preview` は赤で、WEB-1 は CI で強制されない（前も SKIP で強制されていなかった）。
 - [x] 確認（#69、2026-10-02 に人間が確認）：ルートの重なりの読み。「一番厳しいものが勝つ」を、一致する全てのルートの最高の Pressure と、要件の全部を合わせる（Depth は最大、Ballast、scope は全部）と読んだ。一つを選ぶより厳しくなる場合がある。この読みで正しい（Pressure と Depth は最大、Ballast はどれかが求めれば必須、scope は全部）。
 - [x] 確認（#71、2026-10-02 に人間が確認）：「上限付きの Mandate を受け付けない」を、数える上限（`per_day`）のある Mandate の決済を拒否する、と読んだ。`checkout_max` と通貨は記録なしでどの Gate でも効く。正しい。加えて、期間の中で累計する上限（1日の合計金額など）も記録が要り、無ければ拒否。v0 が強制できない上限は、記録があっても拒否する（`unenforceable_limit`、PRS-3）。
@@ -136,12 +141,12 @@
   - 提供元で秘密を失効させる：`ludion-api` の OpenAI と楽天のキー、`ludion-fallback-relay` の `PROVIDER_API_KEY`、`ludion` の GitHub OAuth アプリ。Worker を消してもキーは生きている。
   - D1 3つ、KV 2つ、R2 2つの中身を書き出す。提出物や登録者の情報なら、残すか消すかを決める。
   - `chat-app-relay`（Worker）は Ludion のものか判断できなかった。リストに入れていない。
-- [ ] ~~**npm の publish**（docs/PUBLISH.md、人間が 2026-10-01 にやると言った）~~ → ADR-036 で置き換え（`ludion` の1本だけ。上の「npm の初版」）。下の2行は旧い前提
+- [x] ~~**npm の publish**（docs/PUBLISH.md、人間が 2026-10-01 にやると言った）~~ → ADR-036 で置き換え（`ludion` の1本だけ。上の「npm の初版」）。下の2行は旧い前提
   - **`ludion` だけを先に出せる**（#75、PUB-3）：tarball が CLI のコードを同梱し、`@ludion/*` が npm に一つもなくても入る。組織 `@ludion` も要らない。手順は PUBLISH.md §0.5。
   - `@ludion/gate-*` は、セキュリティの4件（#69）が入ったので出せる状態。出すかは人間の判断。出すときは先に組織 `ludion` を作り、表の順に出す。
   - **2版目からは release ワークフロー**（PUB-4、PUBLISH.md §6）：最初の版を手で出したあと、パッケージごとに trusted publisher を設定し、GitHub に environment `npm`（承認者＝人間、Prevent self-review、main だけ）を作る。手順は §6.1。
   - 注意：Claude の `gh` は人間と同じアカウント `Ludion-ai`。environment の承認の関所は、同じアカウントのトークンからは区別できない。切り離すなら、Claude に別のアカウントか、Actions の承認ができない細かいトークンを渡す（PUBLISH.md §6.1）。
-- [ ] **main のブランチ保護の strict**：2026-10-03 に外したと聞いたが、API では `required_status_checks.strict: true` のまま（#86 が BEHIND で auto-merge されずに止まり、`gh pr update-branch` で通した）。ルールセットは無い。外すのは人間（設定は触らない）。
+- [x] **main のブランチ保護の strict**：2026-10-04 に API で外した（`required_status_checks.strict: false`、必須は `loop` だけのまま）（2026-10-04、人間の「全部許可する」で確定）。
 - [ ] npm `ludion` と `@ludion`、PyPI `ludion` の確保（2026-09-30 時点で全て空き。匂わせ投稿の前に）
 - [x] リポジトリの公開設定の判断 → public、`Ludion-ai/Ludion`（2026-09-30）
 - [x] main のブランチ保護：PR 必須、`loop` チェック必須、auto-merge 許可（2026-09-30。strict と enforce_admins も付けた）
@@ -154,41 +159,20 @@
   - プレビューには入っている（`~/.config/ludion/signup.env` から、デプロイと一緒に。DEPLOY.md §2）。試しの送信はしていない。
   - 本番の `ludion-site` には、人間が DEPLOY.md §3 の手順 1 で入れる。
   - 無いあいだ、デプロイしたフォームは「送信できませんでした」と答える（503）。受け取ったふりはしない。
-- [ ] 判断：WEB-8 は「プレビューで送信すると」を、プレビューに出す成果物（`site/edge`）を手元の workerd（`wrangler dev`）で動かして測った。通知先はスタブ。
-  - プレビューは出ている。ただ、通知先は本物の Discord なので、検査から送ると人に届く。
-  - これを PASS と読んでよいか。だめなら、プレビューが出たあとに同じ検査をプレビューの URL に向ける。そのためには、プレビュー用の webhook（観測できる通知先）が要る。
+- [x] 判断：WEB-8 は、プレビューに出す成果物を手元の workerd で動かして測る読みで PASS とする（2026-10-04、人間の「全部許可する」で確定）。
 - [x] 登録フォームの文面：2026-10-01 に人間が承認した（保存は「先行登録のご案内が終わるまでか、削除のご依頼を受けるまで」、削除の宛先は privacy@ludion.ai）。
-- [ ] （以下は承認前のメモ）登録フォームの文面を読む（`site/src/signup/strings.mjs`、トップの「先行登録」の節）。
-  - 「入力された内容は Ludion のチームに届き、Ludion についてのご連絡に使います」は、個人情報の利用目的の表示にあたる。会社としての約束になる。
-  - プライバシーポリシーはまだない（spec §21）。
+- [x] 登録フォームの文面：2026-10-01 に承認済み（上）。メモは閉じた。
 - [ ] 商標の調査（区分 9、42、45）
 - [ ] （任意）見込み客の了承を得た本物のアクセスログ。scan のコーパスは今は合成データだけ。本物が 1 本あれば、それが一番良い次のフィクスチャになる。`accept/fixtures/logs/` に入れる前に匿名化の方針を決める。
-- [ ] 判断：fail_mode "closed" の拒否は今 `signature_required`（401）で返している。署名済みの正規エージェントには紛らわしい。専用のコード（例：503 `gate_unavailable`）を spec §10.11 に足すか（ADR-020）。
-- [ ] 判断：GATE-1 は Next.js のビルド成果物の名前の変化を「一貫した改名」に限って許している（`reference/test/gate1.test.mjs` の `NORMALISATIONS`）。原因は proxy.js を足すとクライアントのチャンク名が 2 つ変わること。これを「バイト単位で一致」と読んでよいか（#25）。
-- [ ] 判断：日次レポートの metadata event に `operator` を足すか。足せば DECLARED の運営者別の上位を出せる。ただし spec §11.7 の送信項目が変わる（#28）。
+- [x] 判断：fail_mode "closed" の拒否は、v0 では `signature_required`（401）のまま。専用のコード（503 `gate_unavailable`）はローンチの後に見直す（2026-10-04、人間の「全部許可する」で確定）。
+- [x] 判断：GATE-1 の「一貫した改名」を許す読みを、「バイト単位で一致」として認める（2026-10-04、人間の「全部許可する」で確定）。
+- [x] 判断：日次レポートの記録に `operator` を足した（#97。1時間の件数には前からある。外に出るものは増えていない）。
 - [ ] 日次レポートの送信基盤：送信サービス、送信ドメイン、SPF/DKIM/DMARC、配信停止。`ludion report` は中身を作るだけで、送信はしない。
-- [ ] GATE-9 の PHP と WordPress を進めるための道具（どちらか）：
-  - この機械に PHP（ext-sodium 付き）を入れる。夜勤の権限では `php` を実行できなかった。
-  - あるいは、テストだけで使う依存として `@php-wasm/node`（WordPress Playground の PHP を WebAssembly にしたもの。GPL-2.0-or-later、Automattic）を足してよいか。夜勤の権限では新しいパッケージの `npm install` ができなかった。これがあれば、Linux と Windows の CI で同じ PHP と本物の WordPress を回せる。
-  - GATE-9 はさらに STD-3 の相互運用表を要る（元のレーンの `interop/std3-div1` が人間の了承待ち）。
-- [ ] 判断：STD-4 は、新しい版が出たら issue の文面を出力に載せるだけで、GitHub に issue は立てない（公開リポジトリへの書き込みなので）。CI から自動で立ててよいか。
-- [ ] 判断（Mandate v0、docs/adr/2026-10-01-mandate-v0-passkey-consent-and-site-charge.md）：
-  - 上限超え（金額、通貨、日ごとの回数）は、新しいコードを足さずに `mandate_scope`（spec §10.11「委任の範囲外」）で返し、理由は `reason` に入れた。専用のコード（例：`mandate_limit`）が要るなら spec §10.11 の変更になる。
-  - 同意のときだけ、Registry は Principal からサイト（`aud`）を聞く。持つのはハッシュ、発行者、Diver、期限だけ。不変条件8「Registry は行き先を知らない」の読みとして、これでよいか。
-  - カテゴリの Mandate（`cat:ecommerce`）は、サイトの自己申告で効き、同じ仮名がそのカテゴリのサイトすべてに見える。v0 に残すか、サイト限定にするか。
-- [ ] 判断：nonce なしの同一署名を、同じメソッドと URL へ再送したら SPOOFED にしている（GATE-7、PR #4）。正規のリトライも弾く。これを受け入れるか、`requireNonce` を既定にするか。
-- [ ] 本番公開の前に：`/e/<code>` の文面（`site/src/content/docs/e/`、`ja/e/`）を読む。会社としての約束が 2 つ入っている。
-  - 失効と Depth の引き下げには理由を示し、異議を聞く（spec §8.12）。
-  - Ballast v0 は保険ではない（spec §14）。
-  - `rate_limited` は spec §10.11 にあるが、Gate v0 は返さない。ページにもそう書いた。
-  - WEB-2 で文面を直した。読んで、よければそのまま、だめなら ADR（2026-10-01-copy-check-legal-line-and-figure-sources）に書いて差し戻す。
-    - Depth の表の D3 は「保険付きの Ballast（パートナー経由で）」だった。§14 の線にかかるので「Ballast v1（Ludion はまだ提供していません）」にした。spec §13.4 の D3 の定義は変えていない。
-    - トップの「一行で入る」（spec §3 の三行の文言）は、測った値（GATE-3：3行以内）に合わせて「コード3行以内で入る」にした。spec §3 も直すかは人間の判断。
-    - 「3分で検証済みになる」は測った値ではなく目標（DIV-1 は PENDING）と書いた。DIV-1 が PASS したら「目標」を外せる。
-  - `/gate` と `/ja/gate`（Gate の入れ方、`site/src/content/docs/gate.mdx`、`ja/gate.mdx`）も読む。
-    - 中身はアダプタの README の Install の写し。新しい約束は足していない。
-    - `npm install @ludion/gate-*` は、npm の `@ludion` を確保して publish するまで動かない。
-    - scan の CLI、日次レポート、Gate の User-Agent が、すでに `https://ludion.ai/gate` を配っている。
+- [x] GATE-9 の道具：`@php-wasm/node` をテストだけの依存に足してよい（2026-10-04、人間の「全部許可する」で確定）。GATE-9 自体は Claude のバックログ（ローンチの範囲の外）。
+- [x] 判断：STD-4 は今のまま（issue の文面を出力に載せるだけ。CI から公開の issue は立てない）（2026-10-04、人間の「全部許可する」で確定）。
+- [x] 判断（Mandate v0）：Mandate は spec v2.0 §9.5 で凍結中。今の実装（上限超えは `mandate_scope`、同意のときだけ `aud` を聞く、カテゴリの Mandate）のまま、凍結を解く時に見直す（2026-10-04、人間の「全部許可する」で確定）。
+- [x] 判断：nonce なしの同一署名の再送は SPOOFED のまま（安全側）。`requireNonce` は既定にしない（2026-10-04、人間の「全部許可する」で確定）。
+- [x] 本番公開の前の `/e/<code>` と `/gate` の文面：承認（2026-10-04、人間の「全部許可する」で確定）。
 
 ## BLOCKED
 
@@ -256,6 +240,12 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-04 夕方（Claude Code、1本目）：人間の「全部許可する」のあと。
+  - #102 案 C（MCP の client_id は `…/client`、spec v2.0.2）、#103 README（英日）と件名、#104 ラチェット 58 → 86（全オラクル：PASS 86 / FAIL 1（LOOP-2）/ PENDING 5 / SKIP 1）。
+  - サイトのトップを一点に（この PR）。ONE-4 の負の対 ONE-8。サイトのオラクル10件（WEB-2〜WEB-11、ONE-4）を1つずつ回して PASS（WEB-9 の最低の中央値は 100）。
+  - keycloak/keycloak#51236 に再現つきのコメントを投稿した。main のブランチ保護の strict を外した。
+  - 事故：人間待ちを片づけるスクリプトが、最後の項目の終わりを見つけられずに STATE.md の後ろ半分（BLOCKED、既知の問題、直近のセッション）を消し、そのままコミットしていた（PR に出す前に気づいた）。main から戻して、切り取りを「次の項目か次の節まで」に限って作り直した。教訓：文書を切り取る編集は、終わりが見つからなければ止まるように書き、コミットの前に行数と節の数を確かめる。
 
 - 2026-10-04 午後（Claude Code、1本目）：ローンチの条件と、対のない正のオラクル。
   - #99：DIV-1（`interop/std3-div1` を今の main に。`ludion` 1本、GATE-11 の本文、CI に Python）、STD-3、ONE-4（拒否 → help のページ → init → VERIFIED）、SEC-1（gitleaks、版とハッシュを固定）。
