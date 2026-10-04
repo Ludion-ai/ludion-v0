@@ -1,6 +1,6 @@
 # STATE
 
-最終更新：2026-10-04 夕方（Claude Code、1本目のレーン。実装の順の1〜7、ローンチの条件、人間の「全部許可する」を受けて MCP-1 の案 C、件名、README）
+最終更新：2026-10-04 夜（Claude Code、1本目のレーン。spec v2.0.3、不変条件14と16のオラクル、ドキュメントをテストに（WEB-12、WEB-13））
 
 ## 現在地
 
@@ -70,15 +70,15 @@
 
 **一点の外で続いていること**
 
-- LOOP-2：push の実行は 4:28（2026-10-04）。FAIL の理由は `preview` ジョブが赤いことだけ（secret は人間待ち。測り方は案 B に決まった）。
+- LOOP-2：push の実行は 5:11（2026-10-04 夜）。FAIL の理由は `preview` ジョブが赤いことだけ（secret は人間待ち。測り方は案 B に決まった）。
 - 棚上げ：A と B2（`fast-loop-shelf`）。GATE-9 は道具が許された（`@php-wasm/node`）。ローンチの範囲の外なので余力で。
 
 **次の一手**（2026-10-05 から、ローンチ 10/13 22:00 JST まで）
 
 1. 人間の手が要るもの（人間待ちの表）：npm の初版、本番の名簿と Card Host のデプロイ（`*.agents.ludion.ai` の証明書はお金の判断）、ludion.ai の切り替え、`preview` の secret、security@ と privacy@ の受信、PILOT-2 のトークン。
 2. secret が入ったら：LOOP-2 の案 B（`preview` は main への push の後だけ、WEB-1 の Lighthouse を分ける）。LOOP-2 を PASS にする。
-3. WEB-7（ドキュメントをテストに）：クイックスタートの Next.js、Workers、Python の分。
-4. spec の食い違い（`docs/outbox/spec-v2-diff.md`）を v2.0.x に反映する（人間の許可済み、2026-10-04）：§12.7 の `until` と `decisions` の例、§12.3 の見出し、§11.2 の `ludion` の中身など。
+3. WEB-7（ドキュメントをテストに）：Express と CLI（WEB-10）、`/gate` の Express・Next.js・Workers（WEB-12）、TypeScript（`/agent`、WEB-13）は済み。残りは FastAPI と WordPress（GATE-9 の Gate が要る）、Python（PyPI の公開は人間）、scan の CLI（npm の公開のあと）。
+4. spec の残りの食い違い（outbox）：C6（証明書、お金）、C7（名簿の事前登録、ローンチの後）、§12.5 とレポートの `writes: false`（記録に1ビット足すかの判断）。
 5. 夜間の Windows（`nightly-windows`）の結果を毎朝見る。赤なら最優先で直す。
 6. 余力で GATE-9（`@php-wasm/node` で WordPress）。
 
@@ -240,6 +240,17 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-04 夜（Claude Code、1本目）：
+  - #105（トップを一点に、ONE-8）をマージし、プレビューを main から出し直した。全オラクルを回してラチェットを固めた：PASS 87 / FAIL 1（LOOP-2：`preview` の secret だけ）/ PENDING 5 / SKIP 1、ラチェットは ONE-8 を足した。
+  - #106 spec v2.0.3：outbox の残りを本体に（§12.7 の `decisions` と日時の `until`、§12.3 の見出しと判断の規則と件名、§11.2 の名札の例をコードの形に、§10・§22 の「1時間ごとの集計だけ」、§16・§23 は数字を書き写さない、Q14 を解決済みに、Q17 を1本の `ludion` に）。MISSION §5 をローンチの条件 → 一点 → 残りに。§8 は触っていない。
+  - #107：
+    - WEB-12（±、L0）：`/gate`（英日）が GATE-1 と GATE-3 の動かすインストールそのもの（Express、Next.js、Workers）。仕込んだページ9とインストール1を捕まえる。
+    - REG-6（±、L0、不変条件14）：Staple の立場は確認済みの連絡先と署名した約束だけで決まる。払ったという登録、記録に書かれたプランでは動かない。`standingOf` を外に出した（中身は同じ）。
+    - GATE-14（±、L0、不変条件16）：3つのアダプタで、通すときはサイトのバイトのまま（足すのは `Ludion-*` だけ）、断るときは HTTP のヘッダーと `{ error, help }` だけ。仕込んだ問いかけ8つを捕まえる。
+    - クイックスタートの公開の手順：ディレクトリの型（`application/http-message-signatures-directory+json`。多くの静的ホストは拡張子のないファイルを octet-stream で送り、`doctor` が落とす）、`client` のファイル、`ludion.json` を公開しない。`doctor` の検査のテストを足した（型の検査を外すと落ちる）。
+  - 次の PR：`/agent`（コードから署名する、英日）と WEB-13（±、L1）。`ludionFetch` で 200 VERIFIED、目的で 200 read、`token.mjs` は MCP-1 が Keycloak に送るのと同じ `private_key_jwt` の交換。仕込んだページ8つを捕まえる。
+  - LOOP-2 の案 B は、STATE の決めどおり secret が入ってから実装する。CI の `preview` は secret がないと 10 秒で落ちるので、10分に収まるか（デプロイ → Lighthouse を3つに → 判定）は secret が入るまで測れない。
 
 - 2026-10-04 夕方（Claude Code、1本目）：人間の「全部許可する」のあと。
   - #102 案 C（MCP の client_id は `…/client`、spec v2.0.2）、#103 README（英日）と件名、#104 ラチェット 58 → 86（全オラクル：PASS 86 / FAIL 1（LOOP-2）/ PENDING 5 / SKIP 1）。
