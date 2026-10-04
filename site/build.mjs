@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 export const SITE = path.dirname(fileURLToPath(import.meta.url));
 const SKIP = new Set(["node_modules", "dist", ".astro", "test", "preview.json"]); // preview.json records a deploy; it is not part of what was built
 // Code outside site/ that the build bundles (astro.config.mjs aliases it): /scan runs the CLI's scan.
-const BUNDLED = ["packages/scan/src", "packages/gate-core/src/agents.mjs", "packages/gate-core/src/route.mjs"];
+export const BUNDLED = ["packages/scan/src", "packages/gate-core/src/agents.mjs", "packages/gate-core/src/route.mjs"];
 const ENV = { ASTRO_TELEMETRY_DISABLED: "1", npm_config_audit: "false", npm_config_fund: "false", npm_config_update_notifier: "false" };
 
 /** The npm CLI as a JS file, so no .cmd shim or shell is needed on Windows. */
@@ -107,6 +107,15 @@ export function moveDir(from, to, { rename = fs.renameSync } = {}) {
 
 /** Build (or reuse) the static site; returns the dist directory. */
 export function buildSite({ out } = {}) {
+  // A build made elsewhere for this very source (CI: the preview job builds once and hands its dist to
+  // the jobs that check it): taken only when its _build.json names this checkout's siteHash().
+  const given = !out && process.env.LUDION_SITE_DIST;
+  if (given) {
+    let site = null;
+    try { site = JSON.parse(fs.readFileSync(path.join(given, "_build.json"), "utf8")).site; } catch { /* not a build */ }
+    if (site !== siteHash()) throw new Error(`LUDION_SITE_DIST (${given}) is not this checkout's build: ${site} ≠ ${siteHash()}`);
+    return path.resolve(given);
+  }
   ensureDeps();
   const dist = out ?? path.join(os.tmpdir(), "ludion-site", siteHash());
   const done = path.join(dist, ".ludion-built");

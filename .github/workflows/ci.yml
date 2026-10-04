@@ -65,14 +65,34 @@ jobs:
             git diff --stat "origin/${{ github.base_ref }}...HEAD" -- accept docs/MISSION.md scripts .github .claude || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-  # The oracles that need the live preview (WEB-1): deploy this checkout's site to the preview
-  # Worker on the agent-only Cloudflare account, then run them. The token can edit Workers in that
-  # account and nothing else; the deploy refuses one that reaches any other account (docs/DEPLOY.md
-  # §5). One run at a time, so a deploy is never checked against another run's build.
-  preview:
+  # The oracles that need the preview (WEB-1), on the human's plan (2026-10-04, LOOP-2):
+  #   - a push to main always deploys (the preview shows main); a pull request uploads a version only
+  #     when it touches what the site is built from (site/changed.mjs), and leaves the live preview alone;
+  #   - every version has its own preview URL that serves that build and nothing else, so the checks run
+  #     against it while any other run deploys: no lock across jobs;
+  #   - Lighthouse (about 9 minutes for every page, three runs each) is split over three runners, and the
+  #     `preview` job judges WEB-1 from their results (site/test/web1-parts.mjs: every page exactly once,
+  #     this build, this URL).
+  # The token can edit Workers in the agent-only account and nothing else; the deploy refuses one that
+  # reaches any other account (docs/DEPLOY.md §5).
+  preview-changed:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
-    concurrency: { group: preview-deploy, cancel-in-progress: false }
+    outputs:
+      run: ${{ steps.changed.outputs.run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: 22 }
+      - id: changed
+        run: echo "run=$(node site/changed.mjs --event ${{ github.event_name }} --base origin/${{ github.base_ref || 'main' }})" >> "$GITHUB_OUTPUT"
+  preview-deploy:
+    needs: preview-changed
+    if: needs.preview-changed.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    # Live deploys (pushes to main) one at a time, in order; a pull request's upload changes nothing live.
+    concurrency: { group: "${{ github.event_name == 'push' && 'preview-live' || format('preview-upload-{0}', github.run_id) }}", cancel-in-progress: false }
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_PREVIEW_ACCOUNT_ID }}
@@ -82,9 +102,52 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - name: Deploy this checkout's site to the preview
-        run: npm run deploy:preview
-      - name: Scoreboard — the preview job's oracles, ratchet from the base branch
+      - name: Deploy this checkout's site (a push) or upload it as a version (a pull request)
+        run: node site/deploy.mjs ${{ github.event_name == 'pull_request' && '--upload-only' || '' }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: preview, path: "site/preview.json\nsite/dist", if-no-files-found: error, retention-days: 7 }
+  preview-lighthouse:
+    needs: preview-deploy
+    name: preview-lighthouse (${{ matrix.part }}/3)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with: { name: preview, path: site }
+      - name: WEB-1 Lighthouse, part ${{ matrix.part }} of 3, against the version's own URL
+        env: { LUDION_SITE_DIST: site/dist, LUDION_WEB1_PART: "${{ matrix.part }}/3", LUDION_WEB1_OUT: "web1-part-${{ matrix.part }}.json" }
+        run: node --test --test-reporter=tap --test-name-pattern "^WEB-1" site/test/web1.test.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with: { name: "web1-part-${{ matrix.part }}", path: "web1-part-${{ matrix.part }}.json", if-no-files-found: error, retention-days: 7 }
+  # Judges WEB-1 whatever the parts did (a part that crashed is a missing part, which fails it), and
+  # holds it to the ratchet read from the base branch, as `loop` does.
+  preview:
+    needs: [preview-changed, preview-deploy, preview-lighthouse]
+    if: always() && needs.preview-changed.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        continue-on-error: true # nothing to download is WEB-1's to report
+        with: { name: preview, path: site }
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        continue-on-error: true
+        with: { pattern: "web1-part-*", path: web1-parts, merge-multiple: true }
+      - name: Scoreboard — the preview job's oracles, from the parts, ratchet from the base branch
+        env: { LUDION_SITE_DIST: site/dist, LUDION_WEB1_PARTS: web1-parts }
         run: node scripts/scoreboard.mjs --base "origin/${{ github.base_ref || 'main' }}" --job preview
   # MCP-1/MCP-2: a real authorization server (Keycloak, CIMD on) authorizes an agent by its card URL.
   # Its own job, in parallel, outside LOOP-2's 10 minutes (the human's decision, 2026-10-03): Java

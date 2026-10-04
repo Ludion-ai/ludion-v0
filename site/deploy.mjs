@@ -3,12 +3,15 @@
 //
 //   npm run deploy:preview                  (credentials: ~/.config/ludion/cloudflare.env, see scripts/cf-env.mjs)
 //   node site/deploy.mjs --check            (the boundary check alone; deploys nothing)
+//   node site/deploy.mjs --upload-only      (a new version with its own preview URL; the live preview is unchanged)
 //
 // Guards: the Worker name must be exactly PREVIEW_NAME, the config may carry no routes and no custom
 // domains, and workers_dev must be on. Production (ludion.ai) is attached by a human, by hand
 // (docs/DEPLOY.md §3). Before any of that, the credential itself is checked (boundary): the account is
 // PREVIEW_ACCOUNT and the token reaches Workers in no other account. Secrets for the preview Worker come
-// from SECRETS_FILE, uploaded with the deploy. Writes site/preview.json { url, site } for WEB-1.
+// from SECRETS_FILE, uploaded with the deploy. Writes site/preview.json for WEB-1: the live URL, and
+// the version's own preview URL (https://<version prefix>-ludion-site-preview.<subdomain>.workers.dev),
+// which serves that build and only it, so a check can run against it while another run deploys.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -27,6 +30,7 @@ function guard(config) {
   const problems = [];
   if (config.name !== PREVIEW_NAME) problems.push(`the Worker is "${config.name}", not "${PREVIEW_NAME}"`);
   if (config.workers_dev !== true) problems.push("workers_dev is not true");
+  if (config.preview_urls !== true) problems.push("preview_urls is not true (WEB-1 checks a version's own URL)");
   for (const k of ["route", "routes"]) if (config[k] != null) problems.push(`config has "${k}" (a production route)`);
   if (config.env) problems.push("config has environments; deploy exactly one preview");
   return problems;
@@ -98,17 +102,34 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   buildSite({ out: dist });
   const site = siteHash();
   ensureDeps(EDGE);
-  const out = execFileSync(process.execPath, [path.join(EDGE, "node_modules", "wrangler", "bin", "wrangler.js"), "deploy", "-c", path.join(EDGE, "wrangler.json"), ...(secrets.length ? ["--secrets-file", SECRETS_FILE] : [])],
+  const uploadOnly = process.argv.includes("--upload-only");
+  const wrangler = (args) => execFileSync(process.execPath, [path.join(EDGE, "node_modules", "wrangler", "bin", "wrangler.js"), ...args, "-c", path.join(EDGE, "wrangler.json"), ...(secrets.length ? ["--secrets-file", SECRETS_FILE] : [])],
     { cwd: EDGE, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 600_000, env: { ...process.env, WRANGLER_SEND_METRICS: "false", CI: "1", NO_COLOR: "1" } });
-  const url = (/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/i.exec(out) ?? [])[0];
-  if (!url || !url.startsWith(`https://${PREVIEW_NAME}.`)) { console.error(`deployed, but no preview URL in wrangler's output:\n${out.slice(-1500)}`); process.exit(1); }
-  fs.writeFileSync(path.join(SITE, "preview.json"), JSON.stringify({ url, site, deployedAt: new Date().toISOString() }, null, 2) + "\n");
+  const out = wrangler(uploadOnly ? ["versions", "upload", "--message", `site ${site}`] : ["deploy"]);
+  const { url, version, versionUrl } = previewUrls(out);
+  if (!versionUrl || (!uploadOnly && !url)) { console.error(`${uploadOnly ? "uploaded" : "deployed"}, but no preview URL in wrangler's output:\n${out.slice(-1500)}`); process.exit(1); }
+  const live = url ?? `https://${PREVIEW_NAME}.${new URL(versionUrl).hostname.split(".").slice(1).join(".")}`;
+  fs.writeFileSync(path.join(SITE, "preview.json"), JSON.stringify({ url: live, version, version_url: versionUrl, live: !uploadOnly, site, deployedAt: new Date().toISOString() }, null, 2) + "\n");
   // Secret names only, read back from the Worker: the signup form answers 503 without its webhook (WEB-8).
   const s = await api(`/accounts/${account}/workers/scripts/${PREVIEW_NAME}/secrets`);
   const names = s.ok ? s.result.map((x) => x.name) : [];
   const missing = secrets.filter((k) => !names.includes(k));
-  console.log(`preview: ${url} (site ${site}); secrets on the Worker: ${s.ok ? names.join(", ") || "(none)" : `unreadable (${s.status})`}`);
+  console.log(`preview: ${uploadOnly ? `${versionUrl} (uploaded, not live)` : `${live}, this version ${versionUrl}`} (site ${site}); secrets on the Worker: ${s.ok ? names.join(", ") || "(none)" : `unreadable (${s.status})`}`);
   if (missing.length) { console.error(`deployed, but the Worker lacks ${missing.join(", ")}`); process.exit(1); }
+}
+
+/**
+ * The live URL, the version id and the version's own preview URL, from what `wrangler deploy` or
+ * `wrangler versions upload` printed. The version URL is the id's first 8 characters before the
+ * Worker's name on the same workers.dev subdomain.
+ */
+export function previewUrls(out) {
+  const urls = [...out.matchAll(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/gi)].map((m) => m[0]);
+  const url = urls.find((u) => u.startsWith(`https://${PREVIEW_NAME}.`)) ?? null;
+  const version = (/(?:Current )?Version ID:\s*([0-9a-f-]{36})/i.exec(out) ?? [])[1] ?? null;
+  const printed = urls.find((u) => new RegExp(`^https://[0-9a-f]{8}-${PREVIEW_NAME}\\.`).test(u)) ?? null;
+  const fromId = version && url ? url.replace(`https://${PREVIEW_NAME}.`, `https://${version.slice(0, 8)}-${PREVIEW_NAME}.`) : null;
+  return { url, version, versionUrl: printed ?? fromId };
 }
 
 export { guard, boundary, secretKeys };
