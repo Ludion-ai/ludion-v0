@@ -390,7 +390,12 @@ export const ORACLES = [
   { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)" },
   { id: "ONE-4", m: "M9", kind: "+", level: 1, title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min" },
   { id: "ONE-5", m: "M9", kind: "±", level: 1, title: "a write by something claiming to be a crawler is reported as a suspected fake (fixed data, 0 misjudged)" },
-  { id: "MCP-1", m: "M9", kind: "+", level: 1, title: "e2e with Keycloak (CIMD on) as the authorization server: the card URL as client_id is authorized" },
+  // MCP-1/2 run in their own CI job (`mcp`, Java and Keycloak), outside LOOP-2's 10 minutes (the human's
+  // decision, 2026-10-03). Keycloak fetches the card from the production Card Host Worker (accept/mcp/).
+  { id: "MCP-1", m: "M9", kind: "+", level: 1, job: "mcp", pair: "MCP-2", property: "mcp-client-id", title: "e2e with Keycloak (CIMD on) as the authorization server: the card URL as client_id is authorized",
+    timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-1:", { timeoutMs: 580_000, metric: (out) => (/^# MCP-1: (.+)$/m.exec(out) ?? [])[1] }) },
+  { id: "MCP-2", m: "M9", kind: "-", level: 1, job: "mcp", property: "mcp-client-id", title: "Keycloak gives no token to what is not the card's: the Root key, a stranger's key, another audience, a used assertion, an unlisted redirect, a revoked agent — each refused at its own step",
+    timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-2:", { timeoutMs: 580_000 }) },
   { id: "PUR-1", m: "M9", kind: "-", level: 0, title: "a purpose not covered by the signature is an unsigned claim and is never used for matching" },
   { id: "PUR-2", m: "M9", kind: "-", level: 1, title: "the purpose note never leaves the Gate (PRIV-1's canaries)" },
   { id: "PUR-3", m: "M9", kind: "±", level: 0, title: "a write after declaring read (or claiming to be a crawler) is a contradiction" },

@@ -8,10 +8,13 @@
 import { execFileSync } from "node:child_process";
 
 export const LIMIT_S = 600;
+// Jobs the human placed outside the 10 minutes (2026-10-03: Keycloak for MCP-1/2 starts Java). They
+// must still finish green; only their time is not counted.
+export const UNTIMED = Object.freeze(["mcp"]);
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 /** Judge one run's jobs (GitHub's job objects). */
-export function judgeRun(jobs, { limitS = LIMIT_S } = {}) {
+export function judgeRun(jobs, { limitS = LIMIT_S, untimed = UNTIMED } = {}) {
   const ran = (jobs ?? []).filter((j) => j.conclusion !== "skipped");
   if (!ran.length) return { pass: false, detail: "no job ran" };
   const problems = [];
@@ -19,7 +22,7 @@ export function judgeRun(jobs, { limitS = LIMIT_S } = {}) {
   if (unfinished.length) problems.push(`not finished: ${unfinished.map((j) => j.name).join(", ")}`);
   const red = ran.filter((j) => j.status === "completed" && j.conclusion !== "success");
   if (red.length) problems.push(`not green: ${red.map((j) => `${j.name} ${j.conclusion}`).join(", ")}`);
-  const done = ran.filter((j) => j.started_at && j.completed_at);
+  const done = ran.filter((j) => j.started_at && j.completed_at && !untimed.includes(j.name));
   const t = (x) => Date.parse(x);
   const start = Math.min(...done.map((j) => t(j.started_at))), end = Math.max(...done.map((j) => t(j.completed_at)));
   const wallS = done.length ? (end - start) / 1000 : NaN;
@@ -27,7 +30,7 @@ export function judgeRun(jobs, { limitS = LIMIT_S } = {}) {
   const slowest = done.map((j) => ({ name: j.name, s: (t(j.completed_at) - t(j.started_at)) / 1000 })).sort((a, b) => b.s - a.s)[0];
   return {
     pass: problems.length === 0, wallS,
-    metric: `${Number.isFinite(wallS) ? mmss(wallS) : "?"} first start → last finish over ${ran.length} jobs (limit ${mmss(limitS)})${slowest ? `; slowest ${slowest.name} ${mmss(slowest.s)}` : ""}`,
+    metric: `${Number.isFinite(wallS) ? mmss(wallS) : "?"} first start → last finish over ${done.length} jobs (limit ${mmss(limitS)})${ran.some((j) => untimed.includes(j.name)) ? ` (+ untimed: ${ran.filter((j) => untimed.includes(j.name)).map((j) => j.name).join(", ")})` : ""}${slowest ? `; slowest ${slowest.name} ${mmss(slowest.s)}` : ""}`,
     detail: problems.join("; ") || undefined,
   };
 }

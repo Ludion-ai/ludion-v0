@@ -252,3 +252,12 @@ spec の差し替えで、ラチェット済みの WEB-3 と WEB-2 が FAIL に�
 | ADR-024、ADR-026 | 「ADR-019〜026 は `docs/adr/` の個別ファイルを正とする」 | ファイルがない（019〜023、025、027 はある） | spec の文面を「ADR-019〜023、025」にする。あるいは、024 と 026 が何だったかを人間の記録から起こす |
 | ADR-040 | 載っていない | `ADR-040-site-stack.md`（サイトの技術選択、2026-10-01 夜勤） | spec の ADR-019〜026 の行に「ほか、ADR-040」を足す。次の空き番号は、035〜039 を先に使うか、041 からにするかを決める |
 | 日付の ADR（11件、`2026-10-01-*.md`） | 載っていない | 番号なし（夜勤からの規則） | spec §24 に「番号のない実装の ADR は `docs/adr/YYYY-MM-DD-*.md`」と1行足す。番号は spec の決定だけに使う |
+
+## 追記（2026-10-04、MCP-1 の実装から）
+
+| 条項 | 現状 | 提案 |
+|---|---|---|
+| §11.2 の【要確認：MCP の CIMD 要件（redirect_uris と localhost の扱い）】 | 未確認のまま | Keycloak 26.8.0 の e2e（MCP-1）で確かめた：`redirect_uris` が `http://127.0.0.1/callback` と `http://[::1]/callback` なら、任意のポートの loopback で認可コードが届く（RFC 8252）。`private_key_jwt` は、`jwks_uri`（鍵の一覧）の Ed25519 の Session 鍵で通る（ES256 の別の jwks は要らない）。【要確認】を外し、ADR-039 を指す |
+| §11.2 の名札の例（JSON） | `redirect_uris`、`grant_types`、`response_types` がない | ADR-039 のとおり、`"redirect_uris": ["http://127.0.0.1/callback", "http://[::1]/callback"]`、`"grant_types": ["authorization_code"]`、`"response_types": ["code"]` を足す。コードは足した（`packages/diver/src/card.mjs`） |
+| §11.2 の名札の例（JSON）の `ludion` | `diver`、`operator`、`commitments` | コードの `ludion` は `version`、`diver_id`、`registry`、`root_kid`。どちらかに揃える（ADR-013） |
+| §11.2「Ludion の拡張は単一の `ludion` オブジェクトに入れる」 | `web_bot_auth` と `ludion` を名札に置く | **Keycloak 26.8.0 は、知らない項目のある名札を拒む**（keycloak/keycloak#51236、修正の PR #51235 は未マージ）。この2つを外した名札は、同じ e2e で認可が通る。判断は STATE.md の人間待ち |

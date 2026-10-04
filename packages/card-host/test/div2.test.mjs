@@ -83,12 +83,15 @@ test("DIV-2: the card is a strict CIMD document and carries Ludion data in one o
   assert.ok(!id.pathname.split("/").some((s) => s === "." || s === ".."), "no dot segments");
   for (const k of ["client_secret", "client_secret_expires_at"]) assert.ok(!(k in card), `no ${k}`);
   if (card.token_endpoint_auth_method) assert.doesNotMatch(card.token_endpoint_auth_method, /^client_secret/);
+  // The same card is the MCP client_id (ADR-039): loopback redirects only, private_key_jwt.
+  assert.equal(card.token_endpoint_auth_method, "private_key_jwt");
+  assert.ok(card.redirect_uris.length > 0 && card.redirect_uris.every((u) => /^http:\/\/(127\.0\.0\.1|\[::1\])\/[^?#]*$/.test(u)), `loopback redirect_uris only: ${card.redirect_uris}`);
   assert.equal(new URL(card.jwks_uri).origin, id.origin, "jwks_uri on the card's own origin");
   assert.ok(!(card.jwks && card.jwks_uri), "jwks or jwks_uri, not both");
   assert.equal(card.ludion?.diver_id, store.diver_id);
   assert.match(store.diver_id, /^dvr-[a-z2-7]{16}$/);
   assert.equal(host, `${store.diver_id}.agents.ludion.ai`);
-  const unknownTop = Object.keys(card).filter((k) => !["client_id", "client_name", "client_uri", "logo_uri", "contacts", "jwks_uri", "jwks", "ips_uri", "web_bot_auth", "ludion"].includes(k));
+  const unknownTop = Object.keys(card).filter((k) => !["client_id", "client_name", "client_uri", "logo_uri", "contacts", "jwks_uri", "jwks", "ips_uri", "redirect_uris", "grant_types", "response_types", "token_endpoint_auth_method", "web_bot_auth", "ludion"].includes(k));
   assert.deepEqual(unknownTop, [], "Ludion-specific fields live only under `ludion`");
   assert.deepEqual(privateMembers(card), [], "no private key members anywhere in the card");
 });

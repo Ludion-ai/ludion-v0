@@ -59,7 +59,9 @@ const problem = (status, error) => new Response(JSON.stringify({ error }), { sta
 
 /**
  * @param {{ lookup: (host: string) => ({ directory: object, card?: object } | undefined | Promise<any>), maxAgeS?: number }} options
- *   lookup: the published documents for a host (lower-case, no port), or undefined.
+ *   lookup: the published documents for a host (lower-case, no port), or undefined. Its second
+ *   argument is the origin the request reached (with a port when not the default one), so a card
+ *   built on the fly can name the URL it is served at.
  * @returns {{ fetch: (request: Request) => Promise<Response> }}
  */
 export function createCardHost({ lookup, maxAgeS = 300 }) {
@@ -69,7 +71,7 @@ export function createCardHost({ lookup, maxAgeS = 300 }) {
       if (request.method !== "GET" && request.method !== "HEAD") return problem(405, "method_not_allowed");
       if (url.pathname !== DIRECTORY_PATH && url.pathname !== CARD_PATH) return problem(404, "not_found");
       const host = url.hostname.toLowerCase();
-      const docs = await lookup(host);
+      const docs = await lookup(host, url.origin);
       if (!docs) return problem(404, "unknown_agent");
       if (url.pathname === DIRECTORY_PATH) return json(200, await servableKeys(docs.directory, docs.card), DIRECTORY_MEDIA_TYPE, maxAgeS);
       if (!docs.card) return problem(404, "no_card");

@@ -11,9 +11,9 @@ export const AGENTS_SUFFIX = ".agents.ludion.ai";
 export const REGISTRY_ORIGIN = "https://registry.ludion.ai";
 const DIVER_ID = /^dvr-[a-z2-7]{16}$/;
 
-/** lookup(host) for createCardHost, through the Registry's Durable Object namespace. */
+/** lookup(host, origin) for createCardHost, through the Registry's Durable Object namespace. */
 export function registryLookup(namespace, { suffix = AGENTS_SUFFIX } = {}) {
-  return async (host) => {
+  return async (host, origin = `https://${host}`) => {
     if (!host.endsWith(suffix)) return undefined;
     const id = host.slice(0, -suffix.length);
     if (!DIVER_ID.test(id)) return undefined;
@@ -21,7 +21,6 @@ export function registryLookup(namespace, { suffix = AGENTS_SUFFIX } = {}) {
     const r = await stub.fetch(new Request(`https://registry.internal/__card/${id}`));
     if (!r.ok) return undefined;
     const rec = await r.json();
-    const origin = `https://${host}`;
     return {
       directory: directoryDocument(rec.keys),
       card: cardDocument({ origin, name: rec.name ?? "Unnamed agent", contacts: rec.contacts ?? [], ludion: { diver_id: rec.diver_id, registry: REGISTRY_ORIGIN, root_kid: rec.root_kid } }),
