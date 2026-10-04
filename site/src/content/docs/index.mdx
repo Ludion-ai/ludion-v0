@@ -1,27 +1,34 @@
 ---
 title: Ludion
-description: Whose agent is it? What is it allowed to do? Who pays when it breaks something? Drop an access log to see how often unverified automation touched your checkout and login. The log never leaves your device.
+description: Give your AI agent its own key and name. Create it with a command, use the same name on MCP and on the web, erase it everywhere. Sites get a free checkpoint that reads the name.
 template: splash
 head:
   - tag: title
-    content: Ludion — accountability for AI agents
+    content: Ludion — a key and a name for your AI agent
 hero:
-  title: Whose agent is it? What is it allowed to do? Who pays when it breaks something?
-  tagline: Drop an access log to see how often unverified automation touched your checkout and login. The log never leaves your device.
+  title: Give your AI agent its own key and name.
+  tagline: Create it with a command. Use the same name on MCP and on the web. Erase it everywhere, any time.
   actions:
-    - text: Drop your access log
-      link: /scan
+    - text: Give your agent a name
+      link: /quickstart
       icon: right-arrow
+    - text: See which agents hit your site
+      link: /scan
+      variant: minimal
 ---
 import SignupForm from "../../components/SignupForm.astro";
 
-- **For sites:** a free, open-source checkpoint (the Gate) that installs with [3 lines of your code or fewer](/gate) ([measured](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)) and first shows which agents came, and what they touched.
-- **For agents:** a free identity (the Diver). Signature, status and delegation, carried everywhere after one registration.
-- **When something breaks:** Ballast backs who answers. What Ludion verifies is not detection or identity, but accountability.
+```sh
+npx ludion init --name "My Agent" --contact mailto:you@example.com
+```
+
+- **For agents:** that line gives your agent one name, `https://dvr-….agents.ludion.ai`. On the web it is your `Signature-Agent` ([Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)); for MCP servers, its `/client` is your `client_id`, and you authenticate with your own key, never a shared secret. `npx ludion revoke` takes it offline everywhere within an hour ([spec](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)).
+- **For sites:** a free, open-source checkpoint (the Gate) reads that name. It installs with [3 lines of your code or fewer](/gate) ([measured](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)), shows which agents came and what they touched, and lets you let them through, put up a wall or stop them, each with one line of your own config ([checked](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md)). Only your site decides; Ludion has no switch to stop anyone.
+- **Start from your logs:** drop an access log on [the scan page](/scan) to see how often unsigned automation touched your checkout and login. The log never leaves your device.
 
 ## Early access
 
-Run a site and want to see which agents come? Build an agent and want an identity? Leave your email.
+Run a site and want to see which agents come? Build an agent and want a name for it? Leave your email.
 
 <SignupForm lang="en" />
 
