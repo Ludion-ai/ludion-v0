@@ -249,7 +249,8 @@
     - REG-6（±、L0、不変条件14）：Staple の立場は確認済みの連絡先と署名した約束だけで決まる。払ったという登録、記録に書かれたプランでは動かない。`standingOf` を外に出した（中身は同じ）。
     - GATE-14（±、L0、不変条件16）：3つのアダプタで、通すときはサイトのバイトのまま（足すのは `Ludion-*` だけ）、断るときは HTTP のヘッダーと `{ error, help }` だけ。仕込んだ問いかけ8つを捕まえる。
     - クイックスタートの公開の手順：ディレクトリの型（`application/http-message-signatures-directory+json`。多くの静的ホストは拡張子のないファイルを octet-stream で送り、`doctor` が落とす）、`client` のファイル、`ludion.json` を公開しない。`doctor` の検査のテストを足した（型の検査を外すと落ちる）。
-  - 次の PR：`/agent`（コードから署名する、英日）と WEB-13（±、L1）。`ludionFetch` で 200 VERIFIED、目的で 200 read、`token.mjs` は MCP-1 が Keycloak に送るのと同じ `private_key_jwt` の交換。仕込んだページ8つを捕まえる。
+  - #109：`/agent`（コードから署名する、英日）と WEB-13（±、L1）。`ludionFetch` で 200 VERIFIED、目的で 200 read、`token.mjs` は MCP-1 が Keycloak に送るのと同じ `private_key_jwt` の交換。仕込んだページ8つを捕まえる。
+  - #109 のあと、プレビューを main から出し直し、全オラクルを回した：PASS 91 / FAIL 1（LOOP-2）/ PENDING 5 / SKIP 1。ラチェットに WEB-12、WEB-13、REG-6、GATE-14 を足した（87 → 91）。
   - LOOP-2 の案 B は、STATE の決めどおり secret が入ってから実装する。CI の `preview` は secret がないと 10 秒で落ちるので、10分に収まるか（デプロイ → Lighthouse を3つに → 判定）は secret が入るまで測れない。
 
 - 2026-10-04 夕方（Claude Code、1本目）：人間の「全部許可する」のあと。
