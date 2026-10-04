@@ -18,6 +18,34 @@ spec v2.0（`docs/ludion-spec.md`、1391行）を、オラクル・既存のコ�
 | D1 CLAUDE.md の芯 | 3行に差し替えた |
 | E の ADR-024・026・040 | §24 を「ADR-019 以降の実装上の決定は `docs/adr/` を正とする（欠番と、spec に載らない ADR を含む）」に |
 
+## 2026-10-04 の「全部許可する」で片づいたもの（spec v2.0.2、v2.0.3）
+
+| 項目 | したこと |
+|---|---|
+| F1 §10.1 の Diver | `ludion/diver` に |
+| F2 §22 の個人情報 | 「1時間ごとの件数の集計だけで、IP もそのハッシュも、来訪ごとの時刻も出さない」に。§10 と付録B の「メタデータ」も同じ言い方に |
+| F3 §8 不変条件6 | 変えない（提案どおり。より強い形は §12.9 と §22 にある） |
+| F4 §11.13 の評判イベント | 凍結中と明記（§9.5、ADR-038 の見直す条件で扱う） |
+| B1 §23.1、§23.3 の数字 | 書き写さない（`accept/ratchet.json` と `npm run scoreboard` が正、現在地は STATE.md） |
+| B2 §16 の件数 | 書き写さない（GATE-7 の行が正） |
+| B3 Q14 | 解決済みに移し、残り（gate-core 直と Deno、Workers）を1行で |
+| B4 Q17 | `ludion` の1本。初版は手で、2版目から Trusted Publishing |
+| C1 §12.7 の設定例 | `decisions` を4行（block と日時の `until`、`writes` の block、`unnamed` の wall、署名者の allow）に。`who`・`action`・`scope`・`until`・`require.purpose` の説明 |
+| C2 §11.2 の名札の例 | コードの形に（`ludion` は `version`、`diver_id`、`registry`、`root_kid`。`operator` と `commitments` は凍結中） |
+| C4 §12.3 朝のレポート | 見出しは割合1つ、3行の分け方、判断の規則、件名＝見出し（ONE-2、#103） |
+| C5 目的の申告 | PUR-1〜6 PASS（#98）、PUR-7（#101） |
+| D2 MISSION §5 | ローンチの条件 → 一点 → 残り、に書き換えた |
+| E 日付の ADR | §24 の ADR-019 の行に「番号のない実装の ADR は `docs/adr/YYYY-MM-DD-<slug>.md`」 |
+| 追記の MCP-1 の行 | v2.0.2（`…/client`、ADR 2026-10-04-mcp-client-document） |
+| 追記の BLK-1・ONE-3、ONE-2・ONE-5 の行 | 上の C1 と C4 |
+
+**まだ開いているもの**
+
+- C6：`*.agents.ludion.ai` の証明書（お金の判断、人間待ち）。
+- C7：名簿の事前登録（ローンチの後）。
+- C8：不変条件14と16のオラクル（Claude のバックログ。足すのは自由）。
+- §12.5 の規則2とレポート：Gate の照合（PUR-3）は `"writes": false` を読むが、朝のレポートの「偽物の疑い」は POST・PUT・PATCH・DELETE を全て書き込みに数える（来訪の記録と1時間の束は、経路が読むだけかを持たない）。直すなら記録に1ビット足す（PRIV-4 の鍵が1つ増える）。
+
 ## v2.0.1 のあとに残った食い違い（spec は直していない）
 
 ### F1. §10.1 の Diver の行
