@@ -1,0 +1,22 @@
+[build-system]
+requires = ["flit_core>=4,<5"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "ludion"
+version = "0.0.1"
+description = "Ludion Diver for Python: a Web Bot Auth (RFC 9421) identity and one-line request signing for AI agents."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "Ludion" }]
+dependencies = [
+  "cryptography>=42",
+  "http-message-signatures==2.0.1",
+  # undeclared by http-message-signatures 2.0.1 but imported by it (docs/outbox/2026-09-30-pyhms-missing-typing-extensions.md)
+  "typing-extensions>=4.12",
+]
+
+[project.urls]
+Homepage = "https://ludion.ai"
+Source = "https://github.com/Ludion-ai/Ludion"

@@ -1,0 +1,10 @@
+# The non-JS implementation STD-3 interoperates with, and what it needs. Exact pins only;
+# `python interop/py/lock.py` turns this into requirements.lock (with hashes).
+# Python >= 3.11 (http-message-signatures needs 3.10; 3.11 drops cryptography's typing-extensions marker).
+http-message-signatures==2.0.1
+cryptography==50.0.1
+cffi==2.1.1
+pycparser==3.0
+# Undeclared by http-message-signatures 2.0.1, but its vendored http_sfv imports it
+# unconditionally (see docs/outbox/2026-09-30-pyhms-missing-typing-extensions.md).
+typing-extensions==4.16.0

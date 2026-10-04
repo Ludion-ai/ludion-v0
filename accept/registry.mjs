@@ -129,7 +129,13 @@ export const ORACLES = [
     ] }) },
   { id: "STD-2", m: "M1", kind: "-", level: 1, property: "signature-validity", title: "tamper / wrong key / wrong authority / expired / future / >1h (>60s without a nonce) / wrong tag all rejected",
     run: nodeTest(["packages/gate-core/test/std2.test.mjs"], "^STD-2:") },
-  { id: "STD-3", m: "M1", kind: "+", level: 1, pair: "STD-2", property: "signature-validity", title: "interop both ways with ≥2 independent implementations (one non-JS)" },
+  // Cloudflare web-bot-auth (JS) and pyauth http-message-signatures (Python, hash-pinned venv in the OS temp dir).
+  { id: "STD-3", m: "M1", kind: "+", level: 1, pair: "STD-2", property: "signature-validity", title: "interop both ways with ≥2 independent implementations (one non-JS)",
+    timeoutMs: 600_000, run: nodeTest(["interop/std3.test.mjs"], "^STD-3:", { timeoutMs: 590_000,
+      metric: (out) => {
+        const pairs = /^# interop: (\d+\/\d+) /m.exec(out)?.[1], impl = /web-bot-auth ([\d.]+).*?http-message-signatures ([\d.]+)/m.exec(out);
+        return [pairs && `${pairs} pairs`, impl && `web-bot-auth ${impl[1]} + pyauth ${impl[2]}`].filter(Boolean).join(", ");
+      } }) },
   // The pins (accept/std4/pins.json) against the live datatracker, following replacements, with 7 days'
   // grace and the issue text for a draft that moved; and against every reference in the repository.
   // A datatracker that cannot be read is a FAIL. The checker's own failure paths run offline too.
@@ -196,7 +202,10 @@ export const ORACLES = [
     run: nodeTest(["packages/card-host/test/priv5.test.mjs"], "^PRIV-5:", { metric: (out) => (/^# PRIV-5: (.+)$/m.exec(out) ?? [])[1] }) },
 
   // ── M2 diver ───────────────────────────────────────────────────────────────────
-  { id: "DIV-1", m: "M2", kind: "+", level: 1, pair: "DIV-3", property: "signing-key", title: "clean container → init → VERIFIED ≤180s (TS and Python)" },
+  // A clean container pinned by digest (Linux CI, required there) or, elsewhere, an isolated temp dir; the metric says which ran.
+  { id: "DIV-1", m: "M2", kind: "+", level: 1, pair: "DIV-3", property: "signing-key", title: "clean container → init → VERIFIED ≤180s (TS and Python)",
+    timeoutMs: 1_200_000, run: nodeTest(["clean-room/div1.test.mjs"], "^DIV-1:", { timeoutMs: 1_150_000,
+      metric: (out) => [...out.matchAll(/^# div1 (ts|py): ([\d.]+)s (container|fallback)/gm)].map((m) => `${m[1]} ${m[2]}s ${m[3]}`).join(", ") }) },
   { id: "DIV-2", m: "M2", kind: "+", level: 1, pair: "DIV-3", property: "signing-key", title: "Card is a valid CIMD Signature Agent Card and resolves end to end",
     run: nodeTest(["packages/card-host/test/div2.test.mjs"], "^DIV-2:") },
   { id: "DIV-3", m: "M2", kind: "-", level: 1, property: "signing-key", title: "Root key never signs, never in the directory, never plaintext on disk outside dev",

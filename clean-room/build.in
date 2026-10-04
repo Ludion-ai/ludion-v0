@@ -1,0 +1,3 @@
+# The build backend for python/ (the Python Diver wheel DIV-1 installs). Exact pin;
+# `python interop/py/lock.py clean-room/build.in clean-room/build.lock` writes the hashed lock.
+flit-core==4.1.0
