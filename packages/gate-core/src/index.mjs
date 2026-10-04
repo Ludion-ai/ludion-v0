@@ -19,7 +19,7 @@ import { routeKind, isCritical, pathOf, originForm, routeCandidates, queryKeys, 
 import { verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S } from "./mandate.mjs";
 import { memoryLedger, isLedger } from "./ledger.mjs";
 import { bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS } from "./digest.mjs";
-import { createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR } from "./hourly.mjs";
+import { createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, ACCESS, MAX_ROWS_PER_HOUR } from "./hourly.mjs";
 import { memoryRecords, RECORD_DAYS } from "./records.mjs";
 import { createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED } from "./decisions.mjs";
 import { parsePurpose, readPurpose, purposeVerdict, PURPOSE_HEADER, PURPOSE_KINDS, NOTE_MAX } from "./purpose.mjs";
@@ -32,7 +32,7 @@ export {
   routeKind, isCritical, pathOf, originForm, routeCandidates, queryKeys, templateSegment, publicTemplateSegment, publicTemplatePath, isRouteWord, ROUTE_KINDS, CRITICAL_KINDS, WRITE_METHODS,
   verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, memoryLedger, isLedger,
   bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS,
-  createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR, memoryRecords, RECORD_DAYS,
+  createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, ACCESS, MAX_ROWS_PER_HOUR, memoryRecords, RECORD_DAYS,
   createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED,
   parsePurpose, readPurpose, purposeVerdict, PURPOSE_HEADER, PURPOSE_KINDS, NOTE_MAX,
 };
@@ -272,13 +272,13 @@ export async function createGate(config) {
     if (receipt && AUTOMATION.has(cls.class)) {
       // The visit's record stays on the site (7 days); outside, it is one more in its hour's count.
       const operator = operatorOf(cls);
-      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country, operator, purpose, verdict: purposeVerdict({ purpose, cls, write }) });
+      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country, operator, purpose, verdict: purposeVerdict({ purpose, cls, write }), write });
       quietly((r) => records.put(r), record);
       if (announce && !announced) { announced = true; quietly(announce, firstRecordLine(record, operator)); }
       if (hourly) { try { hourly.add(record, operator); } catch { /* counting never fails a request */ } }
     }
     if (hourly) { try { hourly.flushClosed(); } catch { /* idem */ } }
-    return { cls, decision, receipt, headers, route, ...(gateError ? { gateError: String(gateError?.message ?? gateError).slice(0, 200) } : {}) };
+    return { cls, decision, receipt, headers, route, access: write ? "write" : "read", ...(gateError ? { gateError: String(gateError?.message ?? gateError).slice(0, 200) } : {}) };
   }
 
   /** Never throws; adds at most timeoutMs plus the receipt signature. */

@@ -79,7 +79,7 @@ function fixedRecords() {
   const out = [];
   let i = 0;
   for (const [cls, method, route, operator, n, fake] of FIXED) {
-    for (let k = 0; k < n; k++) out.push({ rec: { v: 0, rid: `rcp-f${i}`, site: SITE_ID, ts: T0 / 1000 + 7200 + i++, method, route, class: cls, decision: "allow",
+    for (let k = 0; k < n; k++) out.push({ rec: { v: 0, rid: `rcp-f${i}`, site: SITE_ID, ts: T0 / 1000 + 7200 + i++, method, access: method === "GET" ? "read" : "write", route, class: cls, decision: "allow",
       error: null, pressure: 0, diver: cls === "VERIFIED" || cls === "REVOKED" ? (operator.startsWith("dvr-") ? operator : `https://${operator}`) : null, operator, country: null, ip_h: null }, fake });
   }
   return out;
@@ -90,8 +90,8 @@ export function misjudged(rule, labelled) {
   const out = [];
   for (const { event, fake, who } of labelled) {
     const flagged = !!rule(event);
-    if (flagged && !fake) out.push(`flagged a visit that is not a fake: ${who} ${event.class} ${event.method} ${event.route}`);
-    if (!flagged && fake) out.push(`missed a fake: ${who} ${event.method} ${event.route}`);
+    if (flagged && !fake) out.push(`flagged a visit that is not a fake: ${who} ${event.class} ${event.access} ${event.route}`);
+    if (!flagged && fake) out.push(`missed a fake: ${who} ${event.access} ${event.route}`);
   }
   return out;
 }
@@ -112,9 +112,9 @@ test("ONE-5: the judge catches a rule that flags nothing, every declared write, 
   assert.deepEqual(misjudged(isSuspectedFake, w.labelled), [], "the report's rule");
   const planted = [
     ["flags nothing", () => false, /missed a fake/],
-    ["flags every declared write", (e) => e.class === "DECLARED" && WRITE_METHODS.has(e.method), /not a fake: (ChatGPT-User|Perplexity-User|none)/],
-    ["flags a crawler's name, reads too", (e) => e.class === "DECLARED" && ["GPTBot", "ClaudeBot", "Googlebot"].includes(e.operator), /not a fake: (GPTBot|ClaudeBot|Googlebot) DECLARED (GET|HEAD)/],
-    ["flags any write under any name", (e) => WRITE_METHODS.has(e.method) && e.class !== "SUSPECTED", /not a fake: .*VERIFIED POST/],
+    ["flags every declared write", (e) => e.class === "DECLARED" && e.access === "write", /not a fake: (ChatGPT-User|Perplexity-User|none)/],
+    ["flags a crawler's name, reads too", (e) => e.class === "DECLARED" && ["GPTBot", "ClaudeBot", "Googlebot"].includes(e.operator), /not a fake: (GPTBot|ClaudeBot|Googlebot) DECLARED read/],
+    ["flags any write under any name", (e) => e.access === "write" && e.class !== "SUSPECTED", /not a fake: .*VERIFIED write/],
   ];
   for (const [name, rule, want] of planted) {
     const m = misjudged(rule, w.labelled);
@@ -152,5 +152,5 @@ test("ONE-5: writes under a crawler's name are reported as suspected fakes, 0 mi
 
 /** A fixed record as one hourly batch (what the Gate would send for it). */
 function hourlyOf(r) {
-  return { v: 0, kind: "ludion.hourly", site: r.site, hour: r.ts - (r.ts % 3600), rows: [{ route: r.route, method: r.method, class: r.class, decision: r.decision, operator: r.operator, count: 1 }] };
+  return { v: 0, kind: "ludion.hourly", site: r.site, hour: r.ts - (r.ts % 3600), rows: [{ route: r.route, access: r.access, class: r.class, decision: r.decision, operator: r.operator, count: 1 }] };
 }

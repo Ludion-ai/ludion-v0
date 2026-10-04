@@ -5,15 +5,25 @@
 // (UNKNOWN) are never kept, with one exception: a request for a path on the probe list (/.env,
 // /wp-login.php, …; probes.mjs) is kept whatever its User-Agent says, under the list's own label,
 // since scanners often say they are browsers. The rows stay in the site's own D1.
-import { metadataEvent, routePath, AUTOMATION } from "@ludion/gate-core";
+import { metadataEvent, routePath, AUTOMATION, WRITE_METHODS } from "@ludion/gate-core";
 import { agentName, UNNAMED } from "@ludion/report";
 import { probeOf } from "./probes.mjs";
 
 /** Columns of one row, in order (store.mjs writes them, the report reads a subset). */
 export const COLUMNS = [
   "rid", "ts", "site", "method", "route", "class", "decision", "error", "pressure", "diver", "country",
-  "operator", "token", "reason", "code", "sig_agent", "sig_lifetime", "sig_nonce", "probe", "status",
+  "operator", "token", "reason", "code", "sig_agent", "sig_lifetime", "sig_nonce", "probe", "status", "access",
 ];
+
+/**
+ * A stored row as the report reads it. `access` (read or write) is the Gate's call; rows stored before
+ * the Gate recorded it (2026-10-04) get it from the method, which is the same call here: this site's
+ * config marks no route "writes": false (wrangler.jsonc), so the Gate's judgment was the method's.
+ */
+export function reportRow(row) {
+  if (row?.access === "read" || row?.access === "write") return row;
+  return { ...row, access: WRITE_METHODS.has(String(row?.method ?? "").toUpperCase()) ? "write" : "read" };
+}
 
 const WORD = /^[A-Za-z0-9_.-]{1,48}$/;
 const word = (v) => (typeof v === "string" && WORD.test(v) ? v : null);
@@ -49,7 +59,7 @@ export function eventRow(result, request, { status = null } = {}) {
   if (!receipt) return null;
   const probe = probeOf(new URL(request.url).pathname);
   if (!AUTOMATION.has(cls?.class) && !probe) return null;
-  const e = metadataEvent({ receipt, path: routePath(request.url), country: request.cf?.country });
+  const e = metadataEvent({ receipt, path: routePath(request.url), country: request.cf?.country, write: result.access === "write" });
   const facts = signatureFacts(request.headers.get("signature-input"));
   return {
     rid: e.rid, ts: e.ts, site: e.site, method: e.method, route: e.route, class: e.class, decision: e.decision,
@@ -60,5 +70,6 @@ export function eventRow(result, request, { status = null } = {}) {
     sig_agent: agentHost(request.headers.get("signature-agent")),
     sig_lifetime: facts.lifetime, sig_nonce: facts.nonce,
     probe, status: Number.isInteger(status) && status >= 100 && status <= 599 ? status : null,
+    access: e.access,
   };
 }

@@ -10,19 +10,19 @@
  },
  "expect": {
   "headline": {
-   "named_pct": 23
+   "named_pct": 22
   },
   "groups": {
    "named": {
-    "count": 129,
+    "count": 130,
     "did": [
      "browse",
-     "form",
-     "checkout"
+     "checkout",
+     "form"
     ]
    },
    "claimed": {
-    "count": 324,
+    "count": 329,
     "did": [
      "browse",
      "checkout",
@@ -30,7 +30,7 @@
     ]
    },
    "unnamed": {
-    "count": 120,
+    "count": 125,
     "did": [
      "browse",
      "checkout",
@@ -53,72 +53,72 @@
     ]
    }
   ],
-  "events": 573,
+  "events": 584,
   "classes": {
-   "VERIFIED": 118,
-   "UNVERIFIED": 63,
-   "SPOOFED": 92,
-   "REVOKED": 11,
-   "DECLARED": 169,
-   "SUSPECTED": 120
+   "VERIFIED": 120,
+   "UNVERIFIED": 62,
+   "SPOOFED": 94,
+   "REVOKED": 10,
+   "DECLARED": 173,
+   "SUSPECTED": 125
   },
   "decisions": {
-   "allow": 464,
-   "friction": 31,
-   "deny": 78
+   "allow": 480,
+   "friction": 28,
+   "deny": 76
   },
-  "verified_actions": 118,
+  "verified_actions": 120,
   "verified_agents": 8,
   "critical": {
-   "unverified": 253,
-   "allowed": 171,
-   "friction": 6,
-   "denied": 76
+   "unverified": 250,
+   "allowed": 173,
+   "friction": 2,
+   "denied": 75
   },
   "kinds": {
    "checkout": {
-    "automation": 118,
-    "verified": 11,
-    "denied": 48
+    "automation": 111,
+    "verified": 9,
+    "denied": 42
    },
    "login": {
-    "automation": 84,
-    "verified": 6,
-    "denied": 23
+    "automation": 90,
+    "verified": 7,
+    "denied": 29
    },
    "signup": {
-    "automation": 7,
+    "automation": 3,
     "verified": 1,
     "denied": 0
    },
    "account": {
     "automation": 61,
-    "verified": 5,
-    "denied": 7
+    "verified": 6,
+    "denied": 5
    },
    "form": {
     "automation": 39,
-    "verified": 16,
+    "verified": 14,
     "denied": 0
    },
    "search": {
-    "automation": 32,
+    "automation": 33,
     "verified": 7,
     "denied": 0
    },
    "api": {
-    "automation": 29,
+    "automation": 46,
     "verified": 8,
     "denied": 0
    },
    "asset": {
-    "automation": 18,
-    "verified": 3,
+    "automation": 15,
+    "verified": 5,
     "denied": 0
    },
    "browse": {
-    "automation": 185,
-    "verified": 61,
+    "automation": 186,
+    "verified": 63,
     "denied": 0
    }
   },
@@ -129,6 +129,10 @@
    },
    {
     "agent": "dvr-k7q2m6x4pcab3cde",
+    "actions": 15
+   },
+   {
+    "agent": "crawler.bluefin.example",
     "actions": 13
    },
    {
@@ -136,12 +140,8 @@
     "actions": 12
    },
    {
-    "agent": "crawler.bluefin.example",
-    "actions": 12
-   },
-   {
     "agent": "shopper.agents.example",
-    "actions": 11
+    "actions": 10
    }
   ],
   "top_critical_routes": [
@@ -159,15 +159,15 @@
    },
    {
     "route": "/login",
-    "count": 23
+    "count": 28
    },
    {
     "route": "/checkout",
-    "count": 14
+    "count": 13
    },
    {
     "route": "/api/v1/cart",
-    "count": 12
+    "count": 11
    },
    {
     "route": "/checkout/:id",
@@ -175,27 +175,27 @@
    },
    {
     "route": "/cart",
-    "count": 10
+    "count": 7
    }
   ],
   "pressure1": {
-   "friction": 348,
-   "exempt": 88,
+   "friction": 361,
+   "exempt": 90,
    "applies": true
   },
   "previous": {
-   "events": 278,
-   "verified_actions": 30,
-   "critical_unverified": 82,
-   "spoofed": 26
+   "events": 277,
+   "verified_actions": 32,
+   "critical_unverified": 77,
+   "spoofed": 27
   },
   "delta": {
-   "events": 295,
+   "events": 307,
    "verified_actions": 88,
-   "critical_unverified": 171,
-   "spoofed": 66
+   "critical_unverified": 173,
+   "spoofed": 67
   },
-  "skipped": 7
+  "skipped": 8
  },
  "canaries": "truth/canaries.json"
 }

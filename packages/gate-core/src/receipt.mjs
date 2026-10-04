@@ -104,13 +104,16 @@ export function countryCode(country) {
 /**
  * Metadata event for Ludion Cloud (spec §11.7). Strictly no content: the route is the off-site
  * template of `path` (route words only, PRIV-1), the method a known token, the country a code.
+ * `write` is the Gate's own judgment (a write method on a route not marked "writes": false): it is
+ * what the hourly count and the report go by, as `access` ("read" or "write"), never the method.
  */
-export function metadataEvent({ receipt, path, ip, ipSalt, country, operator, purpose, verdict }) {
+export function metadataEvent({ receipt, path, ip, ipSalt, country, operator, purpose, verdict, write }) {
   const method = String(receipt.method ?? "").toUpperCase();
   return {
     v: 0,
     rid: receipt.rid, site: receipt.site, ts: receipt.ts,
     method: METHODS.has(method) ? method : "OTHER",
+    access: write ? "write" : "read",
     route: publicTemplatePath(path ?? receipt.route ?? ""),
     class: receipt.class, decision: receipt.decision, error: receipt.error, pressure: receipt.pressure,
     diver: receipt.diver,

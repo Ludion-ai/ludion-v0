@@ -4,6 +4,7 @@
 // the report does not have: automation hunting for secrets and admin pages (probes.mjs).
 import { readEvent, summarize, renderText, renderHtml, subject, dayWindow, addDays, dateIn, fmt, LANGS } from "@ludion/report";
 import { store } from "./store.mjs";
+import { reportRow } from "./observe.mjs";
 import { probeKind, KINDS } from "./probes.mjs";
 
 const TOP = 5, TOP_PROBES = 10;
@@ -159,7 +160,7 @@ export async function daily({ db, site, tz, now, webhook, retainDays, fetch = gl
   const win = dayWindow(date, tz), prev = dayWindow(addDays(date, -1), tz);
   const st = store(db);
   const rows = await st.events(Math.floor(prev.start / 1000), Math.ceil(win.end / 1000));
-  const summary = summarize(rows.map(readEvent).filter(Boolean), { site, date, tz });
+  const summary = summarize(rows.map(reportRow).map(readEvent).filter(Boolean), { site, date, tz });
   const x = extras(rows.filter((r) => r.site === site && r.ts * 1000 >= win.start && r.ts * 1000 < win.end));
   const out = {};
   for (const lang of LANGS) {

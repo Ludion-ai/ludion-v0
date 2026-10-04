@@ -12,7 +12,7 @@ import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import { readEvent, count, dayWindow, addDays, isValidDate, fmt } from "@ludion/report";
 import { extras, probeLines } from "./src/daily.mjs";
-import { COLUMNS } from "./src/observe.mjs";
+import { COLUMNS, reportRow } from "./src/observe.mjs";
 
 const TZ = "Asia/Tokyo", SITE = "tracecheck.dev";
 
@@ -35,12 +35,12 @@ export function summarizeSpan(rows, { from, to, tz = TZ, site = SITE }) {
   for (let d = from; d <= to; d = addDays(d, 1)) {
     const w = dayWindow(d, tz);
     const day = mine.filter((r) => r.ts * 1000 >= w.start && r.ts * 1000 < w.end);
-    const c = count(day.map(readEvent).filter(Boolean));
+    const c = count(day.map(reportRow).map(readEvent).filter(Boolean));
     days.push({ date: d, events: c.events, verified: c.classes.VERIFIED, declared: c.classes.DECLARED, suspected: c.classes.SUSPECTED, critical_unverified: c.critical.unverified });
   }
   const lifetimes = {};
   for (const r of mine) if (r.sig_lifetime != null) lifetimes[r.sig_lifetime] = (lifetimes[r.sig_lifetime] ?? 0) + 1;
-  return { site, tz, from, to, days, ...count(mine.map(readEvent).filter(Boolean)), pilot: { ...extras(mine), lifetimes } };
+  return { site, tz, from, to, days, ...count(mine.map(reportRow).map(readEvent).filter(Boolean)), pilot: { ...extras(mine), lifetimes } };
 }
 
 const list = (items, n = 8) => (items.length ? items.slice(0, n).map((i) => `${i.key} ${fmt(i.count)}`).join("、") : "なし");

@@ -1,12 +1,17 @@
 // From metadata events to the numbers of the daily report (spec §11.8).
 //
 // Input is what the Gate's sink emits (gate-core metadataEvent, spec §11.7). Only a fixed set of
-// fields is ever read — site, ts, method, route, class, decision, pressure, diver — and nothing
+// fields is ever read — site, ts, access, route, class, decision, pressure, diver — and nothing
 // else is carried forward, so a field an old or broken Gate added (a raw IP, a cookie, a query)
 // cannot reach the report. Routes are shown only as strict templates, agents only by a name
 // that is not an address.
-import { decide, AUTOMATION, isReadOnlyAgent } from "@ludion/gate-core";
-import { routeKind, isCritical, pathOf, publicTemplateSegment, ROUTE_KINDS, CRITICAL_KINDS, WRITE_METHODS } from "@ludion/gate-core/route";
+//
+// Whether a visit wrote is the Gate's call, made where the site's config is (a route marked
+// "writes": false is a read): the record and the hourly count carry it as `access`, "read" or
+// "write". The report goes by that alone — never the method, never the site's config — so a
+// read-only POST is never counted as a write here (spec §12.5).
+import { decide, AUTOMATION, isReadOnlyAgent, ACCESS } from "@ludion/gate-core";
+import { routeKind, pathOf, publicTemplateSegment, ROUTE_KINDS, CRITICAL_KINDS } from "@ludion/gate-core/route";
 import { dayWindow, addDays } from "./window.mjs";
 
 export const REPORT_CLASSES = ["VERIFIED", "UNVERIFIED", "SPOOFED", "REVOKED", "DECLARED", "SUSPECTED"];
@@ -28,9 +33,10 @@ export function readEvent(e) {
   if (typeof e.site !== "string" || typeof e.ts !== "number" || !Number.isFinite(e.ts)) return null;
   if (!AUTOMATION.has(e.class) || !DECISIONS.has(e.decision)) return null;
   if (!Number.isInteger(e.pressure) || e.pressure < 0 || e.pressure > 3) return null;
+  if (!ACCESS.includes(e.access)) return null;
   return {
     site: e.site, ts: e.ts * 1000,
-    method: typeof e.method === "string" ? e.method.toUpperCase() : "OTHER",
+    access: e.access,
     route: typeof e.route === "string" ? e.route : "",
     class: e.class, decision: e.decision, pressure: e.pressure,
     diver: typeof e.diver === "string" ? e.diver : null,
@@ -82,9 +88,10 @@ export function readBatch(b) {
   const out = [];
   for (const r of b.rows) {
     if (!r || !AUTOMATION.has(r.class) || !DECISIONS.has(r.decision) || !Number.isInteger(r.count) || r.count < 1) return null;
+    if (!ACCESS.includes(r.access)) return null;
     out.push({
       site: b.site, ts: b.hour * 1000,
-      method: typeof r.method === "string" ? r.method.toUpperCase() : "OTHER",
+      access: r.access,
       route: typeof r.route === "string" ? r.route : "",
       class: r.class, decision: r.decision, pressure: null,
       diver: typeof r.operator === "string" && r.operator !== "none" ? r.operator : null,
@@ -155,12 +162,15 @@ export function agentName(diver) {
 const byCount = (a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1);
 
 /**
- * A suspected fake (spec §12.5 rule 2, ONE-5): a write (POST, PUT, PATCH, DELETE) by something that
+ * A suspected fake (spec §12.5 rule 2, ONE-5): a write (as the Gate counted it) by something that
  * only claimed, in its User-Agent and without a signature (DECLARED), the name of an agent that only
  * reads — a crawler or a search indexer (gate-core isReadOnlyAgent). The real one does not submit.
  * A person's fetcher (ChatGPT-User and the like) may submit; a signed agent proved its name.
  */
-export const isSuspectedFake = (e) => e.class === "DECLARED" && typeof e.operator === "string" && WRITE_METHODS.has(e.method) && isReadOnlyAgent(e.operator);
+export const isSuspectedFake = (e) => e.class === "DECLARED" && typeof e.operator === "string" && e.access === "write" && isReadOnlyAgent(e.operator);
+
+/** A critical touch (spec §11.3): a critical kind of route, or any write as the Gate counted it. */
+const isCriticalVisit = (e, kind) => CRITICAL_KINDS.has(kind) || e.access === "write";
 
 /** The numbers for one site and one window. */
 export function count(events) {
@@ -177,7 +187,7 @@ export function count(events) {
     total += n;
     classes[e.class] += n;
     decisions[e.decision] += n;
-    const kind = routeKind(e.method, e.route);
+    const kind = routeKind(null, e.route);
     const g = groups[GROUP_OF[e.class]];
     g.count += n;
     g.kinds[kind] = (g.kinds[kind] ?? 0) + n;
@@ -197,7 +207,7 @@ export function count(events) {
     k.automation += n;
     if (e.class === "VERIFIED") { k.verified += n; const a = agentName(e.diver); agents.set(a, (agents.get(a) ?? 0) + n); }
     if (e.decision === "deny") k.denied += n;
-    if (e.class !== "VERIFIED" && kind !== "malformed" && isCritical(e.method, kind)) {
+    if (e.class !== "VERIFIED" && kind !== "malformed" && isCriticalVisit(e, kind)) {
       critical.unverified += n;
       critical[{ allow: "allowed", friction: "friction", deny: "denied" }[e.decision]] += n;
       const r = displayRoute(e.route);

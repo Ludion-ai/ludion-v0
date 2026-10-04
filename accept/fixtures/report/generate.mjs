@@ -64,6 +64,8 @@ const ROUTES = [
   { route: "/blog/:param", kind: "browse", p: 0, methods: ["GET"], w: 5 },
   { route: "/search", kind: "search", p: 1, methods: ["GET"], w: 9 },
   { route: "/api/v1/products", kind: "api", p: 0, methods: ["GET"], w: 7 },
+  // A POST the site marks read-only ("writes": false): the Gate counts it as a read.
+  { route: "/api/graphql", kind: "api", p: 0, methods: ["POST"], w: 3, readOnly: true },
   { route: "/assets/app.js", kind: "asset", p: 0, methods: ["GET"], w: 4 },
   { route: "/contact", kind: "form", p: 0, methods: ["GET", "GET", "POST"], w: 3 },
   { route: "/products/:id/reviews", kind: "form", p: 0, methods: ["GET", "POST"], w: 3 },
@@ -112,6 +114,8 @@ function makeEvent(site, ts, o = {}) {
   const cls = o.class ?? weighted(CLASS_W).c;
   const rt = o.routeRow ?? weighted(ROUTES);
   const method = o.method ?? pick(rt.methods);
+  // The Gate's call (gate-core): a write method on a route the site did not mark read-only.
+  const access = WRITES.has(method) && !rt.readOnly ? "write" : "read";
   const p = o.pressure ?? rt.p;
   const { decision, error } = o.decision ? { decision: o.decision, error: o.error ?? null } : gateDecision(cls, p);
   let diver = null, agent = null;
@@ -124,11 +128,11 @@ function makeEvent(site, ts, o = {}) {
   const rid = `rcp-${token(16)}`, ip_h = token(22);
   canaries.rid.add(rid); canaries.ip_h.add(ip_h);
   const ev = {
-    v: 0, rid, site, ts: Math.floor(ts / 1000), method, route: o.rawRoute ?? rt.route, class: cls, decision, error,
+    v: 0, rid, site, ts: Math.floor(ts / 1000), method, access, route: o.rawRoute ?? rt.route, class: cls, decision, error,
     pressure: p, diver, country: o.country !== undefined ? o.country : pick(COUNTRIES), ip_h, ...(o.extra ?? {}),
   };
   const shownRoute = o.shownRoute ?? rt.route, kind = o.kind ?? rt.kind;
-  return [ev, { site, ts: ev.ts * 1000, cls, kind, method, decision, p, agent, route: shownRoute, said: o.said ?? null }];
+  return [ev, { site, ts: ev.ts * 1000, cls, kind, method, access, decision, p, agent, route: shownRoute, said: o.said ?? null }];
 }
 
 // ── the event stream ──────────────────────────────────────────────────────────────────────
@@ -191,10 +195,12 @@ items.sort((a, b) => a[0].ts - b[0].ts);
 const junk = [
   "not json at all",
   '{"v":0,"rid":"rcp-truncated","site":"site-7f3a9c2e","ts":17',
-  '{"v":0,"site":"site-7f3a9c2e","ts":"yesterday","class":"DECLARED","method":"GET","route":"/","decision":"allow","pressure":0}',
+  '{"v":0,"site":"site-7f3a9c2e","ts":"yesterday","class":"DECLARED","method":"GET","access":"read","route":"/","decision":"allow","pressure":0}',
   "[1,2,3]",
-  '{"v":0,"site":"site-7f3a9c2e","ts":1790640000,"class":"HUMAN","method":"GET","route":"/","decision":"allow","pressure":0}',
-  '{"v":0,"site":"site-7f3a9c2e","ts":1790640000,"class":"UNKNOWN","method":"GET","route":"/","decision":"allow","pressure":0}',
+  '{"v":0,"site":"site-7f3a9c2e","ts":1790640000,"class":"HUMAN","method":"GET","access":"read","route":"/","decision":"allow","pressure":0}',
+  '{"v":0,"site":"site-7f3a9c2e","ts":1790640000,"class":"UNKNOWN","method":"GET","access":"read","route":"/","decision":"allow","pressure":0}',
+  // No read or write from the Gate: the report does not guess it from the method.
+  '{"v":0,"site":"site-7f3a9c2e","ts":1790640000,"class":"DECLARED","method":"POST","route":"/contact","decision":"allow","pressure":0}',
   "null",
 ];
 const lines = items.map(([ev]) => JSON.stringify(ev));
@@ -225,7 +231,7 @@ function count(labels) {
     const k = (kinds[l.kind] ??= { automation: 0, verified: 0, denied: 0 });
     k.automation++; if (l.cls === "VERIFIED") k.verified++; if (l.decision === "deny") k.denied++;
     if (l.cls === "VERIFIED") agents[l.agent] = (agents[l.agent] ?? 0) + 1;
-    if (l.cls !== "VERIFIED" && (CRITICAL_KINDS.has(l.kind) || WRITES.has(l.method))) {
+    if (l.cls !== "VERIFIED" && (CRITICAL_KINDS.has(l.kind) || l.access === "write")) {
       critical.unverified++;
       critical[{ allow: "allowed", friction: "friction", deny: "denied" }[l.decision]]++;
       routes[l.route] = (routes[l.route] ?? 0) + 1;
