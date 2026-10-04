@@ -76,7 +76,7 @@
 **次の一手**（2026-10-05 から、ローンチ 10/13 22:00 JST まで）
 
 1. 人間の手が要るもの（人間待ちの表）：npm の初版、本番の名簿と Card Host のデプロイ（`*.agents.ludion.ai` の証明書はお金の判断）、ludion.ai の切り替え、`preview` の secret、security@ と privacy@ の受信、PILOT-2 のトークン。
-2. secret が入ったら：LOOP-2 の案 B（`preview` は main への push の後だけ、WEB-1 の Lighthouse を分ける）。LOOP-2 を PASS にする。
+2. secret が入ったら：LOOP-2 を main への push の実行で3回測り、人間に報告する（仕組みは入れた。ADR 2026-10-04-preview-versions-and-split-lighthouse）。
 3. WEB-7（ドキュメントをテストに）：Express と CLI（WEB-10）、`/gate` の Express・Next.js・Workers（WEB-12）、TypeScript（`/agent`、WEB-13）は済み。残りは FastAPI と WordPress（GATE-9 の Gate が要る）、Python（PyPI の公開は人間）、scan の CLI（npm の公開のあと）。
 4. spec の残りの食い違い（outbox）：C7（名簿の事前登録、ローンチの後）。
 5. 夜間の Windows（`nightly-windows`）の結果を毎朝見る。赤なら最優先で直す。
@@ -123,8 +123,8 @@
 - [x] **spec v2.0 の判断**（2026-10-03）：決定1〜9（ADR-035〜039、041、042）。spec v2.0.1 と CLAUDE.md の芯を直した。
 - [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（買うと決めた。ACM のワイルドカード1枚と DNS のワイルドカード1つ、§4）は人間。
 - [ ] **npm の初版**：`ludion` の1本（ADR-036、実装の順の2のあと）を、人間が手で出す。2版目から release ワークフロー。
-- [x] **判断（LOOP-2 と `preview` ジョブ）**：案 B（2026-10-04、人間の「全部許可する」で確定）。`preview` は main への push の後だけで回し、WEB-1 の Lighthouse を分ける。実装は secret が入ってから（Claude）。それまで LOOP-2 は `preview` の赤で FAIL のまま。
-- [ ] **CI の `preview` ジョブの secret**（人間がトークンを作って登録すると決めた）：`CLOUDFLARE_PREVIEW_API_TOKEN`（`Ludion Agents` の Workers Scripts の編集だけ）と `CLOUDFLARE_PREVIEW_ACCOUNT_ID`。登録したら、`preview` を main の必須チェックに足す。それまで `preview` は赤で、WEB-1 は CI で強制されない（前も SKIP で強制されていなかった）。
+- [x] **判断（LOOP-2 と `preview` ジョブ）**：人間の形（2026-10-04 の指示の1）で入れた（docs/adr/2026-10-04-preview-versions-and-split-lighthouse.md）。main への push は毎回、PR は `site/` とビルドの元に触れた時だけ。版ごとの preview URL を測るので、ジョブをまたぐ鍵は要らない。Lighthouse は3台に分けて並列。版の URL に Cloudflare が足す `X-Robots-Tag: noindex` は、live に無いことを確かめてから、その1つだけを外す中継で測る。手元で全体を流して PASS（36ページ、最低 100）。CI での時間は secret が入ってから3回測って報告する。
+- [ ] **CI の `preview` ジョブの secret**（人間がトークンを作って登録すると決めた）：`CLOUDFLARE_PREVIEW_API_TOKEN`（`Ludion Agents` の Workers Scripts の編集だけ）と `CLOUDFLARE_PREVIEW_ACCOUNT_ID`。登録されたら、Claude が main への push の実行で LOOP-2 を3回測って報告する（人間の指示）。それまで `preview-deploy` は赤で、WEB-1 は CI で強制されない。
 - [x] 確認（#69、2026-10-02 に人間が確認）：ルートの重なりの読み。「一番厳しいものが勝つ」を、一致する全てのルートの最高の Pressure と、要件の全部を合わせる（Depth は最大、Ballast、scope は全部）と読んだ。一つを選ぶより厳しくなる場合がある。この読みで正しい（Pressure と Depth は最大、Ballast はどれかが求めれば必須、scope は全部）。
 - [x] 確認（#71、2026-10-02 に人間が確認）：「上限付きの Mandate を受け付けない」を、数える上限（`per_day`）のある Mandate の決済を拒否する、と読んだ。`checkout_max` と通貨は記録なしでどの Gate でも効く。正しい。加えて、期間の中で累計する上限（1日の合計金額など）も記録が要り、無ければ拒否。v0 が強制できない上限は、記録があっても拒否する（`unenforceable_limit`、PRS-3）。
 - [x] Codex の検証器の監査（10件）：全部採用。#69（5、6、7、8）、#70（1、2、3、9、10、対の意味）、#71（4）、#73 と #76（4 の実装の CI で見つけたバグ）。追加のオラクル案7件も採用（LOOP-3、LOOP-4、STD-5、PRS-3、GATE-11、GATE-12、PRS-4）。
