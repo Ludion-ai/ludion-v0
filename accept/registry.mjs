@@ -295,6 +295,9 @@ export const ORACLES = [
   // endpoints in code; standard reference implementations only by exact name@version (ADR-027).
   { id: "NEUT-2", m: "M5", kind: "-", level: 1, property: "neutrality", title: "no CDN/cloud vendor SDK in gate-core's dependency tree",
     run: nodeScript("accept/neutral/deps.mjs") },
+  // gitleaks pinned by version and SHA-256 (accept/gitleaks/gitleaks.mjs), with .gitleaks.toml's narrow exceptions (ADR-042).
+  { id: "SEC-1", m: "M5", kind: "±", level: 1, title: "0 secrets in the git history and the working tree (gitleaks); planted secrets — in a file, a deleted commit, the excepted files — are found",
+    timeoutMs: 600_000, run: nodeTest(["accept/gitleaks/sec1.test.mjs"], "^SEC-1:", { timeoutMs: 590_000, metric: (out) => (/^# SEC-1: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "CRY-1", m: "M5", kind: "-", level: 0, title: "no home-made crypto: primitives only inside allowlisted modules", run: async () => {
     const allow = new Set(["packages/gate-core/src/staple.mjs", "packages/gate-core/src/receipt.mjs", "packages/diver/src/keys.mjs"]);
     // WebCrypto (also via a destructured `subtle`), node:crypto's cipher / KDF / signing / key

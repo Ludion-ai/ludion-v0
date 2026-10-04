@@ -1,0 +1,23 @@
+# gitleaks for SEC-1 (ADR-042): gitleaks' own rules, and narrow exceptions for test data this
+# repository generates. Each exception names the one rule it quiets and the files it covers, so any
+# other kind of secret in those files is still found (SEC-1 plants one to make sure).
+title = "Ludion"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Conformance vectors: Staples, Mandates and statements signed by test keys derived from each case id (accept/conformance/export.mjs)"
+targetRules = ["jwt"]
+paths = ['''^accept/conformance/vectors\.json$''']
+
+[[allowlists]]
+description = "Synthetic canaries, receipt ids and IP hashes in the report and log fixtures (accept/fixtures/*/generate.mjs)"
+targetRules = ["generic-api-key"]
+paths = ['''^accept/fixtures/(report|logs)/truth/[^/]+\.json$''']
+
+[[allowlists]]
+description = "The pinned SHA-256 digest of a downloaded tool"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''export const [A-Z0-9_]+_SHA256 = "[0-9a-f]{64}"''']
