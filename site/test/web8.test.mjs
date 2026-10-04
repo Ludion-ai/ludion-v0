@@ -201,12 +201,15 @@ test("WEB-8: the check bites: each planted fault in the endpoint is caught by it
   for (const [name, rule, from, to] of FAULTS) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ludion-edge-fault-"));
     try {
-      for (const f of ["worker.mjs", "signup.mjs", "form.mjs"]) fs.copyFileSync(path.join(EDGE, f), path.join(dir, f));
+      // The Worker with every module it imports (worker.mjs grows routes), one of them faulty.
+      for (const f of fs.readdirSync(EDGE).filter((x) => x.endsWith(".mjs"))) fs.copyFileSync(path.join(EDGE, f), path.join(dir, f));
       const src = fs.readFileSync(path.join(dir, "signup.mjs"), "utf8");
       assert.ok(src.includes(from), `the fault "${name}" must still apply to signup.mjs`);
       fs.writeFileSync(path.join(dir, "signup.mjs"), src.replace(from, to));
       const h = await startNotifier();
-      const e = await startEdge({ dist, main: path.join(dir, "worker.mjs"), vars: { SIGNUP_WEBHOOK_URL: h.url } });
+      let e;
+      try { e = await startEdge({ dist, main: path.join(dir, "worker.mjs"), vars: { SIGNUP_WEBHOOK_URL: h.url } }); }
+      catch (err) { await h.close(); throw err; } // an open notifier would keep this test process alive
       try {
         const { findings } = await exercise(e.origin, h, tag++);
         const rules = [...new Set(findings.map((f) => f.rule))];

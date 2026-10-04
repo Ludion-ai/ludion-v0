@@ -202,6 +202,11 @@ export const ORACLES = [
     run: nodeTest(["packages/diver/test/div3.test.mjs"], "^DIV-3:") },
   // The npm publish set (accept/publish/set.mjs): packed tarballs into a clean project; the CLI and
   // every Gate adapter work from published names only. Third-party deps come from the registry.
+  // init's one screen and its one optional question (spec §9.2, §13.1; the human's order 2026-10-03).
+  { id: "DIV-5", m: "M2", kind: "±", level: 0, property: "init-screen", title: "npx ludion init shows one screen: the AI's name, the same name on the web (Signature-Agent) and on MCP (client_id), the revoke line, a README badge; none of Depth/Ballast/Mandate/Pressure/Staple, no secret (en, ja, custom domain)",
+    run: nodeTest(["packages/diver/test/div5.test.mjs"], "^DIV-5:", { metric: (out) => (/^# DIV-5: (.+)$/m.exec(out) ?? [])[1] }) },
+  { id: "DIV-6", m: "M2", kind: "-", level: 0, property: "init-question", title: "init's optional question sends nothing unless answered (no terminal, CI, skipped, nonsense: 0 network attempts); an answer is one POST of one word, with no Diver id, name, contact or key",
+    run: nodeTest(["packages/diver/test/div5.test.mjs"], "^DIV-6:") },
   { id: "PUB-1", m: "M2", kind: "+", level: 1, pair: "PUB-2", property: "published-tarball", title: "npm tarballs alone install into a clean project; ludion CLI and gate-node/workers/next work (my agent → my Gate → VERIFIED)",
     timeoutMs: 900_000, run: nodeTest(["accept/publish/pub1.test.mjs"], "^PUB-1:", { timeoutMs: 880_000,
       metric: (out) => (/^# PUB-1: (.+)$/m.exec(out) ?? [])[1] }) },
