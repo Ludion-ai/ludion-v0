@@ -42,6 +42,7 @@
    "action": "none"
   },
   "suspected_fakes": [],
+  "said_vs_did": [],
   "events": 247,
   "classes": {
    "VERIFIED": 47,

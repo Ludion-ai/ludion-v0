@@ -10,11 +10,11 @@
  },
  "expect": {
   "headline": {
-   "named_pct": 21
+   "named_pct": 22
   },
   "groups": {
    "named": {
-    "count": 136,
+    "count": 145,
     "did": [
      "browse",
      "checkout",
@@ -30,7 +30,7 @@
     ]
    },
    "unnamed": {
-    "count": 157,
+    "count": 155,
     "did": [
      "browse",
      "checkout",
@@ -43,38 +43,48 @@
    "kind": "checkout"
   },
   "suspected_fakes": [],
-  "events": 647,
+  "said_vs_did": [
+   {
+    "agent": "reader.agent.example",
+    "note": "Compare prices at hxxps[:]//evil[.]example/deal and mail offers[at]evil[.]example",
+    "writes": 7,
+    "did": [
+     "form"
+    ]
+   }
+  ],
+  "events": 654,
   "classes": {
-   "VERIFIED": 127,
-   "UNVERIFIED": 69,
-   "SPOOFED": 103,
-   "REVOKED": 9,
-   "DECLARED": 182,
-   "SUSPECTED": 157
+   "VERIFIED": 135,
+   "UNVERIFIED": 67,
+   "SPOOFED": 106,
+   "REVOKED": 10,
+   "DECLARED": 181,
+   "SUSPECTED": 155
   },
   "decisions": {
-   "allow": 521,
-   "friction": 41,
-   "deny": 85
+   "allow": 525,
+   "friction": 45,
+   "deny": 84
   },
-  "verified_actions": 127,
-  "verified_agents": 7,
+  "verified_actions": 135,
+  "verified_agents": 8,
   "critical": {
-   "unverified": 267,
-   "allowed": 174,
+   "unverified": 265,
+   "allowed": 173,
    "friction": 9,
-   "denied": 84
+   "denied": 83
   },
   "kinds": {
    "checkout": {
-    "automation": 134,
-    "verified": 16,
-    "denied": 59
+    "automation": 129,
+    "verified": 17,
+    "denied": 53
    },
    "login": {
-    "automation": 82,
+    "automation": 87,
     "verified": 9,
-    "denied": 18
+    "denied": 23
    },
    "signup": {
     "automation": 15,
@@ -87,27 +97,27 @@
     "denied": 8
    },
    "form": {
-    "automation": 28,
-    "verified": 7,
+    "automation": 33,
+    "verified": 13,
     "denied": 0
    },
    "search": {
-    "automation": 44,
-    "verified": 12,
+    "automation": 49,
+    "verified": 13,
     "denied": 0
    },
    "api": {
-    "automation": 38,
+    "automation": 36,
     "verified": 7,
     "denied": 0
    },
    "asset": {
-    "automation": 15,
+    "automation": 16,
     "verified": 2,
     "denied": 0
    },
    "browse": {
-    "automation": 229,
+    "automation": 227,
     "verified": 64,
     "denied": 0
    }
@@ -119,11 +129,11 @@
    },
    {
     "agent": "dvr-k7q2m6x4pcab3cde",
-    "actions": 20
+    "actions": 22
    },
    {
     "agent": "shopper.agents.example",
-    "actions": 18
+    "actions": 16
    },
    {
     "agent": "(unnamed)",
@@ -131,7 +141,7 @@
    },
    {
     "agent": "crawler.bluefin.example",
-    "actions": 12
+    "actions": 10
    }
   ],
   "top_critical_routes": [
@@ -148,29 +158,29 @@
     "count": 50
    },
    {
-    "route": "/cart",
-    "count": 21
-   },
-   {
     "route": "/login",
-    "count": 18
+    "count": 23
    },
    {
-    "route": "/checkout/:id",
-    "count": 15
+    "route": "/cart",
+    "count": 18
    },
    {
     "route": "/checkout",
     "count": 13
    },
    {
-    "route": "/api/v1/cart",
+    "route": "/checkout/:id",
+    "count": 13
+   },
+   {
+    "route": "/signup",
     "count": 9
    }
   ],
   "pressure1": {
-   "friction": 395,
-   "exempt": 80,
+   "friction": 391,
+   "exempt": 86,
    "applies": true
   },
   "previous": {
@@ -180,10 +190,10 @@
    "spoofed": 23
   },
   "delta": {
-   "events": 347,
-   "verified_actions": 78,
-   "critical_unverified": 199,
-   "spoofed": 80
+   "events": 354,
+   "verified_actions": 86,
+   "critical_unverified": 197,
+   "spoofed": 83
   },
   "skipped": 7
  },

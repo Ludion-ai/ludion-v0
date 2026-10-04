@@ -35,7 +35,35 @@ export function readEvent(e) {
     class: e.class, decision: e.decision, pressure: e.pressure,
     diver: typeof e.diver === "string" ? e.diver : null,
     operator: operatorField(e.operator),
+    ...saidFields(e),
   };
+}
+
+/**
+ * What a per-visit record says the agent declared, set against what it did (gate-core purpose.mjs):
+ * only a contradiction of a SIGNED declaration, and its sentence as written (unchecked). An hourly
+ * count never carries any of it.
+ */
+function saidFields(e) {
+  if (e.verdict !== "contradiction" || e.said_by !== "signature" || e.said !== "read") return {};
+  const note = e.purpose?.signed && typeof e.purpose.note === "string" && [...e.purpose.note].length <= 140 ? e.purpose.note : null;
+  return { contradiction: true, note };
+}
+
+/**
+ * A sentence an agent wrote, made safe to show (PUR-5): nothing in it can become a link in a mail
+ * client or a browser — schemes, host names and addresses are defanged — and control characters go.
+ * The renderers escape it as any other text.
+ */
+export function defang(s) {
+  return String(s)
+    .replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, " ")
+    .replace(/\b([a-z][a-z0-9+.-]*):\/\//gi, (m, scheme) => `${scheme.toLowerCase().replace(/^http/, "hxxp")}[:]//`)
+    .replace(/\b(javascript|vbscript|data|mailto|tel|sms|file):/gi, "$1[:]")
+    .replace(/\b(www)\./gi, "$1[.]")
+    // a dot between the labels of something shaped like a host name (example.com, shop.example.co.jp)
+    .replace(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b/gi, (host) => host.replace(/\./g, "[.]"))
+    .replace(/@/g, "[at]");
 }
 
 const TOKEN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -142,7 +170,7 @@ export function count(events) {
   const critical = { unverified: 0, allowed: 0, friction: 0, denied: 0 };
   const pressure1 = { friction: 0, exempt: 0, applies: false };
   const groups = Object.fromEntries(GROUPS.map((g) => [g, { count: 0, kinds: {} }]));
-  const fakes = new Map(), fakesAllowed = new Map(), wall = {};
+  const fakes = new Map(), fakesAllowed = new Map(), wall = {}, said = new Map();
   let total = 0, pressureKnown = false;
   for (const e of events) {
     const n = e.n ?? 1; // an hourly row stands for n visits; a per-visit record for one
@@ -153,6 +181,12 @@ export function count(events) {
     const g = groups[GROUP_OF[e.class]];
     g.count += n;
     g.kinds[kind] = (g.kinds[kind] ?? 0) + n;
+    if (e.contradiction) {
+      const name = agentName(e.diver), key = JSON.stringify([name, e.note]);
+      const x = said.get(key) ?? { agent: name, note: e.note, writes: 0, kinds: {} };
+      x.writes += n; x.kinds[kind] = (x.kinds[kind] ?? 0) + n;
+      said.set(key, x);
+    }
     if (isSuspectedFake(e)) {
       fakes.set(e.operator, (fakes.get(e.operator) ?? 0) + n);
       if (e.decision === "allow") fakesAllowed.set(e.operator, (fakesAllowed.get(e.operator) ?? 0) + n);
@@ -190,6 +224,9 @@ export function count(events) {
     }])),
     decision: mainDecision(wall, fakesAllowed),
     suspected_fakes: suspectedFakes,
+    // Signed "read", then wrote (spec §11.7, §12.3): the agent's own words beside what it did.
+    said_vs_did: [...said.values()].sort((a, b) => b.writes - a.writes || (a.agent < b.agent ? -1 : 1)).slice(0, TOP_FAKES)
+      .map((x) => ({ agent: x.agent, note: x.note == null ? null : defang(x.note), writes: x.writes, did: Object.entries(x.kinds).sort(kindOrder).slice(0, TOP_DID).map(([k]) => k) })),
     events: total, classes, decisions,
     verified_actions: classes.VERIFIED,
     verified_agents: [...agents.keys()].filter((a) => a !== UNNAMED).length,

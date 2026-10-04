@@ -21,6 +21,13 @@ export const STRINGS = {
       wall_fakes: (token) => `「${token}」を名乗る送信に、壁を当てる（本物の ${token} は送信しません）`,
       none: "今日、決めることはありません。",
     },
+    said: {
+      title: "言ったことと、やったこと：署名して「読むだけ」と言い、書き込んだ相手",
+      lead: "署名で覆った目的の申告（Ludion-Purpose）で read と言いながら、送信したリクエストです。申告の文は相手が書いたままで、確かめていません。URL やメールアドレスはリンクにならない形で示します。",
+      head: ["相手", "言ったこと", "送信", "やったこと"],
+      said: (note) => (note == null ? "read（文なし）" : `read「${note}」（相手が書いた文・確かめていない）`),
+      none: "署名した申告と食い違う送信はありませんでした。",
+    },
     fakes: {
       title: "偽物の疑い：クローラーを名乗る送信",
       lead: "読むだけのはずのクローラーや検索のボットを User-Agent で名乗りながら、送信（POST・PUT・PATCH・DELETE）したリクエストです。本物は送信しないので、その名乗りは偽物と見られます。",
@@ -88,6 +95,13 @@ export const STRINGS = {
       wall: (kind) => `Put a wall in front of unnamed automation on ${kind.toLowerCase()} routes. People and AIs that name themselves are not affected.`,
       wall_fakes: (token) => `Put a wall in front of submissions claiming to be ${token}. The real ${token} does not submit.`,
       none: "Nothing to decide today.",
+    },
+    said: {
+      title: "What they said, and what they did: signed \"read only\", then wrote",
+      lead: "Requests that wrote while their signed purpose (Ludion-Purpose) said read. The sentence is shown as the agent wrote it, unchecked; addresses and links in it are shown so that nothing becomes a link.",
+      head: ["Agent", "Said", "Submissions", "Did"],
+      said: (note) => (note == null ? "read (no sentence)" : `read: “${note}” (the agent's own words, unchecked)`),
+      none: "No write went against a signed purpose.",
     },
     fakes: {
       title: "Suspected fakes: submissions claiming to be a crawler",

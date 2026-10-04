@@ -34,8 +34,9 @@
     "node": ">=20"
   },
   "dependencies": {
-    "web-bot-auth": "0.2.0",
     "http-message-sig": "0.3.0",
-    "jsonwebkey-thumbprint": "0.1.0"
+    "jsonwebkey-thumbprint": "0.1.0",
+    "structured-headers": "2.0.3",
+    "web-bot-auth": "0.2.0"
   }
 }

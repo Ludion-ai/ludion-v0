@@ -22,6 +22,7 @@ import { bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAUL
 import { createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR } from "./hourly.mjs";
 import { memoryRecords, RECORD_DAYS } from "./records.mjs";
 import { createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED } from "./decisions.mjs";
+import { parsePurpose, readPurpose, purposeVerdict, PURPOSE_HEADER, PURPOSE_KINDS, NOTE_MAX } from "./purpose.mjs";
 
 export {
   createResolver, createStapleVerifier, issueStaple, classify, createPolicy, createNonceCache, decide, compileRoute, CLASSES,
@@ -33,6 +34,7 @@ export {
   bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS,
   createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR, memoryRecords, RECORD_DAYS,
   createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED,
+  parsePurpose, readPurpose, purposeVerdict, PURPOSE_HEADER, PURPOSE_KINDS, NOTE_MAX,
 };
 
 export const LUDION_VERSION = "0";
@@ -248,8 +250,13 @@ export async function createGate(config) {
       cls = faultClass(route, e);
     }
     const write = WRITE_METHODS.has(String(req.method ?? "").toUpperCase()) && !route.readOnly;
+    // What it says it came to do (spec §11.7): its own word only where the verified signature covers it.
+    const purposeFields = req.fields.filter((f) => f.name.toLowerCase() === PURPOSE_HEADER);
+    const purpose = purposeFields.length > 1 ? { problem: "duplicate", signed: false }
+      : readPurpose({ value: purposeFields[0]?.value, covered: cls.class === "VERIFIED" && (cls.covered ?? []).includes(PURPOSE_HEADER) });
+    if (purpose) cls = { ...cls, purpose };
     const site = decisions.match(cls, { path, write });
-    let decision = decide(cls, route, site);
+    let decision = decide(cls, { ...route, write }, site);
     const unprovable = (cls.stapleError === "no_registry_keys" && STANDING_ERRORS.has(decision.error))
       || (cls.mandateError === "no_registry_keys" && decision.error === "mandate_required");
     if (decision.action === "deny" && unprovable && !failClosed) {
@@ -259,13 +266,13 @@ export async function createGate(config) {
     let receipt = null;
     try {
       const sigField = req.fields.find((f) => f.name.toLowerCase() === "signature")?.value;
-      receipt = await receipts.issue({ method: req.method, path, cls, decision, pressure: route.pressure, signature: sigField });
+      receipt = await receipts.issue({ method: req.method, path, cls, decision, pressure: route.pressure, signature: sigField, purpose: purpose?.signed ? purpose.kind : null });
       headers["Ludion-Receipt"] = receipts.toHeader(receipt);
     } catch (e) { gateError ??= e; } // a receipt is evidence, not the decision: losing it never changes the response
     if (receipt && AUTOMATION.has(cls.class)) {
       // The visit's record stays on the site (7 days); outside, it is one more in its hour's count.
       const operator = operatorOf(cls);
-      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country, operator });
+      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country, operator, purpose, verdict: purposeVerdict({ purpose, cls, write }) });
       quietly((r) => records.put(r), record);
       if (announce && !announced) { announced = true; quietly(announce, firstRecordLine(record, operator)); }
       if (hourly) { try { hourly.add(record, operator); } catch { /* counting never fails a request */ } }

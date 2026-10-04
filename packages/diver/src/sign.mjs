@@ -6,12 +6,13 @@
 // Covered components:
 //   always: @authority, "signature-agent";key=<label>
 //   POST/PUT/PATCH/DELETE: @method, @path, content-digest (RFC 9530)
-//   when present: ludion-staple, ludion-mandate (so they cannot be swapped)
+//   when present: ludion-staple, ludion-mandate, ludion-purpose (so they cannot be swapped)
 // Params: created, expires (≤60s), keyid (JWK thumbprint), nonce, tag="web-bot-auth".
 
 import { sign, generateNonce, HTTP_MESSAGE_SIGNATURE_TAG } from "web-bot-auth";
 import { signerFromJWK } from "web-bot-auth/crypto";
 import { createHash } from "node:crypto";
+import { purposeField, purposeForMethod } from "./purpose.mjs";
 
 const STATE_CHANGING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 export const DEFAULT_LIFETIME_S = 60;
@@ -33,7 +34,9 @@ export async function createDiverSigner(x) {
 
   /**
    * Compute the headers to add to a request.
-   * @param {{ method: string, url: string, headers?: Record<string,string>, body?: string|Uint8Array }} req
+   * @param {{ method: string, url: string, headers?: Record<string,string>, body?: string|Uint8Array,
+   *           purpose?: { kind: "read"|"act", note?: string } }} req  purpose: what the agent came to do (spec §11.7);
+   *           a note that names a person, or is too long, throws PurposeError and nothing is signed (PUR-6)
    * @returns {Promise<Record<string,string>>}
    */
   async function headersFor(req) {
@@ -56,6 +59,7 @@ export async function createDiverSigner(x) {
     if (staple) { headers["ludion-staple"] = staple; additional.push("ludion-staple"); }
     const mandate = x.mandate?.();
     if (mandate) { headers["ludion-mandate"] = mandate; additional.push("ludion-mandate"); }
+    if (req.purpose) { headers["ludion-purpose"] = purposeField(req.purpose); additional.push("ludion-purpose"); }
 
     const created = new Date(now());
     const fields = await sign(
@@ -73,16 +77,27 @@ export async function createDiverSigner(x) {
 
 /**
  * fetch() with Web Bot Auth. Same signature as fetch(), plus a Diver signer.
+ * `init.purpose` ({ kind: "read"|"act", note? }) says what the agent came to do (spec §11.7), signed.
+ * When a site answers `purpose_required` to a request that said nothing, it is sent once more with
+ * the purpose its method implies — a write acts, the rest reads — and no note (PUR-4). A body that
+ * cannot be sent twice (a stream) is not retried.
  * @param {string|URL} input
- * @param {RequestInit & { body?: string|Uint8Array }} [init]
+ * @param {RequestInit & { body?: string|Uint8Array, purpose?: { kind: "read"|"act", note?: string } }} [init]
  * @param {{ signer: Awaited<ReturnType<typeof createDiverSigner>>, fetch?: typeof fetch }} ctx
  */
 export async function ludionFetch(input, init = {}, ctx) {
   if (!ctx?.signer) throw new Error("ludionFetch needs { signer }");
   const url = String(input);
-  const method = (init.method ?? "GET").toUpperCase();
+  const { purpose, ...rest } = init;
+  const method = (rest.method ?? "GET").toUpperCase();
   const base = {};
-  new Headers(init.headers ?? {}).forEach((v, k) => { base[k] = v; });
-  const headers = await ctx.signer.headersFor({ method, url, headers: base, body: init.body });
-  return (ctx.fetch ?? globalThis.fetch)(url, { ...init, method, headers });
+  new Headers(rest.headers ?? {}).forEach((v, k) => { base[k] = v; });
+  const send = async (p) => (ctx.fetch ?? globalThis.fetch)(url, { ...rest, method, headers: await ctx.signer.headersFor({ method, url, headers: base, body: rest.body, purpose: p }) });
+  const res = await send(purpose);
+  const resendable = rest.body == null || typeof rest.body === "string" || rest.body instanceof Uint8Array;
+  if (!purpose && resendable && res.status === 403 && res.headers.get("ludion-error") === "purpose_required") {
+    await res.body?.cancel?.();
+    return send({ kind: purposeForMethod(method) });
+  }
+  return res;
 }

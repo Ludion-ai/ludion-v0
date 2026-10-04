@@ -25,6 +25,10 @@ export function model(s, lang) {
   sections.push({ id: "headline", headline: { pre, value, post },
     rows: GROUPS.map((g) => [H.groups[g], num(`groups.${g}.count`, s.groups[g].count), s.groups[g].did.map((k) => L.kinds.names[k] ?? k).join(H.sep) || H.nothing]),
     decision: { action: s.decision.action, text: decisionText(s.decision, L) } });
+  // Signed "read", then wrote: the agent's own sentence, as text (escaped), defanged in the summary (PUR-5).
+  sections.push({ id: "said", title: L.said.title, lead: L.said.lead, head: L.said.head, none: L.said.none,
+    rows: (s.said_vs_did ?? []).map((x, i) => [{ name: x.agent, nameKey: `said_vs_did.${i}.agent` }, L.said.said(x.note),
+      num(`said_vs_did.${i}.writes`, x.writes), x.did.map((k) => L.kinds.names[k] ?? k).join(L.headline.sep) || L.headline.nothing]) });
   sections.push({ id: "fakes", title: L.fakes.title, lead: L.fakes.lead, head: L.fakes.head, none: L.fakes.none,
     rows: s.suspected_fakes.map((f, i) => [{ name: f.token, nameKey: `suspected_fakes.${i}.token` }, num(`suspected_fakes.${i}.writes`, f.writes), L.fakes.why(f.token)]) });
   sections.push({ id: "critical", title: L.critical.title, lead: L.critical.lead, rows: [

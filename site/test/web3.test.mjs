@@ -29,9 +29,10 @@ function decideErrors() {
     for (const depth of opt([0, 1, 2, 3, 4])) for (const ballast of opt([{ status: "active" }, { status: "none" }]))
       for (const mandate of opt([{ scope: ["read"] }, { scope: ["checkout"] }, {}]))
         for (const pressure of [0, 1, 2, 3]) for (const rd of opt([1, 3])) for (const rb of opt(["active"])) for (const rs of opt(["checkout"]))
-          for (const site of opt([{ action: "block" }, { action: "wall" }, { action: "allow" }])) { // the site's own line (decisions.mjs)
-          const require = { ...(rd !== undefined ? { depth: rd } : {}), ...(rb ? { ballast: rb } : {}), ...(rs ? { scope: rs } : {}) };
-          const d = decide({ class: cls, stapleError, depth, ballast, mandate }, { pressure, require }, site);
+          for (const site of opt([{ action: "block" }, { action: "wall" }, { action: "allow" }])) // the site's own line (decisions.mjs)
+          for (const rp of opt(["act"])) for (const write of [false, true]) for (const purpose of opt([{ kind: "act", signed: true }, { kind: "act", signed: false }])) { // spec §11.7
+          const require = { ...(rd !== undefined ? { depth: rd } : {}), ...(rb ? { ballast: rb } : {}), ...(rs ? { scope: rs } : {}), ...(rp ? { purpose: rp } : {}) };
+          const d = decide({ class: cls, stapleError, depth, ballast, mandate, purpose }, { pressure, require, write }, site);
           if (d.action !== "deny") continue;
           assert.ok(d.error, `a denial without an error code: ${JSON.stringify({ cls, pressure, require })}`);
           if (seen.has(d.error)) assert.equal(seen.get(d.error), d.status, `${d.error} with two statuses`);
