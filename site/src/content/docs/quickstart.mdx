@@ -101,4 +101,4 @@ npx ludion sign GET http://localhost:3000/ --curl
 
 It prints a `curl` command with the signature headers: `Signature-Agent` (where your directory is), `Signature-Input` and `Signature`. Run it with `-sI` against the site you set up above. Its receipt now says `VERIFIED`, and names your directory. Sign each request anew: a signature expires quickly, and a Gate takes one it has seen before for a replay.
 
-`ludion sign` prints headers for any HTTP client. From code, `ludion/diver` signs requests for you (`ludionFetch`).
+`ludion sign` prints headers for any HTTP client. From code, `ludion/diver` signs requests for you (`ludionFetch`): see [Sign from code](/agent), which also shows the same name as an MCP client.

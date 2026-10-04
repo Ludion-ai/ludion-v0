@@ -36,6 +36,7 @@ export default defineConfig({
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/Ludion-ai/Ludion" }],
       sidebar: [
         { slug: "quickstart" },
+        { slug: "agent" },
         { slug: "gate" },
         { label: "Gate errors", translations: { ja: "Gate のエラー" }, items: [{ autogenerate: { directory: "e" } }] },
       ],

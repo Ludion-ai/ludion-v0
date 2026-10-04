@@ -101,4 +101,4 @@ npx ludion sign GET http://localhost:3000/ --curl
 
 署名のヘッダーを付けた `curl` のコマンドが出ます。`Signature-Agent`（ディレクトリの場所）、`Signature-Input`、`Signature` です。`-sI` を付けて、上で作ったサイトに送ってください。受領証は `VERIFIED` になり、あなたのディレクトリが書かれています。署名はリクエストのたびに作り直します。署名はすぐに期限が切れ、Gate は一度見た署名をリプレイとみなします。
 
-`ludion sign` は、どの HTTP クライアントにも使えるヘッダーを出します。コードからなら、`ludion/diver` が署名します（`ludionFetch`）。
+`ludion sign` は、どの HTTP クライアントにも使えるヘッダーを出します。コードからなら、`ludion/diver` が署名します（`ludionFetch`）。[コードから署名する](/ja/agent)を見てください。MCP のクライアントとして同じ名前を使う方法もそこにあります。
