@@ -25,13 +25,15 @@ async function loopback(host = "127.0.0.1") {
 /**
  * Run the flow. Every step is recorded; the result says how far it got and why it stopped.
  * @param {{ server: string, realm: string, clientId: string, user: { username: string, password: string },
- *           assertion: (audience: string) => string, redirect?: string, reuseAssertion?: string }} o
+ *           assertion: (audience: string) => string, redirect?: string, reuseAssertion?: string,
+ *           auth?: (tokenEndpoint: string) => Record<string, string> }} o
  *   assertion(audience) makes the client assertion for the token endpoint; redirect overrides the
- *   loopback one (to try a redirect the card does not list).
+ *   loopback one (to try a redirect the card does not list); auth(tokenEndpoint), when given, is how the
+ *   client authenticates at the token endpoint instead of the private_key_jwt assertion (MCP-3).
  * @returns {Promise<{ stage: "authorize"|"login"|"consent"|"callback"|"token"|"done", steps: string[], error?: string,
  *                     code?: string, token?: object, claims?: object, assertionUsed?: string }>}
  */
-export async function runFlow({ server, realm, clientId, user, assertion, redirect: redirectOverride, reuseAssertion }) {
+export async function runFlow({ server, realm, clientId, user, assertion, redirect: redirectOverride, reuseAssertion, auth }) {
   const base = `${server}/realms/${realm}/protocol/openid-connect`;
   const steps = [];
   const lb = await loopback();
@@ -77,10 +79,10 @@ export async function runFlow({ server, realm, clientId, user, assertion, redire
     steps.push(`callback ${cb.code ? "code" : cb.error}`);
     if (!cb.code || cb.state !== state) return { stage: "callback", steps, error: cb.error_description ?? cb.error ?? "state mismatch" };
 
-    const assertionUsed = reuseAssertion ?? assertion(`${base}/token`);
+    const assertionUsed = auth ? undefined : reuseAssertion ?? assertion(`${base}/token`);
+    const clientAuth = auth ? auth(`${base}/token`) : { client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer", client_assertion: assertionUsed };
     r = await fetch(`${base}/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: form({
-      grant_type: "authorization_code", code: cb.code, redirect_uri: redirect, code_verifier: verifier, client_id: clientId,
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer", client_assertion: assertionUsed }) });
+      grant_type: "authorization_code", code: cb.code, redirect_uri: redirect, code_verifier: verifier, client_id: clientId, ...clientAuth }) });
     const token = await r.json();
     steps.push(`token ${r.status}${token.error ? ` ${token.error}` : ""}`);
     if (!r.ok || !token.access_token) return { stage: "token", steps, code: cb.code, assertionUsed, error: `${token.error ?? r.status}${token.error_description ? `: ${token.error_description}` : ""}` };
