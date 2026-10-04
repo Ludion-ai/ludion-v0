@@ -243,7 +243,8 @@ export const ORACLES = [
   { id: "REG-4", m: "M3", kind: "-", level: 1, title: "no private key material in git history, logs, or build artifacts",
     run: nodeScript("accept/keyscan/run.mjs") },
   // spec v2.0 §23.4: added PENDING (2026-10-03). Wired when built; until then they are the backlog.
-  { id: "REG-5", m: "M3", kind: "±", level: 1, title: "the registry's bulk distribution is signed, and the recipients' lookups are not recorded" },
+  { id: "REG-5", m: "M3", kind: "±", level: 1, title: "the registry's bulk distribution is signed, and the recipients' lookups are not recorded",
+    run: nodeTest(["services/registry/test/reg5.test.mjs"], "^REG-5:", { metric: (out) => [...out.matchAll(/^# REG-5: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
 
   // ── M4 fear → number ───────────────────────────────────────────────────────────
   { id: "SCAN-1", m: "M4", kind: "+", level: 1, pair: "SCAN-5", property: "parse-rate", title: "scan parse rate ≥99% across the log-format corpus",

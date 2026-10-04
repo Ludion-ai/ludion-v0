@@ -8,6 +8,8 @@
 //   POST /v0/revocations                   revoke a Diver or some keys  (Root-signed statement)
 //   GET  /v0/revocations?since=N           revocation entries after N   (each a Registry-signed JWS)
 //   GET  /v0/revocations/stream            the same, live (SSE, Last-Event-ID / ?since=)
+//   GET  /v0/bulk?since=V                  every Diver's public record changed after version V, signed
+//                                          (the whole copy for large verifiers, spec §14.3, REG-5)
 //   POST /v0/principals                    register a Principal's passkey
 //   POST /v0/mandates                      issue a Mandate              (the Principal's passkey consent)
 //   POST /v0/mandates/{jti}/revoke         withdraw it                  (the same Principal's passkey)
@@ -37,6 +39,7 @@ export const REGISTER_TYP = "ludion-register+jwt";
 export const KEYS_TYP = "ludion-keys+jwt";
 export const REVOKE_TYP = "ludion-revoke+jwt";
 export const REVOCATION_TYP = "ludion-revocation+jwt";
+export const BULK_TYP = "ludion-bulk+jwt";
 /** Ballast v0 (spec §14): the three commitments an operator makes at registration. */
 export const BALLAST_V0 = ["abuse_response_24h", "revocation_consent", "glass_consent"];
 
@@ -65,6 +68,15 @@ function base32(bytes) {
 }
 
 /** RFC 7638 thumbprint of an Ed25519 public JWK (WebCrypto digest: runtime-neutral). */
+/** A Diver's public members: what its card and key directory are made of, and what the bulk copy carries. */
+export async function publicDiverRecord(rec) {
+  return {
+    diver_id: rec.diver_id, name: rec.name, contacts: rec.contacts,
+    root_kid: await okpThumbprint(rec.root),
+    keys: (rec.keys ?? []).map((k) => ({ kty: k.kty, crv: k.crv, x: k.x, kid: k.kid })),
+  };
+}
+
 export async function okpThumbprint(k) {
   return b64u(await sha256(enc.encode(JSON.stringify({ crv: k.crv, kty: "OKP", x: k.x }))));
 }
@@ -91,13 +103,16 @@ function peekPayload(compact) {
 
 /** In-memory state, optionally persisted through `save(state)` after every change. */
 export function createMemoryStore({ state, save } = {}) {
-  const s = state ?? { divers: {}, revocations: [], seq: 0, stapleCount: 0 };
-  s.divers ??= {}; s.revocations ??= []; s.seq ??= 0; s.stapleCount ??= 0;
+  const s = state ?? { divers: {}, revocations: [], seq: 0, stapleCount: 0, ver: 0 };
+  s.divers ??= {}; s.revocations ??= []; s.seq ??= 0; s.stapleCount ??= 0; s.ver ??= 0;
   s.principals ??= {}; s.mandates ??= {}; s.consents ??= {};
   const persist = async () => { if (save) await save(s); };
   return {
     async getDiver(id) { return s.divers[id]; },
-    async putDiver(id, rec) { s.divers[id] = rec; await persist(); },
+    /** Every change to a Diver takes the next version (the bulk copy's delta, REG-5). */
+    async putDiver(id, rec) { s.ver++; s.divers[id] = { ...rec, ver: s.ver }; await persist(); },
+    async listDivers() { return Object.values(s.divers); },
+    async version() { return s.ver; },
     async getPrincipal(credentialId) { return Object.hasOwn(s.principals, credentialId) ? s.principals[credentialId] : undefined; },
     /** false if the credential is already registered (a key is never replaced). */
     async addPrincipal(rec) { if (Object.hasOwn(s.principals, rec.id)) return false; s.principals[rec.id] = rec; await persist(); return true; },
@@ -323,6 +338,22 @@ export async function createRegistry(o) {
     return Math.max(Number.isInteger(a) && a >= 0 ? a : 0, Number.isInteger(b) && b >= 0 ? b : 0);
   }
 
+  /**
+   * The whole copy for large verifiers (spec §14.3, ADR-033, REG-5): every Diver's public record changed
+   * after version `since` (0: all of them), revoked ones flagged so a copy drops them, in one JWS the
+   * Registry signs. Nothing about who asked is kept: this reads the store and writes nothing.
+   */
+  async function bulk(request) {
+    const raw = new URL(request.url).searchParams.get("since") ?? "0";
+    const since = Number(raw);
+    if (!/^\d{1,15}$/.test(raw) || !Number.isSafeInteger(since)) throw new HttpError(400, "invalid_since", "since must be a version number");
+    const version = await store.version();
+    const changed = (await store.listDivers()).filter((r) => (r.ver ?? 0) > since).sort((a, b) => (a.diver_id < b.diver_id ? -1 : 1));
+    const divers = await Promise.all(changed.map(async (r) => ({ ...(await publicDiverRecord(r)), revoked: !!r.revoked, ver: r.ver })));
+    const jws = await signJws(signing.privateKey, signing.kid, BULK_TYP, { iss: issuer, version, since, iat: nowS(), divers });
+    return json(200, { version, since, jws }, { "cache-control": "max-age=60" });
+  }
+
   async function revocationList(request) {
     const entries = await store.revocationsSince(sinceOf(request));
     return json(200, { seq: store.state?.seq ?? entries.at(-1)?.seq ?? 0, entries: entries.map((e) => e.jws) }, { "cache-control": "max-age=10" });
@@ -463,11 +494,12 @@ export async function createRegistry(o) {
     if (m === "POST" && p === "/v0/revocations") return revokeHttp(request);
     if (m === "GET" && p === "/v0/revocations") return revocationList(request);
     if (m === "GET" && p === "/v0/revocations/stream") return revocationStream(request);
+    if (m === "GET" && p === "/v0/bulk") return bulk(request);
     if (m === "POST" && p === "/v0/principals") return registerPrincipal(request);
     if (m === "POST" && p === "/v0/mandates") return issueMandate(request);
     const mr = /^\/v0\/mandates\/(mdt-[A-Za-z0-9_-]{8,64})\/revoke$/.exec(p);
     if (mr && m === "POST") return revokeMandate(mr[1], request);
-    if (["/v0/divers", "/v0/revocations", "/v0/revocations/stream", "/.well-known/ludion-keys", "/v0/principals", "/v0/mandates"].includes(p) || r || mr) throw new HttpError(405, "method_not_allowed");
+    if (["/v0/divers", "/v0/revocations", "/v0/revocations/stream", "/v0/bulk", "/.well-known/ludion-keys", "/v0/principals", "/v0/mandates"].includes(p) || r || mr) throw new HttpError(405, "method_not_allowed");
     throw new HttpError(404, "not_found");
   }
 
