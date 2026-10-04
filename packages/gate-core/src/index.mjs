@@ -37,6 +37,16 @@ export {
 
 export const LUDION_VERSION = "0";
 
+/**
+ * The one line a site sees when its Gate records its first automated visit (ONE-1): proof the Gate
+ * is in and recording, the moment it is. What the record holds, and nothing that names a person
+ * (no IP, no time, no query, no header value).
+ */
+export function firstRecordLine(record, operator) {
+  const who = operator && operator !== "none" ? ` ${operator}` : "";
+  return `ludion: recorded the first automated visit — ${record.class}${who}, ${record.method} ${record.route} → ${record.decision}${record.error ? ` (${record.error})` : ""}. Records stay on this server for ${RECORD_DAYS} days; only hourly counts may leave it.`;
+}
+
 /** RFC 9421 §5.1 Accept-Signature sent with signature_required (draft §5.3). */
 export const ACCEPT_SIGNATURE = 'sig1=("@authority" "signature-agent";key="sig1" "@method" "@path");tag="web-bot-auth"';
 
@@ -88,6 +98,8 @@ export function denialHeaders(decision) {
  *           100,000 live entries, and once half full at most a quarter of them per signer identifier
  * @property {object[]} [decisions]               the site's own let-through / wall / block lines (spec §12.4,
  *           ADR-032; decisions.mjs). Only ever from the site's config: nothing the Gate fetches can add one
+ * @property {(line: string) => void} [announce]  told once, when the first automated visit is recorded
+ *           (firstRecordLine); the adapters' file-config entry points print it. Never awaited, never blocks
  * @property {() => number} [now]
  */
 
@@ -183,6 +195,8 @@ export async function createGate(config) {
   const ipSalt = config.ipSalt ?? config.siteId;
   const sendMetadata = config.sendMetadata ?? (config.sink != null);
   const records = config.records ?? memoryRecords({ now });
+  const announce = typeof config.announce === "function" ? config.announce : null;
+  let announced = false;
 
   /** Call a site hook without waiting: a slow or broken one costs the request nothing. */
   const quietly = (fn, arg) => {
@@ -252,6 +266,7 @@ export async function createGate(config) {
       // The visit's record stays on the site (7 days); outside, it is one more in its hour's count.
       const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country });
       quietly((r) => records.put(r), record);
+      if (announce && !announced) { announced = true; quietly(announce, firstRecordLine(record, operatorOf(cls))); }
       if (hourly) { try { hourly.add(record, operatorOf(cls)); } catch { /* counting never fails a request */ } }
     }
     if (hourly) { try { hourly.flushClosed(); } catch { /* idem */ } }

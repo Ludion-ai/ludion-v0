@@ -127,7 +127,8 @@ export async function ludionGate(config) {
  *
  * Reads ludion.config.json (or the file named by $LUDION_CONFIG) from the working directory and
  * the Glass receipt key from $LUDION_SITE_KEY (a secret, never in the config file).
- * @param {{ cwd?: string, env?: Record<string, string|undefined>, config?: object, onFriction?: Function }} [options]
+ * The first automated visit it records is announced on the console (ONE-1); `announce: false` turns that off.
+ * @param {{ cwd?: string, env?: Record<string, string|undefined>, config?: object, onFriction?: Function, announce?: false|((line: string) => void) }} [options]
  */
 export async function ludion(options = {}) {
   const [{ readFileSync }, { resolve }, { gateConfig }] = await Promise.all([import("node:fs"), import("node:path"), import("@ludion/gate-core/config")]);
@@ -136,5 +137,6 @@ export async function ludion(options = {}) {
   const { mandateLedgerFile, ...config } = await gateConfig(spec, { siteKey: env.LUDION_SITE_KEY });
   // mandate_ledger: { "sqlite": file } — the per_day record every Gate process of the site shares (PRS-3).
   if (mandateLedgerFile) config.mandateLedger = await sqliteLedger(resolve(options.cwd ?? process.cwd(), mandateLedgerFile));
-  return ludionGate({ ...config, ...(options.onFriction ? { onFriction: options.onFriction } : {}) });
+  const announce = options.announce === false ? undefined : options.announce ?? ((line) => console.info(line));
+  return ludionGate({ ...config, ...(announce ? { announce } : {}), ...(options.onFriction ? { onFriction: options.onFriction } : {}) });
 }

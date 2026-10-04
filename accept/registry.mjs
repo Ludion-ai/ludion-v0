@@ -385,7 +385,8 @@ export const ORACLES = [
   // One line gives an AI its own key and name, the same on MCP and the web, and one line erases it;
   // the Gate reads the name, matches the declared purpose, and a block is one line in the site's
   // own config. Added PENDING (2026-10-03); wired when built.
-  { id: "ONE-1", m: "M9", kind: "+", level: 1, title: "an empty Next.js and Express app: Gate install → first record visible ≤60s (median of 3)" },
+  { id: "ONE-1", m: "M9", kind: "+", level: 1, title: "an empty Next.js and Express app: Gate install → first record visible ≤60s (median of 3)",
+    timeoutMs: 1_500_000, run: nodeTest(["reference/test/one1.test.mjs"], "^ONE-1:", { timeoutMs: 1_480_000, metric: (out) => [...out.matchAll(/^# ONE-1: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
   { id: "ONE-2", m: "M9", kind: "+", level: 1, title: "the morning report has one headline number and one main decision" },
   { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)",
     run: nodeTest(["packages/gate-node/test/one3.test.mjs"], "^ONE-3:", { metric: (out) => (/^# ONE-3: (.+)$/m.exec(out) ?? [])[1] }) },

@@ -74,7 +74,8 @@ export function withLudion(handler, { configVar = "LUDION", onError = defaultOnE
     const config = await gateConfig(spec, { siteKey: env?.LUDION_SITE_KEY, fetch: trackedFetch });
     if (config.mandateLedger || config.mandateLedgerFile) throw new TypeError("mandate_ledger: a Worker runs in many isolates that share no memory or file; pass a shared ledger in code: withLudion(handler, { mandateLedger })");
     const { mandateLedgerFile, ...rest } = config;
-    return createGate({ ...rest, ...(mandateLedger ? { mandateLedger } : {}) });
+    // The first automated visit recorded is told on the Worker's console (wrangler dev, wrangler tail; ONE-1).
+    return createGate({ ...rest, announce: (line) => console.info(line), ...(mandateLedger ? { mandateLedger } : {}) });
   };
 
   return {

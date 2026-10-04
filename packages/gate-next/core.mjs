@@ -31,7 +31,8 @@ export function createNextGate({ next, loadConfig = readConfigFile, env = proces
     const config = await gateConfig(await loadConfig(env), { siteKey: env.LUDION_SITE_KEY });
     const { lookup, dial, ...rest } = resolver;
     const fetch = createSafeFetch({ lookup, dial, allowPrivateNetwork: rest.allowPrivateNetwork });
-    return createGate({ ...config, resolver: { ...config.resolver, ...rest, fetch } });
+    // The first automated visit recorded is told on the server's console (ONE-1).
+    return createGate({ ...config, announce: (line) => console.info(line), resolver: { ...config.resolver, ...rest, fetch } });
   };
 
   async function proxy(request) {
