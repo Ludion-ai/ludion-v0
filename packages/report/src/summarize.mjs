@@ -5,12 +5,18 @@
 // else is carried forward, so a field an old or broken Gate added (a raw IP, a cookie, a query)
 // cannot reach the report. Routes are shown only as strict templates, agents only by a name
 // that is not an address.
-import { decide, AUTOMATION } from "@ludion/gate-core";
-import { routeKind, isCritical, pathOf, publicTemplateSegment, ROUTE_KINDS } from "@ludion/gate-core/route";
+import { decide, AUTOMATION, isReadOnlyAgent } from "@ludion/gate-core";
+import { routeKind, isCritical, pathOf, publicTemplateSegment, ROUTE_KINDS, CRITICAL_KINDS, WRITE_METHODS } from "@ludion/gate-core/route";
 import { dayWindow, addDays } from "./window.mjs";
 
 export const REPORT_CLASSES = ["VERIFIED", "UNVERIFIED", "SPOOFED", "REVOKED", "DECLARED", "SUSPECTED"];
-export const TOP_AGENTS = 5, TOP_ROUTES = 8;
+export const TOP_AGENTS = 5, TOP_ROUTES = 8, TOP_DID = 3, TOP_FAKES = 5;
+
+// The headline's three rows (spec §12.3): who proved its name, who only claimed one, who gave none.
+// Proved = a valid signature (VERIFIED, and REVOKED: the signature was good, the identity revoked).
+// Claimed = a name without proof (a User-Agent token, a signature that failed or could not be checked).
+export const GROUPS = ["named", "claimed", "unnamed"];
+export const GROUP_OF = { VERIFIED: "named", REVOKED: "named", DECLARED: "claimed", UNVERIFIED: "claimed", SPOOFED: "claimed", SUSPECTED: "unnamed" };
 export const UNNAMED = "(unnamed)";
 const DECISIONS = new Set(["allow", "friction", "deny"]);
 const PLACEHOLDER = /^:(?:id|uuid|email|handle|hex|token|param)$/;
@@ -28,8 +34,13 @@ export function readEvent(e) {
     route: typeof e.route === "string" ? e.route : "",
     class: e.class, decision: e.decision, pressure: e.pressure,
     diver: typeof e.diver === "string" ? e.diver : null,
+    operator: operatorField(e.operator),
   };
 }
+
+const TOKEN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+/** An operator as a record or a count carries it, or null for none (and for anything that is not one). */
+const operatorField = (o) => (typeof o === "string" && o !== "none" && TOKEN.test(o) ? o : null);
 
 const HOURLY = "ludion.hourly";
 
@@ -49,6 +60,7 @@ export function readBatch(b) {
       route: typeof r.route === "string" ? r.route : "",
       class: r.class, decision: r.decision, pressure: null,
       diver: typeof r.operator === "string" && r.operator !== "none" ? r.operator : null,
+      operator: operatorField(r.operator),
       n: r.count,
     });
   }
@@ -114,6 +126,14 @@ export function agentName(diver) {
 
 const byCount = (a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1);
 
+/**
+ * A suspected fake (spec §12.5 rule 2, ONE-5): a write (POST, PUT, PATCH, DELETE) by something that
+ * only claimed, in its User-Agent and without a signature (DECLARED), the name of an agent that only
+ * reads — a crawler or a search indexer (gate-core isReadOnlyAgent). The real one does not submit.
+ * A person's fetcher (ChatGPT-User and the like) may submit; a signed agent proved its name.
+ */
+export const isSuspectedFake = (e) => e.class === "DECLARED" && typeof e.operator === "string" && WRITE_METHODS.has(e.method) && isReadOnlyAgent(e.operator);
+
 /** The numbers for one site and one window. */
 export function count(events) {
   const classes = Object.fromEntries(REPORT_CLASSES.map((c) => [c, 0]));
@@ -121,6 +141,8 @@ export function count(events) {
   const kinds = {}, agents = new Map(), routes = new Map();
   const critical = { unverified: 0, allowed: 0, friction: 0, denied: 0 };
   const pressure1 = { friction: 0, exempt: 0, applies: false };
+  const groups = Object.fromEntries(GROUPS.map((g) => [g, { count: 0, kinds: {} }]));
+  const fakes = new Map(), fakesAllowed = new Map(), wall = {};
   let total = 0, pressureKnown = false;
   for (const e of events) {
     const n = e.n ?? 1; // an hourly row stands for n visits; a per-visit record for one
@@ -128,6 +150,15 @@ export function count(events) {
     classes[e.class] += n;
     decisions[e.decision] += n;
     const kind = routeKind(e.method, e.route);
+    const g = groups[GROUP_OF[e.class]];
+    g.count += n;
+    g.kinds[kind] = (g.kinds[kind] ?? 0) + n;
+    if (isSuspectedFake(e)) {
+      fakes.set(e.operator, (fakes.get(e.operator) ?? 0) + n);
+      if (e.decision === "allow") fakesAllowed.set(e.operator, (fakesAllowed.get(e.operator) ?? 0) + n);
+    }
+    // What a wall (Pressure 1) would meet: unproven automation let through on a critical route.
+    if (e.class !== "VERIFIED" && CRITICAL_KINDS.has(kind) && e.decision === "allow") wall[kind] = (wall[kind] ?? 0) + n;
     const k = (kinds[kind] ??= { automation: 0, verified: 0, denied: 0 });
     k.automation += n;
     if (e.class === "VERIFIED") { k.verified += n; const a = agentName(e.diver); agents.set(a, (agents.get(a) ?? 0) + n); }
@@ -149,7 +180,16 @@ export function count(events) {
     }
   }
   if (!pressureKnown && events.length) pressure1.unknown = true;
+  const kindOrder = (a, b) => b[1] - a[1] || ROUTE_KINDS.indexOf(a[0]) - ROUTE_KINDS.indexOf(b[0]);
+  const suspectedFakes = [...fakes].sort(byCount).slice(0, TOP_FAKES).map(([token, writes]) => ({ token, writes }));
   return {
+    headline: { named_pct: total ? Math.round((100 * groups.named.count) / total) : null },
+    groups: Object.fromEntries(GROUPS.map((k) => [k, {
+      count: groups[k].count,
+      did: Object.entries(groups[k].kinds).sort(kindOrder).slice(0, TOP_DID).map(([kind]) => kind),
+    }])),
+    decision: mainDecision(wall, fakesAllowed),
+    suspected_fakes: suspectedFakes,
     events: total, classes, decisions,
     verified_actions: classes.VERIFIED,
     verified_agents: [...agents.keys()].filter((a) => a !== UNNAMED).length,
@@ -159,6 +199,23 @@ export function count(events) {
     top_critical_routes: [...routes].sort(byCount).slice(0, TOP_ROUTES).map(([route, n]) => ({ route, count: n })),
     pressure1,
   };
+}
+
+/**
+ * The report's one decision (spec §12.3), by a fixed rule, in this order:
+ *   1. "wall": unproven automation was let through on a critical route (checkout, login, sign-up,
+ *      account) → put a wall on the kind with the most of it (ties: checkout, login, signup, account);
+ *   2. "wall_fakes": writes under a crawler's name were let through → a wall for the token with the
+ *      most of them (ties: by token);
+ *   3. "none": nothing to decide.
+ * It counts only what was allowed: what already met friction or was refused is decided.
+ */
+export function mainDecision(wall, fakesAllowed) {
+  const kinds = [...CRITICAL_KINDS].filter((k) => wall[k] > 0).sort((a, b) => wall[b] - wall[a] || ROUTE_KINDS.indexOf(a) - ROUTE_KINDS.indexOf(b));
+  if (kinds.length) return { action: "wall", kind: kinds[0] };
+  const fakes = [...fakesAllowed].filter(([, n]) => n > 0).sort(byCount);
+  if (fakes.length) return { action: "wall_fakes", token: fakes[0][0] };
+  return { action: "none" };
 }
 
 /** Sites present in the events. */

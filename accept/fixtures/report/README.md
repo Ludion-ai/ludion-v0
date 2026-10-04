@@ -25,7 +25,16 @@ hand. The truth comes from the generator's hand-labelled tables, never from `@lu
 - **Automation event**: an object with a string `site`, a numeric `ts` (seconds), a `class` in
   VERIFIED, UNVERIFIED, SPOOFED, REVOKED, DECLARED, SUSPECTED, a `decision` in allow, friction,
   deny, and an integer `pressure` 0–3. Anything else is *skipped* and counted as such. Only
-  `site, ts, method, route, class, decision, pressure, diver` are ever read.
+  `site, ts, method, route, class, decision, pressure, diver, operator` are ever read. These
+  events carry no `operator`, so no declared name is seen (ONE-5 has its own fixture for that).
+- **Headline** (ONE-2): the share of automation that proved its name, `round(100 × named / all)`,
+  or the count of automation (0) when there was none. **Named** = VERIFIED or REVOKED (the
+  signature was good); **claimed** = DECLARED, UNVERIFIED, SPOOFED; **unnamed** = SUSPECTED. Each
+  group shows its count and its top 3 route kinds (by count; ties in the kind order checkout,
+  login, signup, account, form, search, api, asset, browse, malformed).
+- **Decision** (one): a *wall* on the critical kind (checkout, login, signup, account) with the
+  most non-VERIFIED automation the Gate *allowed* (ties in that order); else a wall for the
+  crawler name with the most allowed suspected-fake writes; else *none*.
 - **Day**: local midnight to local midnight in the report's zone, `[start, end)`.
 - **Route kind**: gate-core `routeKind` (the deepest kind word wins; then `/api/…`; static files;
   else browse). Routes carry no query, so a search is recognised by its path only.

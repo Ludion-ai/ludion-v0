@@ -3,7 +3,7 @@
 // built from the summary alone (never from events), so a rendering can show nothing the summary
 // does not hold.
 import { STRINGS } from "./strings.mjs";
-import { REPORT_CLASSES } from "./summarize.mjs";
+import { REPORT_CLASSES, GROUPS } from "./summarize.mjs";
 
 export const GATE_URL = "https://ludion.ai/gate";
 
@@ -18,6 +18,15 @@ export function model(s, lang) {
   const L = STRINGS[lang];
   if (!L) throw new Error(`unknown language ${lang}`);
   const sections = [];
+  // First, the one number and the one decision (spec §12.3, ONE-2); everything below is detail.
+  const H = L.headline;
+  const [pre, post] = s.headline.named_pct == null ? H.empty : H.share;
+  const value = s.headline.named_pct == null ? num("headline.events", s.events, { big: true }) : num("headline.named_pct", s.headline.named_pct, { big: true });
+  sections.push({ id: "headline", headline: { pre, value, post },
+    rows: GROUPS.map((g) => [H.groups[g], num(`groups.${g}.count`, s.groups[g].count), s.groups[g].did.map((k) => L.kinds.names[k] ?? k).join(H.sep) || H.nothing]),
+    decision: { action: s.decision.action, text: decisionText(s.decision, L) } });
+  sections.push({ id: "fakes", title: L.fakes.title, lead: L.fakes.lead, head: L.fakes.head, none: L.fakes.none,
+    rows: s.suspected_fakes.map((f, i) => [{ name: f.token, nameKey: `suspected_fakes.${i}.token` }, num(`suspected_fakes.${i}.writes`, f.writes), L.fakes.why(f.token)]) });
   sections.push({ id: "critical", title: L.critical.title, lead: L.critical.lead, rows: [
     [L.critical.unverified, num("critical.unverified", s.critical.unverified, { big: true })],
     [L.critical.allowed, num("critical.allowed", s.critical.allowed)],
@@ -57,6 +66,13 @@ export function model(s, lang) {
   return { lang, title: L.title, meta: L.meta(s), subject: subject(s, lang), sections, footer: L.footer, link: L.link };
 }
 
+/** The decision as one sentence. */
+export function decisionText(d, L) {
+  if (d.action === "wall") return L.decision.wall(L.kinds.names[d.kind] ?? d.kind);
+  if (d.action === "wall_fakes") return L.decision.wall_fakes(d.token);
+  return L.decision.none;
+}
+
 export function subject(s, lang) {
   return STRINGS[lang].subject(s, fmt(s.critical.unverified), fmt(s.verified_actions));
 }
@@ -68,6 +84,13 @@ export function renderText(s, lang) {
   const m = model(s, lang);
   const out = [m.title, m.meta, ""];
   for (const sec of m.sections) {
+    if (sec.headline) {
+      const h = sec.headline;
+      out.push(`${h.pre} ${cellText(h.value)}${h.post}`);
+      for (const [first, ...rest] of sec.rows) out.push(`  ${cellText(first)}　${rest.map(cellText).join(" / ")}`);
+      out.push(`→ ${sec.decision.text}`, "");
+      continue;
+    }
     out.push(`■ ${sec.title}`);
     if (sec.lead) out.push(sec.lead);
     if (!sec.rows.length) { if (sec.none) out.push(`  ${sec.none}`); out.push(""); continue; }
@@ -110,6 +133,20 @@ export function renderHtml(s, lang) {
   parts.push(`<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.card};border:1px solid ${C.line};font-family:${FONT};font-size:14px;line-height:1.6;color:${C.ink};">`);
   parts.push(`<tr><td style="padding:20px 24px 8px 24px;"><div style="font-size:20px;font-weight:700;">${esc(m.title)}</div><div style="color:${C.muted};">${esc(m.meta)}</div></td></tr>`);
   for (const sec of m.sections) {
+    if (sec.headline) {
+      const h = sec.headline, text = `font-size:16px;font-weight:700;vertical-align:baseline;`;
+      parts.push(`<tr><td data-section="${esc(sec.id)}" style="padding:16px 24px 8px 24px;">`);
+      parts.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr data-headline="1">`
+        + `<td style="padding:0 6px 0 0;${text}">${esc(h.pre)}</td>`
+        + `<td data-metric="${esc(h.value.key)}" style="padding:0;font-size:28px;font-weight:700;color:${C.accent};white-space:nowrap;vertical-align:baseline;">${esc(cellText(h.value))}</td>`
+        + `<td style="padding:0 0 0 2px;${text}">${esc(h.post)}</td></tr></table>`);
+      parts.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:8px 0 0 0;">`);
+      for (const row of sec.rows) parts.push(`<tr>${row.map((c, i) => htmlCell(c, i, false)).join("")}</tr>`);
+      parts.push(`</table>`);
+      parts.push(`<div data-decision="${esc(sec.decision.action)}" style="margin:12px 0 0 0;padding:10px 12px;background:${C.bg};border-left:4px solid ${C.accent};font-weight:700;">→ ${esc(sec.decision.text)}</div>`);
+      parts.push(`</td></tr>`);
+      continue;
+    }
     parts.push(`<tr><td data-section="${esc(sec.id)}" style="padding:16px 24px 8px 24px;">`);
     parts.push(`<div style="font-size:16px;font-weight:700;margin:0 0 4px 0;">${esc(sec.title)}</div>`);
     if (sec.lead) parts.push(`<div style="color:${C.muted};margin:0 0 8px 0;">${esc(sec.lead)}</div>`);

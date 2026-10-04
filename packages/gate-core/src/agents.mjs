@@ -58,6 +58,25 @@ export const KNOWN_AGENT_TOKENS = [
   // Timpi / others deliberately omitted until verified.
 ];
 
+/**
+ * Kinds whose agents only read (spec §12.5 rule 2): a crawler or a search indexer fetches pages, as
+ * each operator's own documentation describes it; it does not submit forms, log in or buy. A write
+ * under such a name is almost certainly someone else wearing it. Fetchers act for a person (they
+ * may submit), so a write under their names is not a sign of a fake.
+ */
+export const READ_ONLY_KINDS = new Set(["crawler", "search"]);
+
+/** The ledger entry whose token is exactly `token`, or null. */
+export function knownAgentToken(token) {
+  return KNOWN_AGENT_TOKENS.find((e) => e.token === token) ?? null;
+}
+
+/** True when `token` names a known agent that only reads (a crawler or a search indexer). */
+export function isReadOnlyAgent(token) {
+  const e = knownAgentToken(token);
+  return !!e && READ_ONLY_KINDS.has(e.kind);
+}
+
 /** Weak automation signals. Matching is case-insensitive substring. */
 export const AUTOMATION_SIGNALS = [
   "python-requests", "python-urllib", "aiohttp", "httpx",

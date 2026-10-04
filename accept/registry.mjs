@@ -387,11 +387,13 @@ export const ORACLES = [
   // own config. Added PENDING (2026-10-03); wired when built.
   { id: "ONE-1", m: "M9", kind: "+", level: 1, title: "an empty Next.js and Express app: Gate install → first record visible ≤60s (median of 3)",
     timeoutMs: 1_500_000, run: nodeTest(["reference/test/one1.test.mjs"], "^ONE-1:", { timeoutMs: 1_480_000, metric: (out) => [...out.matchAll(/^# ONE-1: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
-  { id: "ONE-2", m: "M9", kind: "+", level: 1, title: "the morning report has one headline number and one main decision" },
+  { id: "ONE-2", m: "M9", kind: "+", level: 1, title: "the morning report has one headline number and one main decision",
+    run: nodeTest(["packages/report/test/one2.test.mjs"], "^ONE-2:", { metric: (out) => (/^# ONE-2: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)",
     run: nodeTest(["packages/gate-node/test/one3.test.mjs"], "^ONE-3:", { metric: (out) => (/^# ONE-3: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "ONE-4", m: "M9", kind: "+", level: 1, title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min" },
-  { id: "ONE-5", m: "M9", kind: "±", level: 1, title: "a write by something claiming to be a crawler is reported as a suspected fake (fixed data, 0 misjudged)" },
+  { id: "ONE-5", m: "M9", kind: "±", level: 1, title: "a write by something claiming to be a crawler is reported as a suspected fake (fixed data, 0 misjudged)",
+    run: nodeTest(["packages/report/test/one5.test.mjs"], "^ONE-5:", { metric: (out) => (/^# ONE-5: (.+)$/m.exec(out) ?? [])[1] }) },
   // MCP-1/2 run in their own CI job (`mcp`, Java and Keycloak), outside LOOP-2's 10 minutes (the human's
   // decision, 2026-10-03). Keycloak fetches the card from the production Card Host Worker (accept/mcp/).
   { id: "MCP-1", m: "M9", kind: "+", level: 1, job: "mcp", pair: "MCP-2", property: "mcp-client-id", title: "e2e with Keycloak (CIMD on) as the authorization server: the card URL as client_id is authorized",

@@ -9,6 +9,39 @@
   "end": "2026-10-31T00:00:00.000Z"
  },
  "expect": {
+  "headline": {
+   "named_pct": 22
+  },
+  "groups": {
+   "named": {
+    "count": 54,
+    "did": [
+     "browse",
+     "login",
+     "search"
+    ]
+   },
+   "claimed": {
+    "count": 130,
+    "did": [
+     "browse",
+     "checkout",
+     "login"
+    ]
+   },
+   "unnamed": {
+    "count": 63,
+    "did": [
+     "browse",
+     "checkout",
+     "search"
+    ]
+   }
+  },
+  "decision": {
+   "action": "none"
+  },
+  "suspected_fakes": [],
   "events": 247,
   "classes": {
    "VERIFIED": 47,

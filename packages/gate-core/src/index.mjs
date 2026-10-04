@@ -10,7 +10,7 @@ import { createResolver } from "./resolver.mjs";
 import { createStapleVerifier, issueStaple } from "./staple.mjs";
 import { classify, createPolicy, createNonceCache, decide, ERROR_HELP, ERRORS, AUTOMATION, compileRoute, CLASSES } from "./classify.mjs";
 import { createReceipts, importSiteKey, generateSiteKey, metadataEvent, countryCode, templatePath, hashIp } from "./receipt.mjs";
-import { KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal } from "./agents.mjs";
+import { KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, READ_ONLY_KINDS, knownAgentToken, isReadOnlyAgent } from "./agents.mjs";
 import { GateFault, within, clock } from "./budget.mjs";
 import { isPublicAddress, isIpLiteral } from "./address.mjs";
 import { createAuthorities, requestAuthority } from "./authority.mjs";
@@ -26,7 +26,7 @@ import { createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED } f
 export {
   createResolver, createStapleVerifier, issueStaple, classify, createPolicy, createNonceCache, decide, compileRoute, CLASSES,
   ERROR_HELP, ERRORS, AUTOMATION, createReceipts, importSiteKey, generateSiteKey, metadataEvent, countryCode, templatePath, hashIp,
-  KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, GateFault, isPublicAddress, isIpLiteral,
+  KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, READ_ONLY_KINDS, knownAgentToken, isReadOnlyAgent, GateFault, isPublicAddress, isIpLiteral,
   createAuthorities, requestAuthority, createRevocationList, subscribeRevocations, REVOCATION_TYP,
   routeKind, isCritical, pathOf, originForm, routeCandidates, queryKeys, templateSegment, publicTemplateSegment, publicTemplatePath, isRouteWord, ROUTE_KINDS, CRITICAL_KINDS, WRITE_METHODS,
   verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, memoryLedger, isLedger,
@@ -264,10 +264,11 @@ export async function createGate(config) {
     } catch (e) { gateError ??= e; } // a receipt is evidence, not the decision: losing it never changes the response
     if (receipt && AUTOMATION.has(cls.class)) {
       // The visit's record stays on the site (7 days); outside, it is one more in its hour's count.
-      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country });
+      const operator = operatorOf(cls);
+      const record = metadataEvent({ receipt, path, ip: meta.ip, ipSalt, country: meta.country, operator });
       quietly((r) => records.put(r), record);
-      if (announce && !announced) { announced = true; quietly(announce, firstRecordLine(record, operatorOf(cls))); }
-      if (hourly) { try { hourly.add(record, operatorOf(cls)); } catch { /* counting never fails a request */ } }
+      if (announce && !announced) { announced = true; quietly(announce, firstRecordLine(record, operator)); }
+      if (hourly) { try { hourly.add(record, operator); } catch { /* counting never fails a request */ } }
     }
     if (hourly) { try { hourly.flushClosed(); } catch { /* idem */ } }
     return { cls, decision, receipt, headers, route, ...(gateError ? { gateError: String(gateError?.message ?? gateError).slice(0, 200) } : {}) };
