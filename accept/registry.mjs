@@ -257,6 +257,11 @@ export const ORACLES = [
   // not move it; planted standings that money raises are caught.
   { id: "REG-6", m: "M3", kind: "±", level: 0, title: "Depth does not rise with money (spec §8 invariant 14): the Staple's standing moves with the confirmed contact and the commitments only — not with a paid statement, a plan written into the record, or any other field; no route takes a payment; planted standings caught",
     run: nodeTest(["services/registry/test/reg6.test.mjs"], "^REG-6", { metric: (out) => (/^# REG-6: (.+)$/m.exec(out) ?? [])[1] }) },
+  // HN day (the human's instruction, 2026-10-04): new registrations are limited per IP, per contact and in
+  // all, by the production config, without keeping an address; and they can be paused while every
+  // existing name keeps working.
+  { id: "REG-7", m: "M3", kind: "±", level: 0, title: "new registrations are limited (per IP per hour, per contact per day, in all per hour) by the production config, through the Durable Object, keeping no address; a pause stops new names only; planted unlimited and ignored-pause registries caught",
+    run: nodeTest(["services/registry/test/reg7.test.mjs"], "^REG-7", { metric: (out) => (/^# REG-7: (.+)$/m.exec(out) ?? [])[1] }) },
 
   // ── M4 fear → number ───────────────────────────────────────────────────────────
   { id: "SCAN-1", m: "M4", kind: "+", level: 1, pair: "SCAN-5", property: "parse-rate", title: "scan parse rate ≥99% across the log-format corpus",

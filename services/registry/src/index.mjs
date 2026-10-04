@@ -103,7 +103,7 @@ const isEd25519Public = (k) => k && typeof k === "object" && k.kty === "OKP" && 
 const publicOf = (k) => ({ kty: "OKP", crv: "Ed25519", x: k.x });
 
 class HttpError extends Error {
-  constructor(status, error, detail) { super(detail ?? error); this.status = status; this.error = error; }
+  constructor(status, error, detail, headers) { super(detail ?? error); this.status = status; this.error = error; this.headers = headers; }
 }
 const json = (status, body, headers = {}) => new Response(JSON.stringify(body), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store", "x-content-type-options": "nosniff", ...headers },
@@ -119,7 +119,7 @@ function peekPayload(compact) {
 export function createMemoryStore({ state, save } = {}) {
   const s = state ?? { divers: {}, revocations: [], seq: 0, stapleCount: 0, ver: 0 };
   s.divers ??= {}; s.revocations ??= []; s.seq ??= 0; s.stapleCount ??= 0; s.ver ??= 0;
-  s.principals ??= {}; s.mandates ??= {}; s.consents ??= {};
+  s.principals ??= {}; s.mandates ??= {}; s.consents ??= {}; s.hits ??= {};
   const persist = async () => { if (save) await save(s); };
   return {
     async getDiver(id) { return s.divers[id]; },
@@ -144,6 +144,14 @@ export function createMemoryStore({ state, save } = {}) {
     async appendRevocation(make) { const seq = ++s.seq; const entry = await make(seq); s.revocations.push(entry); await persist(); return entry; },
     async revocationsSince(seq) { return s.revocations.filter((e) => e.seq > seq); },
     async countStaple() { s.stapleCount++; await persist(); },
+    /** One more in `key`'s fixed window of `windowS`: the count with this one, and when the window ends. */
+    async hit(key, windowS, nowS) {
+      for (const [k, h] of Object.entries(s.hits)) if (h.until <= nowS) delete s.hits[k];
+      const h = (s.hits[key] ??= { n: 0, until: nowS + windowS });
+      h.n++;
+      await persist();
+      return { n: h.n, until: h.until };
+    },
     get state() { return s; },
   };
 }
@@ -157,6 +165,12 @@ export function createMemoryStore({ state, save } = {}) {
  *            in production; tests and `--dev-ephemeral-key` make throwaway ones.
  *   origin:  the Registry's own origin. Signed requests must cover this authority (cf. ADR-023).
  *   contactsVerified: development only — treat every registered contact as confirmed (D1).
+ *   limits:  new registrations allowed per IP per hour (`perIpPerHour`, by the client address the
+ *            platform gives: cf-connecting-ip), per contact address per day (`perContactPerDay`), and in
+ *            all per hour (`allPerHour`); beyond one, 429 rate_limited with Retry-After. Kept as counts
+ *            under hashed keys that end with their window: no address is stored. Absent: no limits.
+ *   pauseNew: refuse new registrations (new Divers and Principals) with 503 registration_paused;
+ *            everything an existing name does — keys, Staples, revocation, its card — goes on.
  *   consentOrigin, rpId: where Principals consent with their passkeys (default https://ludion.ai,
  *            ludion.ai); an assertion made on any other page or for any other RP is refused.
  */
@@ -172,6 +186,29 @@ export async function createRegistry(o) {
   const sseRetryMs = o.sseRetryMs ?? 2000;
   const heartbeatMs = o.heartbeatMs ?? 15_000;
   const expectedHost = o.origin ? new URL(o.origin).host : undefined;
+  const limits = o.limits ?? null;
+  const pauseNew = !!o.pauseNew;
+  const PAUSED = () => new HttpError(503, "registration_paused", "new registrations are paused; existing names keep working", { "retry-after": "3600" });
+  /** A key for a counter that does not keep what it counts (salted with this Registry's key id). */
+  const hashed = async (kind, value) => `${kind}:${b64u(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${signing.kid}|${kind}|${value}`))))}`;
+  /** The address a contact names, as one mailbox: lower case, without a +tag. */
+  const mailbox = (c) => { const m = /^mailto:([^@\s?]+)@([^\s?]+)$/i.exec(String(c)); return m ? `${m[1].toLowerCase().replace(/\+.*$/, "")}@${m[2].toLowerCase()}` : null; };
+  /** Count a new registration against every limit; refuse it past one. */
+  async function admit(request, contacts) {
+    if (!limits) return;
+    const t = Math.floor(now() / 1000);
+    const checks = [];
+    const ip = request.headers.get("cf-connecting-ip");
+    if (ip && limits.perIpPerHour) checks.push([await hashed("ip", ip), 3600, limits.perIpPerHour]);
+    if (limits.perContactPerDay) for (const c of new Set(contacts.map(mailbox).filter(Boolean))) checks.push([await hashed("contact", c), 86_400, limits.perContactPerDay]);
+    if (limits.allPerHour) checks.push(["all", 3600, limits.allPerHour]);
+    let refuse = null;
+    for (const [key, windowS, max] of checks) {
+      const h = await store.hit(key, windowS, t);
+      if (h.n > max && (!refuse || h.until > refuse)) refuse = h.until;
+    }
+    if (refuse) throw new HttpError(429, "rate_limited", "too many new registrations; try again later", { "retry-after": String(Math.max(1, refuse - t)) });
+  }
   /** Open revocation streams: push(entry) → cleanup() */
   const subscribers = new Map();
   const nowS = () => Math.floor(now() / 1000);
@@ -207,6 +244,10 @@ export async function createRegistry(o) {
     const prev = await store.getDiver(id);
     if (prev?.revoked) throw new HttpError(403, "revoked", "this Diver is revoked");
     if (prev && prev.registered_iat >= p.iat) return json(200, { diver_id: id, status: "active" });
+    if (!prev) {
+      if (pauseNew) throw PAUSED();
+      await admit(request, contacts);
+    }
     await store.putDiver(id, {
       ...(prev ?? { keys: [], keys_ts: 0, revoked_jkt: [], created: new Date(now()).toISOString() }),
       diver_id: id, root: publicOf(p.root), signature_agent: agent.origin,
@@ -396,6 +437,7 @@ export async function createRegistry(o) {
   // ── Principals and Mandates (spec §10.6) ─────────────────────────────────────────────────
 
   async function registerPrincipal(request) {
+    if (pauseNew) throw PAUSED();
     const { credential } = await readJson(request);
     let cred;
     try { cred = await credentialFrom(credential); } catch (e) { throw new HttpError(400, "bad_credential", e.message); }
@@ -512,7 +554,7 @@ export async function createRegistry(o) {
     async fetch(request) {
       try { return await route(request); }
       catch (e) {
-        if (e instanceof HttpError) return json(e.status, { error: e.error, ...(e.message !== e.error ? { detail: e.message } : {}) });
+        if (e instanceof HttpError) return json(e.status, { error: e.error, ...(e.message !== e.error ? { detail: e.message } : {}) }, e.headers);
         return json(500, { error: "internal" });
       }
     },
