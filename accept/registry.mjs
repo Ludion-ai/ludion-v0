@@ -443,6 +443,11 @@ export const ORACLES = [
     timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-1:", { timeoutMs: 580_000, metric: (out) => (/^# MCP-1: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "MCP-2", m: "M9", kind: "-", level: 1, job: "mcp", property: "mcp-client-id", title: "Keycloak gives no token to what is not the card's: the Root key, a stranger's key, another audience, a used assertion, an unlisted redirect, a revoked agent — each refused at its own step",
     timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-2:", { timeoutMs: 580_000 }) },
+  // The token endpoint is where the agent proves it holds the key (its client_id is public): an exchange
+  // with no signature by a key in its directory gets no token. Bites: a client document that says
+  // "none" on a server that allows public clients is caught.
+  { id: "MCP-3", m: "M9", kind: "-", level: 1, job: "mcp", property: "mcp-client-id", title: "no key, no token: Keycloak refuses an exchange with no signature by the agent's key — no client authentication (PKCE only), alg none, a cut-off signature, a client secret; the signed control gets its token",
+    timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-3:", { timeoutMs: 580_000, metric: (out) => (/^# MCP-3: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "PUR-1", m: "M9", kind: "-", level: 0, title: "a purpose not covered by the signature is an unsigned claim and is never used for matching",
     run: nodeTest(["packages/gate-core/test/pur.test.mjs"], "^PUR-1:", { metric: (out) => (/^# PUR-1: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "PUR-2", m: "M9", kind: "-", level: 1, title: "the purpose note never leaves the Gate (PRIV-1's canaries)",

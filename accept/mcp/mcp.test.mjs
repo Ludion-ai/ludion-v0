@@ -18,6 +18,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import https from "node:https";
+import { randomUUID } from "node:crypto";
 import cardWorker from "../../packages/card-host/worker.mjs";
 import { nodeListener, CARD_PATH, CLIENT_PATH, DIRECTORY_PATH } from "../../packages/card-host/src/index.mjs";
 import registryWorker, { RegistryState } from "../../services/registry/worker.mjs";
@@ -138,6 +139,38 @@ test("MCP-2: a client assertion for another audience, or one already used, is re
   const first = await W.flow(a);
   assert.equal(first.stage, "done", `control: ${first.error ?? ""} ${first.stage === "done" ? "" : await diagnose(first)}`);
   await refusedAtToken(await W.flow(a, { reuseAssertion: first.assertionUsed }), "a used assertion");
+});
+
+// MCP-3 (−): no key, no token. The agent's client_id is public — anyone can put it in an authorization
+// request and get a code with a person's consent — so the token endpoint is where the agent proves it
+// holds the key. An exchange that carries no signature by a key in the agent's directory is refused:
+// no client authentication at all (a public client with PKCE only), an assertion with "alg": "none", an
+// assertion whose signature is cut off, and a client secret (there is none to know).
+const b64u = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+const JWT_BEARER = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+/** The claims a real assertion carries, for these unsigned ones. */
+const claims = (clientId, audience) => {
+  const now = Math.floor(Date.now() / 1000);
+  return { iss: clientId, sub: clientId, aud: audience, iat: now, exp: now + 60, jti: randomUUID() };
+};
+
+test("MCP-3: an exchange with no signature by the agent's key gets no token — no client authentication, alg none, a cut-off signature, a client secret", { timeout: 240_000 }, async () => {
+  ready();
+  const a = W.agents.main;
+  const cases = [
+    ["no client authentication (PKCE only)", () => ({})],
+    ["an assertion with alg none", (aud) => ({ client_assertion_type: JWT_BEARER, client_assertion: `${b64u({ alg: "none", typ: "JWT" })}.${b64u(claims(a.clientId, aud))}.` })],
+    ["an assertion with its signature cut off", (aud) => {
+      const real = clientAssertion(a.session, { clientId: a.clientId, audience: aud });
+      return { client_assertion_type: JWT_BEARER, client_assertion: `${real.split(".").slice(0, 2).join(".")}.` };
+    }],
+    ["a client secret", () => ({ client_secret: "secret" })],
+  ];
+  for (const [what, auth] of cases) await refusedAtToken(await W.flow(a, { auth }), what);
+  // Control: the same flow with the agent's own assertion gets its token.
+  const ok = await W.flow(a);
+  assert.deepEqual(authorizedProblems(ok, { clientId: a.clientId, issuer: W.issuer }), [], "control: the agent's own assertion");
+  console.log(`MCP-3: Keycloak ${KEYCLOAK_VERSION} refused a token to ${cases.length} exchanges without the agent's signature (${cases.map(([w]) => w).join("; ")}); the signed one got its token`);
 });
 
 /** Run a flow and return it with Keycloak's reasons logged while it ran. */
