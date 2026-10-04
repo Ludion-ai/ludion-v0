@@ -104,14 +104,42 @@ def directory_document(session_public_jwks) -> dict:
     return {"keys": [{"kty": "OKP", "crv": "Ed25519", "kid": k["kid"], "x": k["x"], "use": "sig"} for k in session_public_jwks]}
 
 
+# Where an MCP client receives its authorization code (ADR-039, RFC 8252 §7.3): loopback only, any port.
+LOOPBACK_REDIRECT_URIS = ("http://127.0.0.1/callback", "http://[::1]/callback")
+# The only way the card and the client document say the agent authenticates: its own key (MCP-3, MCP-4).
+# A Card Host serves no document that says anything else.
+TOKEN_AUTH_METHOD = "private_key_jwt"
+
+
+def _oauth(origin: str) -> dict:
+    return {
+        "jwks_uri": f"{origin}{DIRECTORY_PATH}",
+        "redirect_uris": list(LOOPBACK_REDIRECT_URIS),
+        "grant_types": ["authorization_code"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": TOKEN_AUTH_METHOD,
+    }
+
+
 def card_document(origin: str, name: str, contacts, diver: str, root_kid: str) -> dict:
-    """Signature Agent Card: a CIMD document with web_bot_auth, Ludion data under `ludion`."""
+    """Signature Agent Card: a CIMD document with web_bot_auth, Ludion data under `ludion` (the JS cardDocument)."""
     origin = origin.rstrip("/")
     return {
         "client_id": f"{origin}/card",
         "client_name": name,
         "contacts": list(contacts),
-        "jwks_uri": f"{origin}{DIRECTORY_PATH}",
+        **_oauth(origin),
         "web_bot_auth": {"trigger": "fetcher"},
         "ludion": {"version": 0, "diver_id": diver, "registry": "https://registry.ludion.ai", "root_kid": root_kid},
+    }
+
+
+def client_document(origin: str, name: str, contacts) -> dict:
+    """The agent's OAuth client document for MCP (CIMD, no extensions; the JS clientDocument): its client_id."""
+    origin = origin.rstrip("/")
+    return {
+        "client_id": f"{origin}/client",
+        "client_name": name,
+        **({"contacts": list(contacts)} if contacts else {}),
+        **_oauth(origin),
     }

@@ -73,6 +73,22 @@ test("doctor: the files as published — reachable, typed, the current key, each
   for (const p of ["/.well-known/http-message-signatures-directory", "/card", "/client"]) assert.ok(r.out.includes(`✔ https://${HOST}${p}`), r.out);
 });
 
+test("doctor: a card or client document on your own domain that is not private_key_jwt — a public client, a secret, nothing said — is warned about", async () => {
+  const cases = [
+    ["a public client document", (p) => (p === "/client" ? json({ ...file("client"), token_endpoint_auth_method: "none" }) : null), /⚠ \/client says token_endpoint_auth_method "none".*a public client/],
+    ["a card with a shared secret", (p) => (p === "/card" ? json({ ...file("card"), token_endpoint_auth_method: "client_secret_basic" }) : null), /⚠ \/card says token_endpoint_auth_method "client_secret_basic"/],
+    ["a card that says nothing", (p) => { if (p !== "/card") return null; const { token_endpoint_auth_method, ...rest } = file("card"); return json(rest); }, /⚠ \/card says token_endpoint_auth_method null/],
+  ];
+  const missed = [];
+  for (const [name, fault, why] of cases) {
+    serve = fault;
+    const r = await run(["doctor"]);
+    if (r.code === 0 || !why.test(r.out) || /All good/.test(r.out)) missed.push(`${name}: exit ${r.code}\n${r.out}`);
+  }
+  serve = () => null;
+  assert.deepEqual(missed, []);
+});
+
 test("doctor: a wrong type, a missing file, a redirect, a stale directory and a document naming another URL are each reported", async () => {
   const cases = [
     ["the directory as application/octet-stream", (p) => (p.startsWith("/.well-known") ? { status: 200, type: "application/octet-stream", body: fs.readFileSync(path.join(agent, ".well-known/http-message-signatures-directory")) } : null), /served with application\/octet-stream/],

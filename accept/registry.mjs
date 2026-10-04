@@ -336,6 +336,11 @@ export const ORACLES = [
   { id: "LIVE-1", m: "M6", kind: "+", level: 2, needs: ["CLOUDFLARE_API_TOKEN"], title: "canary Gate (P0, *.workers.dev) up; hourly signed probe VERIFIED; ≥99.9%/week" },
   { id: "LIVE-2", m: "M6", kind: "+", level: 2, pair: "GATE-7", property: "attribution", needs: ["LUDION_CANARY_READ_TOKEN"], title: "a real third-party agent is VERIFIED on the canary at least daily" },
   { id: "LIVE-3", m: "M6", kind: "+", level: 2, needs: ["LUDION_CLOUD_READ_TOKEN"], title: "North Star: Verified Actions/day computed from Cloud events, on the scoreboard" },
+  // The human's condition (2026-10-04) for WEB-1 measuring preview versions through a relay that removes
+  // Cloudflare's noindex: production ludion.ai is shown, separately, not to send it. Nightly: an outage
+  // of ludion.ai must never block a PR.
+  { id: "LIVE-4", m: "M6", kind: "±", level: 2, job: "nightly", title: "production ludion.ai serves a build of site/ and no page says noindex (X-Robots-Tag or a robots meta): every sitemap page, the home, a 404; planted forms of noindex caught",
+    run: allOf(nodeTest(["accept/live/live4.test.mjs"], "^LIVE-4"), nodeScript("accept/live/live4.mjs", [], { timeoutMs: 240_000, metric: (out) => (/^# LIVE-4: (.+)$/m.exec(out) ?? [])[1] })) },
 
   // ── M7 web: the site, the /e/<code> help pages, the in-browser scan ──────────────
   // The live preview (site/preview.json from `npm run deploy:preview`) serves THIS checkout's build
@@ -456,6 +461,10 @@ export const ORACLES = [
   // "none" on a server that allows public clients is caught.
   { id: "MCP-3", m: "M9", kind: "-", level: 1, job: "mcp", property: "mcp-client-id", title: "no key, no token: Keycloak refuses an exchange with no signature by the agent's key — no client authentication (PKCE only), alg none, a cut-off signature, a client secret; the signed control gets its token",
     timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-3:", { timeoutMs: 580_000, metric: (out) => (/^# MCP-3: (.+)$/m.exec(out) ?? [])[1] }) },
+  // After MCP-3: the protection rests on the document saying private_key_jwt, so the Card Host serves no
+  // card and no client document that says anything else (the human's decision, 2026-10-04).
+  { id: "MCP-4", m: "M9", kind: "±", level: 0, property: "mcp-client-id", title: "the Card Host serves no card and no client document whose token_endpoint_auth_method is not private_key_jwt: agents registered asking for none or a secret still get private_key_jwt; 13 planted values refused on both paths",
+    run: nodeTest(["packages/card-host/test/mcp4.test.mjs"], "^MCP-4", { metric: (out) => (/^# MCP-4: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "PUR-1", m: "M9", kind: "-", level: 0, title: "a purpose not covered by the signature is an unsigned claim and is never used for matching",
     run: nodeTest(["packages/gate-core/test/pur.test.mjs"], "^PUR-1:", { metric: (out) => (/^# PUR-1: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "PUR-2", m: "M9", kind: "-", level: 1, title: "the purpose note never leaves the Gate (PRIV-1's canaries)",

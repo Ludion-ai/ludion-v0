@@ -6,7 +6,10 @@
 // Fetch API only (Request → Response), so the same code runs on Node, workerd, Deno and Bun.
 // It never redirects (verifiers must not follow them, draft §6.7), serves only the public
 // members of keys whatever it is handed, and refuses to serve a card whose client_id is not
-// the URL it is served at (CIMD parsers reject it; better to fail here, loudly).
+// the URL it is served at (CIMD parsers reject it; better to fail here, loudly). Nor does it serve a
+// card or a client document that does not say token_endpoint_auth_method "private_key_jwt": the
+// client_id is public, and only the agent's key at the token endpoint keeps anyone else from using it
+// (MCP-3, MCP-4). A public client ("none") or a shared secret would hand the name to whoever asks.
 
 export const DIRECTORY_PATH = "/.well-known/http-message-signatures-directory";
 export const DIRECTORY_MEDIA_TYPE = "application/http-message-signatures-directory+json";
@@ -57,6 +60,9 @@ export async function servableKeys(keySet, card) {
 const json = (status, body, type = "application/json", maxAge = 300) => new Response(JSON.stringify(body), {
   status, headers: { "content-type": type, "cache-control": `max-age=${maxAge}`, "x-content-type-options": "nosniff" },
 });
+/** The only way a served card or client document may say its client authenticates. */
+export const TOKEN_AUTH_METHOD = "private_key_jwt";
+
 const problem = (status, error) => new Response(JSON.stringify({ error }), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
 /**
@@ -79,11 +85,13 @@ export function createCardHost({ lookup, maxAgeS = 300 }) {
       if (url.pathname === CLIENT_PATH) {
         if (!docs.client) return problem(404, "no_client");
         if (docs.client.client_id !== `${url.origin}${CLIENT_PATH}`) return problem(500, "client_id_mismatch");
+        if (docs.client.token_endpoint_auth_method !== TOKEN_AUTH_METHOD) return problem(500, "not_private_key_jwt");
         return json(200, docs.client, "application/json", maxAgeS);
       }
       if (!docs.card) return problem(404, "no_card");
       const here = `${url.origin}${CARD_PATH}`;
       if (docs.card.client_id !== here) return problem(500, "card_client_id_mismatch");
+      if (docs.card.token_endpoint_auth_method !== TOKEN_AUTH_METHOD) return problem(500, "not_private_key_jwt");
       if (docs.card.jwks) return json(200, { ...docs.card, jwks: await servableKeys(docs.card.jwks, docs.card) }, "application/json", maxAgeS);
       return json(200, docs.card, "application/json", maxAgeS);
     },

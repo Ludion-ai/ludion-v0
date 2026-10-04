@@ -195,7 +195,7 @@ test("Glass receipts: the Gate's receipt verifies with the site key; a changed d
 test("Card Host: directory with its media type, the Card at its own URL, public members only, 404 otherwise", async () => {
   const w = await theWorld();
   const host = "dvr-portableportable.agents.ludion.ai";
-  const card = { client_id: `https://${host}${CARD_PATH}`, client_name: "Portable Agent", jwks_uri: `https://${host}${DIRECTORY_PATH}` };
+  const card = { client_id: `https://${host}${CARD_PATH}`, client_name: "Portable Agent", jwks_uri: `https://${host}${DIRECTORY_PATH}`, token_endpoint_auth_method: "private_key_jwt" };
   const ch = createCardHost({ lookup: (h) => (h === host ? { directory: { keys: [{ ...w.agent.privateJwk, kid: w.agent.kid }] }, card } : undefined) });
   const dir = await ch.fetch(new Request(`https://${host}${DIRECTORY_PATH}`));
   assert.equal(dir.status, 200);
@@ -211,6 +211,9 @@ test("Card Host: directory with its media type, the Card at its own URL, public 
   assert.equal((await ch.fetch(new Request(`https://unknown.agents.ludion.ai${DIRECTORY_PATH}`))).status, 404);
   assert.equal((await ch.fetch(new Request(`https://${host}/admin`))).status, 404);
   assert.equal((await ch.fetch(new Request(`https://${host}${CARD_PATH}`, { method: "POST" }))).status, 405);
+  // A card that would make the name a public client is never served (MCP-4).
+  const open = createCardHost({ lookup: () => ({ directory: { keys: [] }, card: { ...card, token_endpoint_auth_method: "none" } }) });
+  assert.equal((await open.fetch(new Request(`https://${host}${CARD_PATH}`))).status, 500);
 });
 
 test("classify() alone, with a primed resolver and no Gate around it", async () => {
