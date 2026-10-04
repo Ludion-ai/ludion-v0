@@ -69,6 +69,20 @@ function base32(bytes) {
 
 /** RFC 7638 thumbprint of an Ed25519 public JWK (WebCrypto digest: runtime-neutral). */
 /** A Diver's public members: what its card and key directory are made of, and what the bulk copy carries. */
+/**
+ * What a Diver's Staple says it stands at: Depth, Ballast and how its operator was verified. Its only
+ * inputs are the confirmed contact and the commitments the Diver signed (spec §14.5); nothing a Diver
+ * or anyone else pays is read here, and nothing else can raise it (spec §8 invariant 14, REG-6).
+ */
+export function standingOf(rec) {
+  const ballastActive = BALLAST_V0.every((c) => rec.commitments?.includes(c));
+  return {
+    depth: rec.contact_verified && ballastActive ? 1 : 0, // D1: keys + confirmed contact + Ballast v0 (spec §13.4)
+    ballast: ballastActive ? { status: "active", tier: "b0", commitments: [...BALLAST_V0] } : { status: "none" },
+    op: { verified: rec.contact_verified ? "email" : "none" },
+  };
+}
+
 export async function publicDiverRecord(rec) {
   return {
     diver_id: rec.diver_id, name: rec.name, contacts: rec.contacts,
@@ -261,15 +275,6 @@ export async function createRegistry(o) {
     return sig.keyid;
   }
 
-  function standing(rec) {
-    const ballastActive = BALLAST_V0.every((c) => rec.commitments?.includes(c));
-    return {
-      depth: rec.contact_verified && ballastActive ? 1 : 0, // D1: keys + confirmed contact + Ballast v0 (spec §13.4)
-      ballast: ballastActive ? { status: "active", tier: "b0", commitments: [...BALLAST_V0] } : { status: "none" },
-      op: { verified: rec.contact_verified ? "email" : "none" },
-    };
-  }
-
   async function staple(id, request) {
     const rec = await diverOr404(id);
     const bodyText = await readBody(request);
@@ -286,7 +291,7 @@ export async function createRegistry(o) {
     const mrev = (rec.mrev ?? []).filter((m) => m.exp + 60 > t).slice(-MAX_MREV).map((m) => m.jti);
     const payload = revoked
       ? { iss: issuer, sub: id, iat: t, exp: t + lifetime, depth: 0, ballast: { status: "suspended" }, revoked: true, cnf: { jkt } }
-      : { iss: issuer, sub: id, iat: t, exp: t + lifetime, ...standing(rec), ...(mrev.length ? { mrev } : {}), cnf: { jkt } };
+      : { iss: issuer, sub: id, iat: t, exp: t + lifetime, ...standingOf(rec), ...(mrev.length ? { mrev } : {}), cnf: { jkt } };
     payload.jti = `stp-${b64u(crypto.getRandomValues(new Uint8Array(12)))}`;
     const compact = await issueStaple(signing.privateKey, signing.kid, payload);
     await store.countStaple();

@@ -78,15 +78,16 @@ DECLARED
 npx ludion init --name "My Agent" --contact mailto:ops@example.com --domain agent.example.com
 ```
 
-`--domain` には、あなたが管理していて、鍵を公開するホストを指定します。`init` は Root 鍵を封じるパスフレーズを聞いてから、次のファイルを書きます。
+`--domain` には、あなたが管理していて、鍵を公開するホストを指定します。`init` は Root 鍵を封じるパスフレーズを聞いてから（`LUDION_ROOT_PASSPHRASE` があればそれを使います）、次のファイルを書きます。
 
 - `ludion.json`：あなたの鍵。人に見せないでください。
 - `.well-known/http-message-signatures-directory`：公開する鍵のディレクトリ。
 - `card`：誰がエージェントを動かしていて、どう連絡が取れるか。
+- `client`：同じ名前と鍵を、MCP のサーバー向けの OAuth のクライアント情報にしたもの。
 
 ### ディレクトリとカードを公開する
 
-公開するファイルを、`https://agent.example.com/.well-known/http-message-signatures-directory` と `https://agent.example.com/card`、MCP のサーバー向けに `https://agent.example.com/client` で配ります。静的なホストならどこでも構いません。届くかを確かめます。
+公開するファイルを、`https://agent.example.com/.well-known/http-message-signatures-directory` と `https://agent.example.com/card`、MCP のサーバー向けに `https://agent.example.com/client` で配ります。静的なホストならどこでも構いません。`ludion.json` は公開しないでください。ディレクトリは `application/http-message-signatures-directory+json` として配ります。拡張子のないファイルを `application/octet-stream` で送るホストが多く、Cloudflare Pages や Netlify なら `_headers` のファイルで型を指定できます。届くか、型が正しいかを確かめます。
 
 ```sh
 npx ludion doctor

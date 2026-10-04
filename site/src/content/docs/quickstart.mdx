@@ -78,15 +78,16 @@ Point `report.endpoint` in `ludion.config.json` at a collector you run, and when
 npx ludion init --name "My Agent" --contact mailto:ops@example.com --domain agent.example.com
 ```
 
-`--domain` is a host you control, where you will publish your keys. `init` asks for a passphrase that seals your Root key, then writes these files:
+`--domain` is a host you control, where you will publish your keys. `init` asks for a passphrase that seals your Root key (or reads it from `LUDION_ROOT_PASSPHRASE`), then writes these files:
 
 - `ludion.json`: your keys. Keep it private.
 - `.well-known/http-message-signatures-directory`: your public key directory.
 - `card`: who runs the agent and how to reach them.
+- `client`: the same name and keys, as OAuth client metadata for MCP servers.
 
 ### Publish the directory and the card
 
-Serve the public files at `https://agent.example.com/.well-known/http-message-signatures-directory`, `https://agent.example.com/card` and (for MCP servers) `https://agent.example.com/client` from any static host. Then check that they can be reached:
+Serve the public files at `https://agent.example.com/.well-known/http-message-signatures-directory`, `https://agent.example.com/card` and (for MCP servers) `https://agent.example.com/client` from any static host; never publish `ludion.json`. Serve the directory as `application/http-message-signatures-directory+json`: many hosts send a file without an extension as `application/octet-stream`, and on Cloudflare Pages or Netlify a `_headers` file sets the type. Then check that they can be reached, with the right type:
 
 ```sh
 npx ludion doctor
