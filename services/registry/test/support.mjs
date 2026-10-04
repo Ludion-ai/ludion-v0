@@ -3,6 +3,10 @@
 import { generateEd25519, diverIdFromRoot } from "@ludion/diver";
 import { generateRegistryKey } from "@ludion/gate-core/staple";
 import { createRegistry, createMemoryStore } from "../src/index.mjs";
+import { createDurableStore, memoryStorage } from "../src/durable.mjs";
+
+/** The store the tests run on: the memory store, or (LUDION_REGISTRY_STORE=durable) the Durable Object one (ADR-041). */
+export const testStore = async () => (process.env.LUDION_REGISTRY_STORE === "durable" ? createDurableStore(memoryStorage()) : createMemoryStore());
 
 export const REGISTRY_ORIGIN = "https://registry.test";
 
@@ -21,7 +25,7 @@ export async function diverStore(name = "Test agent") {
 /** An in-process Registry and a fetch that reaches it. */
 export async function registryWorld({ now, ...rest } = {}) {
   const key = await generateRegistryKey();
-  const store = createMemoryStore();
+  const store = await testStore();
   const registry = await createRegistry({ key: key.privateJwk, origin: REGISTRY_ORIGIN, store, now, ...rest });
   const seen = [];
   const fetch = async (url, init = {}) => {

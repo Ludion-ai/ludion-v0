@@ -11,5 +11,9 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "devDependencies": {
+    "@ludion/diver": "0.0.1"
+  },
+  "$comment": "@ludion/diver is for worker.mjs, the Worker deployed from this repository (ADR-041); the library (src/index.mjs) needs nothing."
 }

@@ -1,6 +1,6 @@
 # DEPLOY — プレビューから ludion.ai の本番へ
 
-最終更新：2026-10-01 11:10 JST（Claude Code）。この文書は手順だけを書く。Claude は本番、DNS、削除に触れない。それは人間がやる。
+最終更新：2026-10-03（Claude Code。6 を足した）。この文書は手順だけを書く。Claude は本番、DNS、削除に触れない。それは人間がやる。
 
 ## 0. 今の状態（ludion.ai と棚卸しは 2026-10-01 09:10 JST、プレビューとトークンは 11:05 JST）
 
@@ -304,3 +304,90 @@ curl -s https://ludion.ai/_build.json              # {"site":"…"}：新しい�
 - 読み取りすら 403 なので、書き込みも通らないと見てよい。トークンの範囲（Account Resources）が `Ludion Agents` だけになっている。
 - 本体（スクリプト）のダウンロードは、取れるかどうかだけを見た。中身は表示も保存もしていない。
 - 見えるアカウントについての同じ確認は、`npm run deploy:preview` がデプロイのたびに繰り返す（2）。本番の ID を名指しする確認は、ID をリポジトリに置かないので、手で行った。
+
+## 6. 本番の名簿と Card Host（ADR-041。人間がやる）
+
+本番の Cloudflare アカウントに、Worker を2つ出す。Claude は設定と手順までを用意した。デプロイ、鍵の生成と保管、DNS、証明書は人間がやる。
+
+| Worker | 名前 | 入口 | 設定 |
+|---|---|---|---|
+| 名簿（Registry） | `ludion-registry` | `registry.ludion.ai`（カスタムドメイン） | `services/registry/wrangler.json` |
+| Card Host | `ludion-card-host` | ルート `*.agents.ludion.ai/*` | `packages/card-host/wrangler.json` |
+
+- 名簿の状態は、名簿の Worker の Durable Object（`RegistryState`、SQLite）1つに入る。
+- Card Host は、名簿の Durable Object に「その Diver の公開の記録」だけを聞く（`/__card/<diver_id>`、訪問者のものは何も渡さない）。インターネットから `/__card/` を叩いても 404。
+- Card Host は読み取り専用で、observability、Workers Logs、logpush を切ってある。tail も保存先もない。`nodejs_compat` も付けていない（PRIV-5 が全部を確かめる）。
+- 名簿の署名鍵（v0 の中間鍵）は Worker の秘密 `REGISTRY_SIGNING_KEY`。spec §11.3 の HSM との差は ADR-041。
+- 名簿の Worker は連絡先の確認（メール）をしない。登録した Diver の Depth は 0 から上がらない（v0）。
+
+### 6.1 鍵を作る（手元、1分）
+
+リポジトリの外に作る。中身は表示しない。
+
+```sh
+node services/registry/bin/keygen.mjs ~/.config/ludion/registry-secrets.json
+```
+
+- 出力は `{"kid":"…"}` だけ。この kid を控える（6.5 で照合する）。
+- ファイルは `wrangler deploy --secrets-file` の形（`{"REGISTRY_SIGNING_KEY": "<秘密鍵の JWK>"}`）で、権限は 0600。
+- リポジトリの中のパスと、すでにあるファイルは拒否する（上書きしない）。
+- 鍵の控えをどこに置くか（パスワード管理、オフラインの媒体）は人間が決める。失うと、発行済みの Staple と Mandate は寿命（最長1時間）で切れ、Diver は再発行を受ける。
+
+### 6.2 本番のアカウントにログインする
+
+エージェントのトークン（`~/.config/ludion/cloudflare.env`）は本番に届かない（5.3）。人間がその場でログインする（5.2 の 6）。
+
+```sh
+npx wrangler@4.144.0 login
+npx wrangler@4.144.0 whoami
+```
+
+- `whoami` のアカウントが本番であることを確かめる（`Ludion Agents` ではない）。
+- アカウントが複数見えるときは、以下のコマンドの前に `CLOUDFLARE_ACCOUNT_ID=<本番のアカウントの ID>` を付ける。
+
+### 6.3 名簿を出す（鍵と一緒に）
+
+リポジトリの直下で、`npm ci` のあとに。
+
+```sh
+npx wrangler@4.144.0 deploy --config services/registry/wrangler.json --secrets-file ~/.config/ludion/registry-secrets.json
+```
+
+- 秘密は、デプロイと同じ一回で入る。`wrangler secret put` を別に打たない（鍵がない状態の Worker が一瞬もできない）。
+- `registry.ludion.ai` はカスタムドメインなので、DNS のレコードと証明書は Cloudflare が作る（1段目の名前なので Universal SSL の範囲）。
+- 秘密が入ったかは、名前だけを見る：`npx wrangler@4.144.0 secret list --config services/registry/wrangler.json` に `REGISTRY_SIGNING_KEY` がある。
+
+### 6.4 Card Host を出す（名簿の後に）
+
+Card Host は、名簿の Durable Object を `script_name: "ludion-registry"` で使う。名簿が先にないと失敗する。
+
+```sh
+npx wrangler@4.144.0 deploy --config packages/card-host/wrangler.json
+```
+
+- **証明書（要判断・お金）**：`*.agents.ludion.ai` は2段目のワイルドカードで、Universal SSL の範囲外（4 の 3）。決めるまで、Card Host を出しても TLS で落ちる。名簿だけを先に出してよい。
+- DNS の `*.agents` のレコードは 4 の 1。ルートは `wrangler.json` が付ける（4 の 2 は手で付けなくてよい）。
+- ダッシュボードで確かめる：**Workers & Pages** → `ludion-card-host` → **Settings** → **Observability** が無効、**Logpush** が無効、**Trigger Events** に Tail がない。
+
+### 6.5 確かめる
+
+```sh
+curl -s https://registry.ludion.ai/.well-known/ludion-keys
+curl -s -o /dev/null -w "%{http_code}\n" https://registry.ludion.ai/__card/dvr-aaaaaaaaaaaaaaaa
+```
+
+- 1つ目：`keys` の kid が 6.1 で控えたものと一致する。
+- 2つ目：`404`（Card Host の内向きの問いは、外からは聞けない）。
+- 証明書が入ったあと、Card Host：
+
+```sh
+curl -s -o /dev/null -w "%{http_code}\n" https://dvr-aaaaaaaaaaaaaaaa.agents.ludion.ai/card
+```
+
+  - 登録のない Diver なので `404`。`npx ludion register`（既定の名簿は `https://registry.ludion.ai`）で登録した Diver なら、`/card` が名札（`client_id` が `https://<diver_id>.agents.ludion.ai/card`）、`/.well-known/http-message-signatures-directory` が承認済みのセッション鍵だけを返す。
+
+### 6.6 終わったら
+
+- `npx wrangler@4.144.0 logout`（本番に効く資格情報を、この機械に残さない）。
+- `~/.config/ludion/registry-secrets.json` は、控えを取ったら消してよい（Worker の秘密は読み出せないので、取り直すには鍵を作り直す：6.1 から）。
+- 鍵の交換（月次、ADR-041）：6.1 で新しいファイルを作り、6.3 をもう一度回す。発行済みの Staple は寿命（最長1時間）で切れる。
