@@ -10,6 +10,19 @@ import { createRegistry, publicDiverRecord } from "./src/index.mjs";
 import { createDurableStore } from "./src/durable.mjs";
 
 export const CARD_PREFIX = "/__card/";
+
+/**
+ * REGISTRY_LIMITS (a var: an object, or its JSON): { per_ip_per_hour, per_contact_per_day, all_per_hour }.
+ * Absent or broken: none — but the production config carries them (REG-7 reads wrangler.json).
+ */
+export function limitsFrom(v) {
+  let o = v;
+  if (typeof v === "string") { try { o = JSON.parse(v); } catch { o = null; } }
+  if (!o || typeof o !== "object") return null;
+  const n = (x) => (Number.isInteger(x) && x > 0 ? x : undefined);
+  const l = { perIpPerHour: n(o.per_ip_per_hour), perContactPerDay: n(o.per_contact_per_day), allPerHour: n(o.all_per_hour) };
+  return Object.values(l).some(Boolean) ? l : null;
+}
 const DIVER_ID = /^dvr-[a-z2-7]{16}$/;
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
@@ -25,6 +38,8 @@ export class RegistryState {
         issuer: this.env.REGISTRY_ISSUER || "https://registry.ludion.ai",
         origin: this.env.REGISTRY_ORIGIN || "https://registry.ludion.ai",
         store: this.store,
+        limits: limitsFrom(this.env.REGISTRY_LIMITS),
+        pauseNew: this.env.REGISTRY_PAUSE_NEW === "1" || this.env.REGISTRY_PAUSE_NEW === true,
       });
     })());
   }

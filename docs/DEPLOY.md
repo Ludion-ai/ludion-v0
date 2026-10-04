@@ -162,6 +162,21 @@ npx wrangler secret put SIGNUP_WEBHOOK_URL --name ludion-site
 - ターミナルの環境変数に `CLOUDFLARE_API_TOKEN` があると、wrangler はログインよりそちらを使う。新しい窓で行う。
 - 出力の `https://ludion-site.<サブドメイン>.workers.dev` を開き、トップ、`/ja`、`/scan`、`/e/signature_required` が出ることを見る。
 
+### 1.5 出し直す（切り替えのあと、main のビルドで）
+
+切り替えのあとにサイトを更新するときは、手順 1 の最初の4行だけを回す（秘密は Worker に残っている）。
+
+```sh
+git switch main && git pull && npm ci
+node site/build.mjs --out site/dist
+cd site/edge && npm ci
+npx wrangler deploy --name ludion-site
+```
+
+- 確かめる：`curl -s https://ludion.ai/_build.json` の `site` が、手元の `node -e "import('./site/build.mjs').then(m => console.log(m.siteHash()))"` と同じ。
+- `/quickstart`、`/agent`、`/badge/dvr-aaaaaaaaaaaaaaaa.svg` が 200。`POST /api/init-answer` が 404 でない。
+- LIVE-4（noindex がないこと）は夜間に見るが、出し直した直後に `node accept/live/live4.mjs` を手で回してもよい。
+
 ### 2. 旧の設定を控える（1分、戻すときに使う）
 
 1. ダッシュボードの左の **Workers & Pages** → **`ludion`**（旧）→ **Settings** タブ → **Domains & Routes**。
@@ -412,3 +427,57 @@ curl -s -o /dev/null -w "%{http_code}\n" https://dvr-aaaaaaaaaaaaaaaa.agents.lud
 - `npx wrangler@4.144.0 logout`（本番に効く資格情報を、この機械に残さない）。
 - `~/.config/ludion/registry-secrets.json` は、控えを取ったら消してよい（Worker の秘密は読み出せないので、取り直すには鍵を作り直す：6.1 から）。
 - 鍵の交換（月次、ADR-041）：6.1 で新しいファイルを作り、6.3 をもう一度回す。発行済みの Staple は寿命（最長1時間）で切れる。
+
+## 7. 本番で init が依存するもの（ローンチの前に）
+
+`npx ludion init` から、名前が世界で通じるまで（`register`、Card Host、MCP）に、本番で必要になるものの全部。各行の手順がこの文書のどこにあるかと、無かったものはここに足した（2026-10-04）。
+
+| # | 依存 | 無いと / 壊れると | 手順 |
+|---|---|---|---|
+| 1 | npm の `ludion`（`npx ludion`） | init が始まらない | docs/PUBLISH.md §0.5（初版は人間が手で） |
+| 2 | 利用者の Node 20 以上 | `npx` が動かない | `package.json` の `engines`。README に書いてある |
+| 3 | ludion.ai の `POST /api/init-answer`（任意の1問） | 答えた人の1語が届かない。init は止まらない（DIV-6：答えなければ何も送らない） | §1.5 で出し直す。秘密 `SIGNUP_WEBHOOK_URL` は §3 の手順 1 |
+| 4 | ludion.ai の `/badge/<id>.svg`（init の画面の README バッジ） | バッジが 404 | §1.5 |
+| 5 | 名簿 `registry.ludion.ai`（`register`、鍵の承認、Staple、失効、丸ごと配布） | 名前が登録できない。Staple が取れない | §6.1〜§6.5。署名鍵は秘密 `REGISTRY_SIGNING_KEY` |
+| 6 | 名簿の登録の上限と一時停止（REG-7） | HN の当日に名簿がスパムで汚れる | §7.1、§7.2 |
+| 7 | Card Host `*.agents.ludion.ai`（名札、client 文書、鍵の一覧） | 名前の鍵が取れない（Web で UNVERIFIED、MCP で認可が通らない） | §4（ACM の証明書、DNS）、§6.4 |
+| 8 | 失効の配信（名簿の SSE、`/v0/revocations/stream`） | 購読している Gate への即時の失効が届かない。届かなくても Staple の寿命（最長1時間）で通らなくなる | §6.3 の名簿と同じ。デモのサイトの購読は docs/outbox/launch/runbook.md |
+| 9 | Cloudflare のプランの上限 | 下の §7.3 | §7.3（お金の判断は人間） |
+| 10 | メール | v0 には無い。名簿は連絡先を確かめない（`contact_verified` は開発用の `confirmContact` だけ）。Depth は 0 のまま | 送信は無い。SPF・DKIM の設定も要らない。届く側の `security@`、`privacy@` は Email Routing（人間待ち） |
+| 11 | D1 | 使っていない。名簿は Durable Object の SQLite（1つの名簿で 10 GB まで）。D1 は tracecheck のパイロットだけ | — |
+
+### 7.1 登録の上限（REG-7）
+
+`services/registry/wrangler.json` の `vars.REGISTRY_LIMITS` が、新しい名前の登録を数える。
+
+- IP ごとに1時間10件、連絡先（同じメールボックス：大文字小文字と `+タグ` を同じに数える）ごとに1日5件、全体で1時間3000件。
+- 越えた登録は `429 rate_limited` と `Retry-After`。CLI には `✖ registry: 429 rate_limited — too many new registrations; try again later` と出る。
+- 数えるのは、新しい名前の登録だけ。登録済みの名前の登録し直し、鍵の承認、Staple、失効、名札は数えない。
+- 数は、名簿の鍵の id を塩にしたハッシュの下に、窓の終わりまでだけ置く。IP もメールも保存しない（REG-7 が確かめる）。
+- 変えるときは `wrangler.json` を直して §6.3 のデプロイをもう一度回す。ダッシュボードで変えた値は、次のデプロイで `wrangler.json` の値に戻る。
+
+### 7.2 新しい登録だけを止める
+
+スパムが上限をすり抜けるときや、名簿を守りたいときに。既存の名前の鍵、Staple、名札、失効、丸ごと配布、Gate の検証は止まらない。
+
+```sh
+# 止める
+npx wrangler@4.144.0 deploy --config services/registry/wrangler.json --var REGISTRY_PAUSE_NEW:1
+# 戻す
+npx wrangler@4.144.0 deploy --config services/registry/wrangler.json --var REGISTRY_PAUSE_NEW:0
+```
+
+- 止めているあいだ、新しい名前の登録（と、凍結中の Principal の登録）は `503 registration_paused`（`Retry-After: 3600`）。CLI には `✖ registry: 503 registration_paused — new registrations are paused; existing names keep working`。
+- 秘密はそのまま残る（`--secrets-file` を付けない再デプロイは秘密を消さない）。
+- 確かめる：新しい名前で `npx ludion register` が 503。登録済みの名前で `npx ludion staple` が通る。
+
+### 7.3 Cloudflare のプランの上限（お金の判断は人間）
+
+公式の値（2026-10-04 に developers.cloudflare.com で確かめた）：
+
+- Workers Free：1日 100,000 リクエスト（UTC の0時に戻る。越えると Error 1027）。1リクエストの CPU は 10 ms。
+- Workers Paid：リクエストの上限なし。CPU は既定 30 秒。
+- Durable Object（SQLite）：Free でも使える。1つで 10 GB、アカウントで 5 GB（Free）。1つのオブジェクトの目安は毎秒 1,000 リクエスト。
+
+HN の当日は、サイト、名簿、Card Host のリクエストが同じアカウントの上限を分け合う。名簿の登録と Staple の発行は Ed25519 の署名の確かめと署名をするので、10 ms の CPU に近づく。**ローンチの前に Workers Paid にすることを勧める**（月額。契約は人間）。
+

@@ -140,6 +140,7 @@
 - [ ] **本番の ludion.ai を main のビルドで出し直す**（人間。docs/DEPLOY.md §3 の手順 1 と同じ）：本番のビルドは古く、`/quickstart` と `/agent` が 404（2026-10-04）。ローンチの前に。出し直したら LIVE-4 がもう一度見る。
 - [ ] **ローンチの下書き**（docs/outbox/launch/、英語）：Show HN の本文と最初のコメント（tracecheck の数字は空欄）、想定問答、60秒のデモの台本。出すのと録るのは人間。
 - [ ] **名簿の事前登録の10件**（spec §14.2）：データは手元の作業ツリーにだけある（`docs/outbox/launch/private/registry-preseed.json`、.gitignore。公開のリポジトリに入れると公開になるため）。各社の公開文書から 2026-10-04 に確かめた。Q21（各社へ事前に連絡するか）は人間の判断。
+- [ ] **Workers Paid にするか**（お金、人間）：DEPLOY.md §7.3。Free は1日 100,000 リクエスト（越えると Error 1027）で、HN の当日にサイト、名簿、Card Host が分け合う。
 - [ ] **CI の preview の secret が入ったら**：Claude が main への push を3回回して、10分に収まるかを報告する（2026-10-04 の夜の時点で、まだ入っていない）。
 - [ ] **旧資源の削除**（docs/DEPLOY.md §1.3、Ludion の16件だけ）。消す前に：
   - 提供元で秘密を失効させる：`ludion-api` の OpenAI と楽天のキー、`ludion-fallback-relay` の `PROVIDER_API_KEY`、`ludion` の GitHub OAuth アプリ。Worker を消してもキーは生きている。
@@ -241,6 +242,12 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-04 深夜2（Claude Code、1本目）：**コードフリーズ**（人間、ローンチまで）。やるのは次の3つと赤くなったオラクルの修正だけ。
+  - 本番の init が外に依存するもの11件を、DEPLOY.md §7 の表にした（npm、Node、ludion.ai の `/api/init-answer` と `/badge`、名簿、上限と一時停止、Card Host、失効の配信、プランの上限、メール、D1）。足りなかった手順を足した：§1.5（ludion.ai を main で出し直す）、§7.1（上限）、§7.2（新しい登録だけを止める）、§7.3（Cloudflare のプランの上限。Free は1日 100,000 リクエストと CPU 10 ms。Paid を勧める。お金は人間）。メールは v0 に無い（連絡先を確かめない）ので、送信と SPF・DKIM は要らない。
+  - REG-7（±、L0）：名簿の新しい登録に上限（IP ごとに1時間10件、連絡先ごとに1日5件、全体で1時間3000件。`wrangler.json` の vars）。越えると 429 と Retry-After。数はハッシュの下にだけ置き、IP もメールも残さない。`REGISTRY_PAUSE_NEW="1"` で新しい名前（と Principal）だけを 503。既存の名前は止まらない。守りを外す突然変異はどちらも落ちる。
+  - docs/outbox/launch/runbook.md（前日、投稿の前の5分、当日の数字、戻し方）。デモの台本の revoke の場面に、失効の配信の一行を足した。
+  - 本番の ludion.ai には、まだ `/api/init-answer` と `/badge` が無い（古いビルド）。出し直し（§1.5）は人間待ち。
 
 - 2026-10-04 深夜（Claude Code、1本目）：人間の承認1つと追加1つ、ローンチの準備。
   - LIVE-4（±、L2、夜間）：本番の ludion.ai はサイトのビルドを配り、どのページも noindex を言わない（ヘッダーも meta も）。中継の承認の条件。いま PASS（26ページ、トップ、404）。

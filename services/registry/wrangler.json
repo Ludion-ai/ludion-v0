@@ -1,5 +1,5 @@
 {
-  "$comment": "The Registry (ADR-041). The human deploys it to the production account (docs/DEPLOY.md §6) and puts the v0 signing key in the secret REGISTRY_SIGNING_KEY.",
+  "$comment": "The Registry (ADR-041). The human deploys it to the production account (docs/DEPLOY.md §6) and puts the v0 signing key in the secret REGISTRY_SIGNING_KEY. REGISTRY_LIMITS caps new registrations (per IP per hour, per contact per day, all per hour); REGISTRY_PAUSE_NEW \"1\" pauses new registrations only (docs/DEPLOY.md §6.7).",
   "name": "ludion-registry",
   "main": "worker.mjs",
   "compatibility_date": "2026-09-01",
@@ -32,6 +32,12 @@
   ],
   "vars": {
     "REGISTRY_ISSUER": "https://registry.ludion.ai",
-    "REGISTRY_ORIGIN": "https://registry.ludion.ai"
+    "REGISTRY_ORIGIN": "https://registry.ludion.ai",
+    "REGISTRY_LIMITS": {
+      "per_ip_per_hour": 10,
+      "per_contact_per_day": 5,
+      "all_per_hour": 3000
+    },
+    "REGISTRY_PAUSE_NEW": "0"
   }
 }

@@ -54,6 +54,17 @@ export async function createDurableStore(storage) {
       return [...m.values()];
     },
     async countStaple() { stapleCount++; await storage.put("stapleCount", stapleCount); },
+    /** One more in `key`'s fixed window of `windowS`: the count with this one, and when the window ends. */
+    async hit(key, windowS, nowS) {
+      const all = await storage.list({ prefix: "hit:" });
+      const stale = [...all].filter(([, h]) => h.until <= nowS).map(([k]) => k);
+      if (stale.length) await storage.delete(stale);
+      const k = `hit:${key}`;
+      const prev = stale.includes(k) ? undefined : all.get(k);
+      const h = { n: (prev?.n ?? 0) + 1, until: prev?.until ?? nowS + windowS };
+      await storage.put(k, h);
+      return h;
+    },
     get state() { return { seq }; },
   };
 }
