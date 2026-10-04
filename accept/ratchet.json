@@ -28,6 +28,7 @@
     "LOOP-5",
     "MCP-1",
     "MCP-2",
+    "MCP-3",
     "NEUT-1",
     "NEUT-2",
     "ONE-1",
@@ -66,6 +67,7 @@
     "REG-5",
     "REG-6",
     "RPT-1",
+    "RPT-2",
     "SCAN-1",
     "SCAN-2",
     "SCAN-3",
@@ -90,6 +92,7 @@
     "WEB-4",
     "WEB-5",
     "WEB-6",
+    "WEB-7",
     "WEB-8",
     "WEB-9"
   ]

@@ -1,5 +1,8 @@
 {
   "url": "https://ludion-site-preview.ludion-agents.workers.dev",
-  "site": "3df177b7e5cc79f1",
-  "deployedAt": "2026-10-04T09:11:34.807Z"
+  "version": "cf60dedc-eacd-4174-82ab-d1a75c22441d",
+  "version_url": "https://cf60dedc-ludion-site-preview.ludion-agents.workers.dev",
+  "live": true,
+  "site": "81ee4e34d7e66373",
+  "deployedAt": "2026-10-04T10:56:39.433Z"
 }
