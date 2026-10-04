@@ -13,40 +13,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 import { REF, ROOT, prepare, start, freePort, stopAll, raw, node, BUILD_MTIME, receiptOf } from "../harness.mjs";
 
 after(stopAll); // a timed-out test skips its finally; no server may outlive the file
 import { automationRequest } from "../requests.mjs";
+import { installDiff, installProblems, recordProblems, walk, LIMIT_S, MAX_CODE_LINES, MAX_CONFIG_FILES, README } from "../gate3-measure.mjs";
 
-const LIMIT_S = 60, MAX_CODE_LINES = 3, MAX_CONFIG_FILES = 1;
-const CONFIG_FILES = new Set(["ludion.config.json", "wrangler.toml", "wrangler.json", "wrangler.jsonc"]);
-const README = { express: "gate-node", next: "gate-next", workers: "gate-workers" };
-
-function walk(dir, base = dir, out = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) walk(p, base, out); else out.push(path.relative(base, p).split(path.sep).join("/"));
-  }
-  return out;
-}
-
-/** Lines changed by the install, per file, from a real diff: each hunk counts max(removed, added). */
-export function installDiff(app) {
-  const site = path.join(REF, app, "site"), install = path.join(REF, app, "install");
-  const files = walk(install).map((f) => {
-    const before = path.join(site, f), after = path.join(install, f);
-    let out;
-    try { out = execFileSync("git", ["diff", "--no-index", "--no-color", "-U0", fs.existsSync(before) ? before : "/dev/null", after], { encoding: "utf8" }); }
-    catch (e) { if (e.status !== 1) throw e; out = e.stdout; } // exit 1 = the files differ
-    let changed = 0;
-    const added = [];
-    for (const m of out.matchAll(/^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/gm)) changed += Math.max(Number(m[1] ?? 1), Number(m[2] ?? 1));
-    for (const l of out.split("\n")) if (l.startsWith("+") && !l.startsWith("+++")) added.push(l.slice(1));
-    return { file: f, config: CONFIG_FILES.has(path.basename(f)), changed, added, created: !fs.existsSync(before) };
-  });
-  return { files, codeLines: files.filter((f) => !f.config).reduce((s, f) => s + f.changed, 0), configFiles: files.filter((f) => f.config).length };
-}
+// The measures themselves are functions GATE-13 tries on planted installs and records.
+export { installDiff } from "../gate3-measure.mjs";
 
 async function collector() {
   const events = [];
@@ -65,14 +39,8 @@ for (const app of ["express", "next", "workers"]) {
   test(`GATE-3: ${app}: ≤${MAX_CODE_LINES} app lines, ≤${MAX_CONFIG_FILES} config file, first classified event ≤${LIMIT_S}s`, { timeout: 900_000 }, async () => {
     // ── the install, measured ─────────────────────────────────────────────────────────────
     const d = installDiff(app);
-    assert.ok(d.files.length > 0, "an install that changes nothing proves nothing");
-    assert.ok(d.codeLines <= MAX_CODE_LINES, `${app}: ${d.codeLines} application lines changed (${d.files.map((f) => `${f.file}:${f.changed}`).join(", ")})`);
-    assert.ok(d.configFiles <= MAX_CONFIG_FILES, `${app}: ${d.configFiles} config files`);
-    assert.ok(!d.files.some((f) => /(^|\/)package(-lock)?\.json$/.test(f.file)), "dependencies come from npm install, not a hand edit");
     const readme = fs.readFileSync(path.join(ROOT, "packages", README[app], "README.md"), "utf8");
-    for (const f of d.files.filter((x) => !x.config)) for (const line of f.added.filter((l) => l.trim())) {
-      assert.ok(readme.includes(line.trim()), `${app}: the README of @ludion/${README[app]} does not show the installed line ${JSON.stringify(line.trim())}`);
-    }
+    assert.deepEqual(installProblems(app, d, readme), []);
 
     // ── the clock: process start → first classified event ───────────────────────────────────
     const { B } = prepare(app); // installs happen here, outside the clock
@@ -103,14 +71,8 @@ for (const app of ["express", "next", "workers"]) {
         } catch { /* not listening yet */ }
         if (!first) await new Promise((r) => setTimeout(r, 200));
       }
-      assert.ok(first, `${app}: no classified record within ${LIMIT_S}s\n${server.log.slice(-1500)}`);
+      assert.deepEqual(recordProblems(app, first, { t0, site: cfg.site_id, sinkEvents: sink.events }), [], server.log.slice(-1500));
       const seconds = (first.at - t0) / 1000;
-      // Nothing of a visit went to the report endpoint; at most an hourly count, if an hour closed.
-      for (const e of sink.events) assert.equal(e.event?.kind, "ludion.hourly", `${app}: the report endpoint got a visit: ${JSON.stringify(e.event ?? e.bad).slice(0, 200)}`);
-      assert.equal(first.event.site, cfg.site_id);
-      assert.equal(first.event.class, "SUSPECTED");
-      assert.equal(first.event.route, "/products/:id");
-      assert.ok(seconds <= LIMIT_S, `${app}: first classified event after ${seconds.toFixed(1)}s`);
       results[app] = app === "next" ? `${seconds.toFixed(1)}s (build ${((builtAt - t0) / 1000).toFixed(1)}s)` : `${seconds.toFixed(1)}s`;
       console.log(`${app}: ${d.codeLines} app lines, ${d.configFiles} config file, first event ${results[app]}`);
     } finally {

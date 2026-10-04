@@ -53,13 +53,14 @@ before(() => {
 }, { timeout: 900_000 });
 
 /** One run: install → the README's lines → start → one automated request → the line. Seconds. */
-async function run(app) {
+async function run(app, { plant, waitS = 180 } = {}) {
   const dir = dirs[app], spec = APP[app];
   const local = path.join(dir, path.basename(tarball));
   fs.copyFileSync(tarball, local); // the bytes npm would download
   const t0 = performance.now();
   npm(["install", "--no-audit", "--no-fund", local], dir);
   fs.cpSync(path.join(REF, app, "install"), dir, { recursive: true });
+  plant?.(dir); // ONE-6: a Gate that does not tell, or tells too much
   const port = await freePort();
   const server = await start(spec.start, dir, port, { ready: false });
   try {
@@ -67,7 +68,7 @@ async function run(app) {
       if (server.child.exitCode != null) throw new Error(`${app} exited:\n${server.log.slice(-2000)}`);
       try { await raw(port, `GET ${spec.path} HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nUser-Agent: ${UA}\r\nConnection: close\r\n\r\n`, { timeoutMs: 30_000 }); } catch { /* not up yet */ }
       if (LINE.test(server.log)) break;
-      if (performance.now() - t0 > 180_000) throw new Error(`${app}: no first-record line in 180 s:\n${server.log.slice(-2000)}`);
+      if (performance.now() - t0 > waitS * 1000) { if (plant) break; throw new Error(`${app}: no first-record line in ${waitS} s:\n${server.log.slice(-2000)}`); }
       await new Promise((r) => setTimeout(r, 100));
     }
     const s = (performance.now() - t0) / 1000;
@@ -85,13 +86,35 @@ async function run(app) {
   }
 }
 
-test("ONE-1: the judge refuses a missing line, and a line that names the visitor (planted)", () => {
+test("ONE-6: the judge refuses a missing line, and a line that names the visitor (planted)", () => {
   const ok = "ludion: recorded the first automated visit — SUSPECTED, GET /products/:id → allow. Records stay on this server for 7 days; only hourly counts may leave it.";
   assert.deepEqual(lineProblems(`ready\n${ok}\n`, APP.express), []);
   assert.match(lineProblems("ready\n", APP.express)[0], /no first-record line/);
   assert.match(lineProblems(ok.replace("GET /products/:id", "GET /products/:id from 203.0.113.9"), APP.express)[0], /IP/);
   assert.match(lineProblems(ok.replace("SUSPECTED", "SUSPECTED python-requests/2.32.3"), APP.express)[0], /User-Agent/);
   assert.match(lineProblems(`${ok}\n${ok}`, APP.express)[0], /more than once/);
+});
+
+// ONE-6 (−, first-record): a Gate that does not tell, or tells who the visitor is, fails ONE-1's
+// measure — run for real, through the same install, start and request, with the server's Gate line
+// planted.
+const PLANTS = [
+  ["a Gate that never tells", (dir) => edit(path.join(dir, "server.mjs"), (s) => s.replace("app.use(await ludion());", "app.use(await ludion({ announce: false }));")), /no first-record line/],
+  ["a Gate that tells the visitor's address and User-Agent", (dir) => edit(path.join(dir, "server.mjs"), (s) => s.replace("app.use(await ludion());",
+    'app.use(await ludion({ announce: (l) => console.info(l + " Visitor: 127.0.0.1, python-requests/2.32.3") }));')), /IP, the query or the User-Agent/],
+  ["a Gate that tells every visit", (dir) => edit(path.join(dir, "server.mjs"), (s) => s.replace("app.use(await ludion());",
+    "app.use(await ludion({ announce: (l) => { console.info(l); console.info(l); } }));")), /more than once/],
+];
+const edit = (file, fn) => fs.writeFileSync(file, fn(fs.readFileSync(file, "utf8")));
+
+test("ONE-6: a Gate that does not tell, or tells who the visitor is, fails ONE-1's measure (planted Gates, run for real)", { timeout: 900_000 }, async () => {
+  const missed = [];
+  for (const [name, plant, why] of PLANTS) {
+    const r = await run("express", { plant, waitS: 20 });
+    if (!r.problems.some((p) => why.test(p))) missed.push(`${name}: ${r.problems.join("; ") || "passed"}`);
+  }
+  assert.deepEqual(missed, []);
+  console.log(`ONE-6: ${PLANTS.length} planted Gates (silent, naming the visitor, telling twice) failed ONE-1's measure, run for real on Express`);
 });
 
 for (const app of Object.keys(APP)) {
