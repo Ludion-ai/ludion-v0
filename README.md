@@ -74,6 +74,7 @@ and a `ludion.config.json` next to `package.json`:
 - **Only the site decides.** Ludion's servers have no path to stop anyone: decisions live in the site's config and nowhere else.
 - **The morning report** (`npx ludion report`) has one headline number — the share of automation that named itself with a signature — and one thing to decide. Writes under a crawler's name are shown as suspected fakes; an agent that signed "read only" and then wrote is shown beside its own words.
 - Next.js (one line in `proxy.js`) and Cloudflare Workers: [ludion.ai/gate](https://ludion.ai/gate). Every refusal links to a page that explains it: [ludion.ai/e](https://ludion.ai/e).
+- Planned, after the launch: the Gate for FastAPI and WordPress, and the agent side in Python.
 
 ## What leaves the site
 
@@ -118,7 +119,7 @@ node examples/e2e.mjs  # an agent, a Gate, VERIFIED, all on 127.0.0.1
 | `packages/scan`, `packages/report` | The log scan (CLI and browser) and the morning report |
 | `packages/card-host` | Serves an agent's key directory, card and client document |
 | `services/registry` | The Registry: registration, status, revocation, the whole copy for large verifiers |
-| `python` | The agent side in Python |
+| `python` | The agent side in Python (planned: not published, not part of the launch) |
 | `site` | ludion.ai (Astro + Starlight), English and Japanese |
 | `accept`, `reference`, `clean-room`, `interop` | The oracles, attack corpus, conformance vectors, reference apps and fixtures |
 

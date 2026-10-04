@@ -135,6 +135,39 @@ export function prepare(app) {
   return out;
 }
 
+/**
+ * A reader's site after following a page (WEB-7): reference/<app>/site with `files` (path → text)
+ * written over it, its own `npm ci`, then the page's `npm install ludion` (the packed tarball), then the
+ * app's build step. Cached by content in its own directory, as prepare() caches A and B.
+ * @param {keyof APPS} app
+ * @param {Record<string, string>} files
+ * @returns {string} the directory
+ */
+export function prepareFrom(app, files) {
+  const spec = APPS[app];
+  const tmpPack = fs.mkdtempSync(path.join(os.tmpdir(), `ludion-pack-${app}-`));
+  const tarballs = pack(spec.packages, tmpPack);
+  const h = createHash("sha256").update(`${process.version}|${process.platform}|${process.arch}|page\n`);
+  for (const f of files_(path.join(REF, app, "site"))) h.update(`site/${f}\n`).update(fs.readFileSync(path.join(REF, app, "site", f)));
+  for (const [f, text] of Object.entries(files).sort(([a], [b]) => (a < b ? -1 : 1))) h.update(`page/${f}\n`).update(text);
+  for (const t of tarballs) h.update(fs.readFileSync(t));
+  h.update(fs.readFileSync(fileURLToPath(import.meta.url)));
+  const base = path.join(CACHE, `${app}-page-${h.digest("hex").slice(0, 16)}`);
+  const dir = path.join(base, "C");
+  if (fs.existsSync(path.join(base, ".ready")) && (!spec.built || spec.built(dir))) { fs.rmSync(tmpPack, { recursive: true, force: true }); return dir; }
+  fs.rmSync(base, { recursive: true, force: true });
+  copyTree(path.join(REF, app, "site"), dir);
+  for (const [f, text] of Object.entries(files)) { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), text); }
+  npm(["ci", "--no-audit", "--no-fund"], dir);
+  const local = tarballs.map((t) => { const d = path.join(dir, ".ludion-packages", path.basename(t)); fs.mkdirSync(path.dirname(d), { recursive: true }); fs.copyFileSync(t, d); return d; });
+  npm(["install", "--no-audit", "--no-fund", ...local], dir);
+  fs.rmSync(tmpPack, { recursive: true, force: true });
+  if (spec.build) spec.build(dir);
+  fs.writeFileSync(path.join(base, ".ready"), new Date().toISOString());
+  return dir;
+}
+const files_ = (dir) => files(dir);
+
 // Ports handed out by this process. listen(0)-then-close can return the same port to two callers
 // racing in one Promise.all; two servers told the same port was one way GATE-1 hung (#41).
 const handedOut = new Set();
@@ -189,9 +222,10 @@ function killTree(child) {
 /**
  * Start an app from `dir` on `port`. Resolves once it answers HTTP.
  * @param {keyof APPS} app
- * @param {{ env?: Record<string,string>, ready?: boolean, extraArgs?: string[] }} [opts]
+ * @param {{ env?: Record<string,string>, ready?: boolean, extraArgs?: string[], logLevel?: string }} [opts]
+ *        logLevel: wrangler dev only; "warn" by default, "log" for what a reader sees (WEB-7: the Worker's console)
  */
-export async function start(app, dir, port, { env = {}, ready = true, readyTimeoutMs } = {}) {
+export async function start(app, dir, port, { env = {}, ready = true, readyTimeoutMs, logLevel = "warn" } = {}) {
   let args, state;
   if (app === "stub") args = ["-e", env.LUDION_STUB_SCRIPT ?? ""]; // harness self-test only
   else if (app === "express") args = ["server.mjs"];
@@ -201,7 +235,7 @@ export async function start(app, dir, port, { env = {}, ready = true, readyTimeo
     const inspector = await freePort();
     state = fs.mkdtempSync(path.join(os.tmpdir(), "ludion-wrangler-state-")); // parallel instances must not share .wrangler/state (SQLite)
     args = ["node_modules/wrangler/bin/wrangler.js", "dev", "--port", String(port), "--ip", "127.0.0.1", "--inspector-port", String(inspector), "--persist-to", state,
-      "--show-interactive-dev-session=false", "--log-level", "warn", ...Object.entries(env).filter(([k]) => k === "LUDION").map(([k, v]) => ["--var", `${k}:${v}`]).flat()];
+      "--show-interactive-dev-session=false", "--log-level", logLevel, ...Object.entries(env).filter(([k]) => k === "LUDION").map(([k, v]) => ["--var", `${k}:${v}`]).flat()];
   } else throw new Error(`unknown app ${app}`);
   const child = spawn(process.execPath, args, {
     cwd: dir, detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"],
