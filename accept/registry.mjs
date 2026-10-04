@@ -411,8 +411,10 @@ export const ORACLES = [
     run: nodeTest(["packages/report/test/one2.test.mjs"], "^ONE-7:") },
   { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)",
     run: nodeTest(["packages/gate-node/test/one3.test.mjs"], "^ONE-3:", { metric: (out) => (/^# ONE-3: (.+)$/m.exec(out) ?? [])[1] }) },
-  { id: "ONE-4", m: "M9", kind: "+", level: 1, title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min",
+  { id: "ONE-4", m: "M9", kind: "+", level: 1, pair: "ONE-8", property: "way-in", title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min",
     timeoutMs: 1_500_000, run: nodeTest(["site/test/one4.test.mjs"], "^ONE-4:", { timeoutMs: 1_480_000, metric: (out) => (/^# ONE-4: (.+)$/m.exec(out) ?? [])[1] }) },
+  { id: "ONE-8", m: "M9", kind: "-", level: 1, property: "way-in", title: "a refusal that does not lead to VERIFIED fails ONE-4: no reason, no help link, a help page that does not exist or gives no steps, an arrival that is not VERIFIED (planted, against the built site)",
+    timeoutMs: 900_000, run: nodeTest(["site/test/one4.test.mjs"], "^ONE-8:", { timeoutMs: 880_000, metric: (out) => (/^# ONE-8: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "ONE-5", m: "M9", kind: "±", level: 1, title: "a write by something claiming to be a crawler is reported as a suspected fake (fixed data, 0 misjudged)",
     run: nodeTest(["packages/report/test/one5.test.mjs"], "^ONE-5:", { metric: (out) => (/^# ONE-5: (.+)$/m.exec(out) ?? [])[1] }) },
   // MCP-1/2 run in their own CI job (`mcp`, Java and Keycloak), outside LOOP-2's 10 minutes (the human's

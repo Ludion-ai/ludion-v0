@@ -37,6 +37,42 @@ export function verifySteps(html) {
   return [...html.slice(at, end < 0 ? undefined : end).matchAll(/data-code="([^"]*)"/g)].map((m) => decode(m[1]));
 }
 
+/**
+ * What is wrong with a refusal (the raw response head) as a way in: it must say why (Ludion-Error),
+ * link a help page (Link rel=help) that exists in the built site, and that page must give the steps.
+ * @returns {{ problems: string[], steps: string[] }}
+ */
+export function refusalProblems(head, dist) {
+  const out = [];
+  if (!/^HTTP\/1\.1 40[13]/m.test(head)) out.push("not refused (401 or 403)");
+  const error = /^ludion-error: *(\S+)/im.exec(head)?.[1];
+  if (!error) out.push("no Ludion-Error");
+  const link = /^link: *<([^>]+)>; *rel="help"/im.exec(head)?.[1];
+  if (!link) return { problems: [...out, "no help link"], steps: [] };
+  let page;
+  try { page = path.join(dist, `${new URL(link).pathname.replace(/^\//, "")}.html`); } catch { return { problems: [...out, `a help link that is not a URL: ${link}`], steps: [] }; }
+  if (!fs.existsSync(page)) return { problems: [...out, `the help page ${link} does not exist`], steps: [] };
+  const steps = verifySteps(fs.readFileSync(page, "utf8"));
+  if (!steps.some((c) => /^npx ludion init /.test(c))) out.push(`${link} gives no init step`);
+  if (!steps.some((c) => /^npx ludion sign /.test(c))) out.push(`${link} gives no sign step`);
+  return { problems: out, steps };
+}
+
+/** What is wrong with the arrival (the signed request's response head): through, with a VERIFIED receipt. */
+export function arrivalProblems(head) {
+  const out = [];
+  if (!/^HTTP\/1\.1 200/m.test(head)) out.push(`not through: ${(/^HTTP\/1\.1 \d+/m.exec(head) ?? ["no response"])[0]}`);
+  const r = /^ludion-receipt: *(\S+)/im.exec(head)?.[1];
+  let receipt = null;
+  try { receipt = r ? JSON.parse(Buffer.from(r, "base64url").toString("utf8")) : null; } catch { /* unreadable */ }
+  if (!receipt) out.push("no receipt");
+  else {
+    if (receipt.class !== "VERIFIED") out.push(`classified ${receipt.class}`);
+    if (receipt.decision !== "allow") out.push(`decision ${receipt.decision}`);
+  }
+  return out;
+}
+
 function bash() {
   if (process.platform !== "win32") return "bash";
   for (const p of [process.env.LUDION_BASH, "C:\\Program Files\\Git\\bin\\bash.exe", "C:\\Program Files (x86)\\Git\\bin\\bash.exe"]) if (p && fs.existsSync(p)) return p;
@@ -73,11 +109,6 @@ before(async () => {
 }, { timeout: 900_000 });
 after(() => { server?.close(); server?.closeAllConnections?.(); try { fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 5 }); } catch {} });
 
-const receiptOf = (head) => {
-  const r = /^ludion-receipt: *(\S+)/im.exec(head)?.[1];
-  return r ? JSON.parse(Buffer.from(r, "base64url").toString("utf8")) : null;
-};
-
 /** One run, from the refusal to VERIFIED. */
 async function run(i) {
   const target = `http://127.0.0.1:${port}/checkout/1`;
@@ -90,15 +121,11 @@ async function run(i) {
   const t0 = performance.now();
   // Stopped.
   const refused = (await sh(`curl -s -D - -o /dev/null ${target}`, agent, env)).out; // curl/…: automation that names no one
-  assert.match(refused, /^HTTP\/1\.1 401/m, refused);
-  const error = /^ludion-error: *(\S+)/im.exec(refused)?.[1];
-  const link = /^link: *<([^>]+)>; *rel="help"/im.exec(refused)?.[1];
-  assert.equal(error, "signature_required");
-  assert.equal(link, "https://ludion.ai/e/signature_required");
   // The help page it names, from the site as built.
-  const page = path.join(dist, `${new URL(link).pathname.replace(/^\//, "")}.html`);
-  assert.ok(fs.existsSync(page), `the help page ${link} exists in the built site`);
-  const cmds = verifySteps(fs.readFileSync(page, "utf8"));
+  const why = refusalProblems(refused, dist);
+  assert.deepEqual(why.problems, [], refused);
+  assert.match(refused, /^ludion-error: *signature_required/im);
+  const cmds = why.steps;
   const init = cmds.find((c) => /^npx ludion init /.test(c)), sign = cmds.find((c) => /^npx ludion sign /.test(c));
   assert.ok(init && sign, `the page's steps: ${cmds.join(" | ")}`);
   // npx fetches ludion: here, the packed tarball into the new environment.
@@ -127,11 +154,10 @@ async function run(i) {
   const head = (await sh(curl.replace(/^curl /, "curl -s -D - -o /dev/null "), agent, env)).out;
   steps.sign = (performance.now() - t) / 1000;
   const s = (performance.now() - t0) / 1000;
-  const receipt = receiptOf(head);
-  return { s, steps, status: Number(/^HTTP\/1\.1 (\d+)/m.exec(head)?.[1]), receipt, identifier: store.signature_agent, head };
+  return { s, steps, problems: arrivalProblems(head), identifier: store.signature_agent, head };
 }
 
-test("ONE-4: the judge reads the commands of a help page's Get verified section, in order (planted page)", () => {
+test("ONE-8: the judge reads the commands of a help page's Get verified section, in order (planted page)", () => {
   const html = '<h2 id="what-happened">x</h2><button data-code="npx ludion scan"></button><h2 id="get-verified-in-3-minutes">G</h2>'
     + '<button data-code="npx ludion init --name &#x22;A&#x22;"></button><button data-code="npx ludion sign GET https://shop.example/x --curl"></button><h2 id="next">n</h2><button data-code="rm -rf /"></button>';
   assert.deepEqual(verifySteps(html), ['npx ludion init --name "A"', "npx ludion sign GET https://shop.example/x --curl"]);
@@ -142,10 +168,38 @@ test(`ONE-4: stopped (Ludion-Error, help link) → the help page's steps → VER
   const runs = [];
   for (let i = 0; i < RUNS; i++) runs.push(await run(i));
   for (const r of runs) {
-    assert.equal(r.status, 200, r.head);
-    assert.equal(r.receipt?.class, "VERIFIED", r.head);
-    assert.equal(r.receipt?.decision, "allow");
+    assert.deepEqual(r.problems, [], r.head);
     assert.ok(r.s <= LIMIT_S, `${r.s.toFixed(1)} s > ${LIMIT_S} s`);
   }
   console.log(`ONE-4: refused → help page → init → publish → sign → VERIFIED in ${runs.map((r) => r.s.toFixed(1)).join(" / ")} s (limit ${LIMIT_S} s); npx ${runs.map((r) => r.steps.npx.toFixed(1)).join("/")} s, init ${runs.map((r) => r.steps.init.toFixed(1)).join("/")} s`);
+});
+
+// ONE-8 (−, way-in): a refusal that does not lead to VERIFIED fails ONE-4's judges — planted against
+// the built site: no reason, no help link, a link to a page that does not exist, a page without the
+// steps, and an arrival that is not VERIFIED.
+test("ONE-8: a refusal without a reason, a help link or the steps, and an arrival that is not VERIFIED, are caught", () => {
+  const ok = 'HTTP/1.1 401 Unauthorized\r\nludion-error: signature_required\r\nlink: <https://ludion.ai/e/signature_required>; rel="help"\r\n';
+  assert.deepEqual(refusalProblems(ok, dist).problems, [], "control: the real refusal");
+  const planted = [
+    ["no reason", ok.replace(/ludion-error:[^\n]*\n/, ""), /no Ludion-Error/],
+    ["no help link", ok.replace(/link:[^\n]*\n/, ""), /no help link/],
+    ["a help page that does not exist", ok.replace("signature_required>", "not_a_code>"), /does not exist/],
+    ["let through instead", ok.replace("401 Unauthorized", "200 OK"), /not refused/],
+  ];
+  const stepless = path.join(dist, "e", "one8-planted.html");
+  fs.writeFileSync(stepless, '<h2 id="what-happened">x</h2><h2 id="get-verified-in-3-minutes">G</h2><button data-code="npx ludion doctor"></button>');
+  planted.push(["a help page without the steps", ok.replace("signature_required>", "one8-planted>"), /no init step/]);
+  try {
+    const missed = planted.filter(([, head, why]) => !refusalProblems(head, dist).problems.some((p) => why.test(p))).map(([n]) => n);
+    assert.deepEqual(missed, []);
+  } finally { fs.rmSync(stepless, { force: true }); }
+  const receipt = (cls, decision) => Buffer.from(JSON.stringify({ class: cls, decision })).toString("base64url");
+  const arrival = (status, r) => `HTTP/1.1 ${status}\r\n${r ? `ludion-receipt: ${r}\r\n` : ""}`;
+  assert.deepEqual(arrivalProblems(arrival("200 OK", receipt("VERIFIED", "allow"))), [], "control");
+  for (const [name, head, why] of [
+    ["still refused", arrival("401 Unauthorized", receipt("SUSPECTED", "deny")), /not through/],
+    ["through but unverified", arrival("200 OK", receipt("UNVERIFIED", "allow")), /classified UNVERIFIED/],
+    ["no receipt", arrival("200 OK"), /no receipt/],
+  ]) assert.ok(arrivalProblems(head).some((p) => why.test(p)), name);
+  console.log("ONE-8: 5 planted refusals and 3 planted arrivals caught by ONE-4's judges, against the built site");
 });
