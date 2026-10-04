@@ -6,7 +6,7 @@
 //
 // The Card Host's one question, GET /__card/<diver_id> (a Diver's public record), reaches the
 // Durable Object only through its binding: the Worker answers 404 for it from the Internet.
-import { createRegistry, okpThumbprint } from "./src/index.mjs";
+import { createRegistry, publicDiverRecord } from "./src/index.mjs";
 import { createDurableStore } from "./src/durable.mjs";
 
 export const CARD_PREFIX = "/__card/";
@@ -41,11 +41,7 @@ export class RegistryState {
     if (!DIVER_ID.test(id)) return json(404, { error: "unknown_agent" });
     const rec = await this.store.getDiver(id);
     if (!rec || rec.revoked) return json(404, { error: "unknown_agent" });
-    return json(200, {
-      diver_id: rec.diver_id, name: rec.name, contacts: rec.contacts,
-      root_kid: await okpThumbprint(rec.root),
-      keys: (rec.keys ?? []).map((k) => ({ kty: k.kty, crv: k.crv, x: k.x, kid: k.kid })),
-    });
+    return json(200, await publicDiverRecord(rec));
   }
 }
 

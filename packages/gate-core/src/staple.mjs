@@ -92,8 +92,9 @@ export async function createStapleVerifier(registryJwks, options = {}) {
    * typ "ludion-revocation+jwt"): signature, typ and issuer. Returns the payload.
    * @param {string} compact @param {{ typ: string }} expect
    */
-  async function verifyStatement(compact, { typ }) {
-    const { header, payload } = await checkRegistrySignature(compact, MAX_STATEMENT_BYTES);
+  /** A Registry statement (revocation, Mandate, bulk copy). `maxBytes`: the bulk copy is larger than any one statement. */
+  async function verifyStatement(compact, { typ, maxBytes = MAX_STATEMENT_BYTES }) {
+    const { header, payload } = await checkRegistrySignature(compact, maxBytes);
     if (header.typ !== typ) throw new StapleError(`expected ${typ}`, "typ");
     if (payload.iss !== issuer) throw new StapleError("statement issuer mismatch", "iss");
     return payload;

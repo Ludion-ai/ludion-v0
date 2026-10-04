@@ -11,9 +11,17 @@ const REV = (seq) => `rev:${String(seq).padStart(12, "0")}`;
 export async function createDurableStore(storage) {
   let seq = (await storage.get("seq")) ?? 0;
   let stapleCount = (await storage.get("stapleCount")) ?? 0;
+  let ver = (await storage.get("ver")) ?? 0;
   return {
     getDiver: (id) => storage.get(`diver:${id}`),
-    putDiver: (id, rec) => storage.put(`diver:${id}`, rec),
+    /** Every change to a Diver takes the next version (the bulk copy's delta, REG-5). */
+    async putDiver(id, rec) {
+      const next = ver + 1;
+      await storage.put({ [`diver:${id}`]: { ...rec, ver: next }, ver: next });
+      ver = next;
+    },
+    async listDivers() { return [...(await storage.list({ prefix: "diver:" })).values()]; },
+    async version() { return ver; },
     getPrincipal: (credentialId) => storage.get(`principal:${credentialId}`),
     /** false if the credential is already registered (a key is never replaced). */
     async addPrincipal(rec) {
