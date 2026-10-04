@@ -245,6 +245,8 @@
 - 2026-10-04 深夜（Claude Code、1本目）：人間の承認1つと追加1つ、ローンチの準備。
   - LIVE-4（±、L2、夜間）：本番の ludion.ai はサイトのビルドを配り、どのページも noindex を言わない（ヘッダーも meta も）。中継の承認の条件。いま PASS（26ページ、トップ、404）。
   - MCP-4（±、L0）：Card Host は private_key_jwt でない名札と client 文書を出さない（500 `not_private_key_jwt`）。公開クライアントやシークレットを求めて登録しても private_key_jwt が出る。13の値を両方の道で出さない。守りを外すと落ちる。doctor は、自前のドメインの名札や client 文書が private_key_jwt でなければ警告する（終了コード 1）。
+  - #117 の CI で、ラチェット済みの DIV-1（Python）が落ちた：Python の Diver の名札が OAuth の項目を持たず、MCP-4 の守りで Card Host が 500 を返し、鍵の発見が通らなかった。Python の名札を JS と同じ形にし、`client` も書くようにした（同じ PR）。教訓はメモリに：名札の形や Card Host を変えたら、手元で DIV-1 と STD-3 を回す。
+  - 全オラクル：PASS 96 / FAIL 1（LOOP-2）/ PENDING 4 / SKIP 1。ラチェット 94 → 96（LIVE-4、MCP-4）。
   - ローンチの下書き：`docs/outbox/launch/`（Show HN の本文と最初のコメント、想定問答、60秒のデモの台本）。名簿の事前登録のデータは公開しないので、リポジトリに入れず手元にだけ置いた（下の人間待ち）。
 
 - 2026-10-04 夜遅く（Claude Code、1本目）：人間の決定1〜5（貼り付けの指示）。
