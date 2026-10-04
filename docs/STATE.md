@@ -1,6 +1,6 @@
 # STATE
 
-最終更新：2026-10-03 夜（Claude Code、1本目のレーン。人間の決定1〜9を受けて spec v2.0.1、CLAUDE.md の芯、ADR-035〜039・041・042）
+最終更新：2026-10-04 午前（Claude Code、1本目のレーン。実装の順の1〜4。4 の MCP-1 は Keycloak の不具合で FAIL、判断は人間待ちの先頭）
 
 ## 現在地
 
@@ -34,13 +34,14 @@
 
 **実装の順**（それぞれ別の PR。上から）
 
-1. **決定4と PRIV-4**（ADR-038）：Gate から外に出すのは1時間ごとの集計だけ。来訪ごとの記録はサイトの中に7日。不変条件15の違反を先に消す。
-2. **決定2のパッケージ化**（ADR-036）と **init の1画面**：
+1. ✅（#92）**決定4と PRIV-4**（ADR-038）：Gate から外に出すのは1時間ごとの集計だけ。来訪ごとの記録はサイトの中に7日。不変条件15の違反を先に消す。
+2. ✅（#93、#94）**決定2のパッケージ化**（ADR-036）と **init の1画面**：
    - `ludion` 1本に CLI と `ludion/gate/{next,node,workers}`、`ludion/diver` を束ね、PUB-1〜4 をその形に。
    - 1画面には Web と MCP の例、revoke の一行、バッジ、任意の1問。
    - オラクルも足す。「断ったら何も送らない」を含める。
-3. **決定6の設定と PRIV-5**（ADR-041）：本番の名簿（`registry.ludion.ai`）と Card Host（`*.agents.ludion.ai`）の Workers の設定、docs/DEPLOY.md の手順。デプロイは人間。
-4. **MCP-1**（ADR-039）：Keycloak は CI の別ジョブで並列に回し、LOOP-2 の10分に入れない。
+3. ✅（PR は #94 の後）**決定6の設定と PRIV-5**（ADR-041）：本番の名簿（`registry.ludion.ai`）と Card Host（`*.agents.ludion.ai`）の Workers の設定、docs/DEPLOY.md の手順。デプロイは人間。
+4. 🟥（PR は 3 の後）**MCP-1**（ADR-039）：Keycloak は CI の別ジョブ `mcp` で並列に回し、LOOP-2 の10分に入れない。
+   - e2e と負の対（MCP-2）はできた。Keycloak 26.8.0 が名札の `web_bot_auth` と `ludion` を読めずに拒むので FAIL（keycloak/keycloak#51236）。この2つを外した名札なら、同じ e2e で通る。判断は人間待ちの先頭。
 5. **ONE-1・ONE-2・ONE-3・BLK-1・ONE-5**。
 6. **PUR-1〜6**。
 7. **日本語の README**。
@@ -104,8 +105,15 @@
 
 ## 人間待ち
 
+- [ ] **判断（急ぎ、MCP-1 と 10/10 の切る線）**：Keycloak 26.8.0（最新、2026-10-01）の CIMD は、知らない項目のある名札を拒む（`Unrecognized field "web_bot_auth"`。keycloak/keycloak#51236、修正の PR #51235 は未マージ）。名札は spec §11.2 どおり `web_bot_auth` と `ludion` を持つので、MCP-1 は認可の要求で止まる。
+  - 確かめたこと（手元、Keycloak 26.8.0）：その2つを外した同じ名札なら、loopback（任意のポート）、PKCE、同意、Session 鍵（Ed25519）の private_key_jwt で、名札の URL にトークンが出る（`azp` が名札の URL）。負の6つ（Root 鍵、他人の鍵、別の宛先、使い回し、名札にない redirect、失効）も、それぞれの段で拒まれる。ES256 の別の jwks は要らなかった。
+  - 案 C（推す）：MCP の client_id を、拡張のない CIMD（例：`<origin>/oauth-client`）に分ける。`/card` は Web Bot Auth の名札のまま（DIV-2 はそのまま）。名前（オリジン）は同じ。厳しい認可サーバーにも通り、Keycloak の修正を待たない。client_id は認可サーバーでの身元なので、決めたら変えない。spec §11.2 と §13.1 の例（`MCP client_id = …/card`）と init の画面（DIV-5）を直す。
+  - 案 A：spec のまま、Keycloak の修正を待つ。#51236 へのコメントの下書きは `docs/outbox/keycloak-51236-comment.md`（投稿は人間）。10/10 までに修正版が出なければ、切る線どおり HN から MCP を外す。
+  - 案 B：`/card` から `web_bot_auth` と `ludion` を外す。DIV-2（ラチェット済み）の緩和になる。推さない。
+  - 決まったら：C なら半日で入れる（e2e はそのまま使える）。A なら何もしない。
+
 - [x] **spec v2.0 の判断**（2026-10-03）：決定1〜9（ADR-035〜039、041、042）。spec v2.0.1 と CLAUDE.md の芯を直した。
-- [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と docs/DEPLOY.md の手順は Claude が用意する（実装の順の3）。デプロイ、秘密の登録、`*.agents.ludion.ai` の証明書（2段目のワイルドカード）は人間。
+- [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（2段目のワイルドカード、お金の判断、§4）は人間。
 - [ ] **npm の初版**：`ludion` の1本（ADR-036、実装の順の2のあと）を、人間が手で出す。2版目から release ワークフロー。
 - [ ] **判断（LOOP-2 と `preview` ジョブ）**：WEB-1 は手元で 9 分（28ページ × Lighthouse 3回、プレビューの URL へ）。secret が入ると、`preview` ジョブだけで LOOP-2 の10分を越える。Lighthouse を同じ機械で並べると揺れるので、分けるなら別のランナー。ただしプレビューは1つの Worker なので、デプロイとその検査を、複数のジョブにまたがって1つの鍵で守る必要がある。
   - 案 B（推す）：`preview` は main への push の後だけで回し、WEB-1 の Lighthouse を3つのランナーに分ける（ワークフロー単位の鍵）。プレビューはいつも main を見せる。PR では、同じ成果物を workerd で測る WEB-9 が守る。決まり2（マージ後の赤は最優先）と同じ形。「secret が入ったら `preview` を PR の必須チェックにする」の予定は取り下げになる。
@@ -246,6 +254,12 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-04 午前（Claude Code、1本目）：実装の順の2の残り、3、4。
+  - **2（#94）init の1画面**：DIV-5、DIV-6 PASS。手元の全オラクルで、WEB-8 の「仕込んだ故障」の複製が新しいルートの import を持たずに組めず、失敗の後に通知先が開いたままでプロセスが残る（ローカルの1時間のハング）のを捕まえた。複製は site/edge の .mjs を全部取るようにし、失敗時に閉じる。速いテスト（deploy-guard）に降ろした。
+  - **3 本番の名簿と Card Host**（ADR-041）：名簿は Durable Object 1つ（`createDurableStore`。名簿のテストは両方の店で回る）、Card Host は名簿に Diver の id だけを聞く。Card Host は `nodejs_compat` なし（`@ludion/diver/card` は暗号を持たない）。PRIV-5 PASS（訪問者の何も名簿にもログにも届かない、設定とコードが何も残さない、import に Node の組み込みがない。判定は先に仕込んだ偽物で確かめた）。DEPLOY.md §6。NEUT-1 が card-host の tarball の依存（npm にない `@ludion/diver`）で落ちたので devDependencies にした。
+  - **4 MCP-1**：上の人間待ちの先頭。CI の `mcp` ジョブ（Java 21、Keycloak の zip は SHA-256 で固定）。LOOP-2 は `mcp` の時間を数えない（緑は要る。人間の決定）。MCP-2（負）を足した。
+  - scoreboard（手元、Windows、4分割）：3 の先頭で PASS 61、FAIL 2（WEB-8、NEUT-1）。直して2つとも単独で PASS。MCP-1、MCP-2 は FAIL（`mcp` ジョブ）。
 
 - 2026-10-03 夜（Claude Code、1本目）：実装の順の1、決定4と PRIV-4（ADR-038）。
   - Gate から外に出るのは1時間ごとの集計だけ（`ludion.hourly` の束。キーは経路のテンプレート・メソッド・分類・判定・運営者、値は件数）。時間が閉じた後の最初のリクエストか、gate-node の1分ごとの見回りで送る。
