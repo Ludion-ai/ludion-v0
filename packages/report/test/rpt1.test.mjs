@@ -162,8 +162,8 @@ test("RPT-1: every number in all four renderings equals the truth, and ja and en
       // Text: exactly the same numbers, in the same order.
       assert.deepEqual(numbersIn(text, t), ms.map(([, v]) => v), `${at}: text and HTML disagree`);
       for (const [, name] of names) assert.ok(text.includes(name), `${at}: text lacks ${name}`);
-      // Subject: the fear number, then verified actions; the HTML title is the subject.
-      assert.deepEqual(numbersIn(subj, t), [t.expect.critical.unverified, t.expect.verified_actions], `${at}: subject`);
+      // Subject: the headline's one number (ONE-2), nothing else counted; the HTML title is the subject.
+      assert.deepEqual(numbersIn(subj, t), [t.expect.headline.named_pct ?? t.expect.events], `${at}: subject`);
       assert.ok(subj.includes(t.site) && subj.includes(t.date), `${at}: subject names the site and day`);
       assert.equal(decode(/<title>([\s\S]*?)<\/title>/.exec(html)[1]), subj, `${at}: HTML title is the subject`);
       // One decision, the truth's.

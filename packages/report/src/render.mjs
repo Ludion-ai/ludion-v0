@@ -77,8 +77,12 @@ export function decisionText(d, L) {
   return L.decision.none;
 }
 
+/** The subject is the headline: the one number of the report (ONE-2), and nothing else counted. */
 export function subject(s, lang) {
-  return STRINGS[lang].subject(s, fmt(s.critical.unverified), fmt(s.verified_actions));
+  const H = STRINGS[lang].headline;
+  const [pre, post] = s.headline.named_pct == null ? H.empty : H.share;
+  const value = s.headline.named_pct == null ? s.events : s.headline.named_pct;
+  return STRINGS[lang].subject(s, `${pre} ${fmt(value)}${post.startsWith("%") ? "" : " "}${post}`.replace(/\s+$/, ""));
 }
 
 const cellText = (c) => (typeof c === "string" ? c : c.name !== undefined ? c.name : c.signed ? signed(c.value) : fmt(c.value));
