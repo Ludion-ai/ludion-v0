@@ -126,11 +126,31 @@ export async function openRootKey(root, passphrase) {
  */
 export function signRootStatement(rootPrivateJwk, typ, payload) {
   if (rootPrivateJwk?.kty !== "OKP" || rootPrivateJwk.crv !== "Ed25519" || typeof rootPrivateJwk.d !== "string") throw new Error("the Root must be an opened Ed25519 private JWK");
-  const kid = rootPrivateJwk.kid ?? thumbprint({ kty: "OKP", crv: "Ed25519", x: rootPrivateJwk.x });
+  return compactJws(rootPrivateJwk, typ, payload);
+}
+
+function compactJws(privateJwk, typ, payload) {
+  const kid = privateJwk.kid ?? thumbprint({ kty: "OKP", crv: "Ed25519", x: privateJwk.x });
   const b = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
   const input = `${b({ alg: "EdDSA", kid, typ })}.${b(payload)}`;
-  const key = createPrivateKey({ key: { kty: "OKP", crv: "Ed25519", x: rootPrivateJwk.x, d: rootPrivateJwk.d }, format: "jwk" });
+  const key = createPrivateKey({ key: { kty: "OKP", crv: "Ed25519", x: privateJwk.x, d: privateJwk.d }, format: "jwk" });
   return `${input}.${edSign(null, Buffer.from(input), key).toString("base64url")}`;
+}
+
+/**
+ * An OAuth client assertion (RFC 7523 §2.2, private_key_jwt): how an agent whose client_id is its
+ * card authenticates at an MCP authorization server's token endpoint (ADR-039). Signed by a SESSION
+ * key — one the card's jwks_uri lists — never by the Root. Short-lived and single-use (jti).
+ * @param {JsonWebKey} sessionPrivateJwk
+ * @param {{ clientId: string, audience: string, now?: number, lifetimeS?: number }} o
+ *   audience: the token endpoint URL (or the authorization server's issuer, if it asks for that)
+ */
+export function clientAssertion(sessionPrivateJwk, { clientId, audience, now = Math.floor(Date.now() / 1000), lifetimeS = 60 }) {
+  if (sessionPrivateJwk?.kty !== "OKP" || sessionPrivateJwk.crv !== "Ed25519" || typeof sessionPrivateJwk.d !== "string") throw new Error("the session key must be an Ed25519 private JWK");
+  if (!/^https:\/\//.test(clientId ?? "")) throw new Error("clientId must be the card's https URL");
+  if (!audience) throw new Error("audience (the token endpoint) is required");
+  if (!(lifetimeS > 0 && lifetimeS <= 300)) throw new Error("lifetimeS must be in (0, 300]");
+  return compactJws(sessionPrivateJwk, "JWT", { iss: clientId, sub: clientId, aud: audience, jti: randomBytes(16).toString("base64url"), iat: now, exp: now + lifetimeS });
 }
 
 /** diver_id = "dvr-" + base32(first 80 bits of SHA-256 JWK thumbprint of the Root public key) (spec §10.2). */
@@ -142,4 +162,4 @@ export function diverIdFromRoot(rootPublicJwk) {
 
 // The two public documents (directory and card) live in card.mjs: no crypto, so the Card Host Worker
 // builds them too (ADR-041).
-export { directoryDocument, cardDocument, DIRECTORY_MEDIA_TYPE, HTTP_MESSAGE_SIGNATURES_DIRECTORY } from "./card.mjs";
+export { directoryDocument, cardDocument, DIRECTORY_MEDIA_TYPE, HTTP_MESSAGE_SIGNATURES_DIRECTORY, LOOPBACK_REDIRECT_URIS } from "./card.mjs";

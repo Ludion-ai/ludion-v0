@@ -1,7 +1,7 @@
 // LOOP-2's judge, offline: what counts as a full CI run and how it is timed (accept/loop/ci-time.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { judgeRun, latestPushRun, LIMIT_S } from "./ci-time.mjs";
+import { judgeRun, latestPushRun, LIMIT_S, UNTIMED } from "./ci-time.mjs";
 
 const T0 = Date.parse("2026-10-03T10:00:00Z");
 const at = (s) => new Date(T0 + s * 1000).toISOString();
@@ -41,6 +41,18 @@ test("LOOP-2: a run with a red, cancelled or unfinished job is not a full run, h
   assert.match(judgeRun(jobs).detail, /not finished: loop/);
   assert.equal(judgeRun([]).pass, false);
   assert.equal(judgeRun(run().filter((j) => j.conclusion === "skipped")).pass, false, "only skipped jobs: nothing ran");
+});
+
+test("LOOP-2: the mcp job (Keycloak) is outside the 10 minutes, but must still finish green", () => {
+  assert.deepEqual([...UNTIMED], ["mcp"], "only the job the human placed outside");
+  const slow = [...run(), job("mcp", 0, 1200)];
+  const v = judgeRun(slow);
+  assert.equal(v.pass, true, v.detail);
+  assert.equal(v.wallS, 340, "its 20 minutes are not counted");
+  assert.match(v.metric, /over 6 jobs \(limit 10:00\) \(\+ untimed: mcp\)/);
+  assert.match(judgeRun([...run(), job("mcp", 0, 30, "failure")]).detail, /not green: mcp failure/);
+  assert.match(judgeRun([...run(), { ...job("mcp", 0, 30), status: "in_progress", conclusion: null, completed_at: null }]).detail, /not finished: mcp/);
+  assert.equal(judgeRun([...run(), job("mcp-extra", 0, 1200)]).pass, false, "another name is timed");
 });
 
 test("LOOP-2: it reads the latest completed push run on main, and the jobs of that run's latest attempt", async () => {

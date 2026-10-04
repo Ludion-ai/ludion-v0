@@ -82,6 +82,29 @@ jobs:
         run: npm run deploy:preview
       - name: Scoreboard — the preview job's oracles, ratchet from the base branch
         run: node scripts/scoreboard.mjs --base "origin/${{ github.base_ref || 'main' }}" --job preview
+  # MCP-1/MCP-2: a real authorization server (Keycloak, CIMD on) authorizes an agent by its card URL.
+  # Its own job, in parallel, outside LOOP-2's 10 minutes (the human's decision, 2026-10-03): Java
+  # and Keycloak take a while to start. Keycloak's zip is checked against a pinned SHA-256.
+  mcp:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LUDION_TOOLS: ${{ github.workspace }}/../ludion-tools
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with: { distribution: temurin, java-version: "21" }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with: { path: "${{ github.workspace }}/../ludion-tools", key: "keycloak-${{ hashFiles('accept/mcp/keycloak.mjs') }}" }
+      - run: npm ci
+      - name: Keycloak (pinned version and SHA-256)
+        run: node accept/mcp/fetch-keycloak.mjs
+      - name: Scoreboard — the mcp job's oracles, ratchet from the base branch
+        run: node scripts/scoreboard.mjs --base "origin/${{ github.base_ref || 'main' }}" --job mcp
   # The same loop on the platform the agent actually runs on, nightly on main. Caught before: the
   # Node ≥23 test reporter, Windows path separators, EXDEV and EPERM renames, SQLite's busy wait.
   # A red night is fixed first (the human's rule, 2026-10-03).
