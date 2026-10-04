@@ -121,7 +121,7 @@
 - [x] **ludion.ai のトップの文面**：spec v2.0 §9 の一点に書き直した（英日。PR `site/one-point`）（2026-10-04、人間の「全部許可する」で確定）。
 - [x] **判断（MCP-1）**：2026-10-04、人間が「全部許可する」。案 C にした：MCP の client_id は拡張のない CIMD（`<origin>/client`）、`/card` は Web Bot Auth の名札のまま。spec v2.0.2（§11.2、§13.1、§9.3、§23.4）、docs/adr/2026-10-04-mcp-client-document.md。Keycloak 26.8.0 で MCP-1、MCP-2 が PASS。keycloak/keycloak#51236 には、再現つきのコメントを投稿した（https://github.com/keycloak/keycloak/issues/51236#issuecomment-5977718433）。
 - [x] **spec v2.0 の判断**（2026-10-03）：決定1〜9（ADR-035〜039、041、042）。spec v2.0.1 と CLAUDE.md の芯を直した。
-- [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（2段目のワイルドカード、お金の判断、§4）は人間。
+- [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（買うと決めた。ACM のワイルドカード1枚と DNS のワイルドカード1つ、§4）は人間。
 - [ ] **npm の初版**：`ludion` の1本（ADR-036、実装の順の2のあと）を、人間が手で出す。2版目から release ワークフロー。
 - [x] **判断（LOOP-2 と `preview` ジョブ）**：案 B（2026-10-04、人間の「全部許可する」で確定）。`preview` は main への push の後だけで回し、WEB-1 の Lighthouse を分ける。実装は secret が入ってから（Claude）。それまで LOOP-2 は `preview` の赤で FAIL のまま。
 - [ ] **CI の `preview` ジョブの secret**（人間がトークンを作って登録すると決めた）：`CLOUDFLARE_PREVIEW_API_TOKEN`（`Ludion Agents` の Workers Scripts の編集だけ）と `CLOUDFLARE_PREVIEW_ACCOUNT_ID`。登録したら、`preview` を main の必須チェックに足す。それまで `preview` は赤で、WEB-1 は CI で強制されない（前も SKIP で強制されていなかった）。
@@ -152,9 +152,7 @@
 - [x] main のブランチ保護：PR 必須、`loop` チェック必須、auto-merge 許可（2026-09-30。strict と enforce_admins も付けた）
 - [x] `CLOUDFLARE_API_TOKEN`：2026-10-01 朝、前からあるトークンが通るようになった。プレビューのデプロイ（WEB-1）に使った。LIVE-1（canary）はまだ。
 - [x] 旧 Ludion の Cloudflare 資源の棚卸し：2026-10-01 09:03、`node scripts/cf-inventory.mjs`（GET だけ）。結果は docs/DEPLOY.md §1.3。
-- [ ] 判断（お金）：Card Host の `*.agents.ludion.ai` は2段目のワイルドカードで、Universal SSL の範囲外。
-  - 選択肢：Advanced Certificate Manager（有料）、名前を `dvr-….ludion.ai` に寄せる（spec の変更）、別のドメイン。
-  - 詳細は docs/DEPLOY.md 4。
+- [x] 判断（お金）：Card Host の `*.agents.ludion.ai` の証明書は買う（2026-10-04、人間）。ACM のワイルドカードの証明書1枚と、ワイルドカードの DNS レコード1つ。手順は docs/DEPLOY.md §4（ACM の契約、注文、DNS、確かめ方）。実行は人間（下の「本番の名簿と Card Host のデプロイ」）。
 - [ ] `SIGNUP_WEBHOOK_URL` → LP の登録通知（Discord の incoming webhook）
   - プレビューには入っている（`~/.config/ludion/signup.env` から、デプロイと一緒に。DEPLOY.md §2）。試しの送信はしていない。
   - 本番の `ludion-site` には、人間が DEPLOY.md §3 の手順 1 で入れる。

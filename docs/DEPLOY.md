@@ -213,25 +213,46 @@ curl -s https://ludion.ai/_build.json              # {"site":"…"}：新しい�
 
 ## 4. Card Host の `*.agents.ludion.ai`（spec の `dvr-….agents.ludion.ai`）
 
-ワイルドカードの2段目のサブドメインになる。お金の判断を含むので、実行は人間。
+人間の決定（2026-10-04）：証明書を買う。**Advanced Certificate Manager（ACM）のワイルドカードの証明書1枚**と、**ワイルドカードの DNS レコード1つ**。名前は spec のまま（`dvr-….agents.ludion.ai`）。
 
-1. **DNS。** **DNS** → **Records** → **Add record** で、次のレコードを作る。
-   - Type：`AAAA`
-   - Name：`*.agents`
-   - IPv6 address：`100::`
-   - Proxy status：**Proxied**（オレンジの雲）
-   - 行き先の実体は Worker が持つので、`100::` はダミーでよい。
-2. **Worker のルート。** Workers のカスタムドメインはワイルドカードを受けない。だからルートで結ぶ。
-   1. **Workers & Pages** → Card Host の Worker → **Settings** → **Domains & Routes** → **Add** → **Route**。
-   2. Zone は `ludion.ai`、Route は `*.agents.ludion.ai/*`。
-3. **証明書（要判断・お金）。**
-   - Universal SSL が守るのは、`ludion.ai` と `*.ludion.ai`（1段目）だけ。`dvr-x.agents.ludion.ai` は守らない。
-   - そのままでは、エージェントの鍵の取得が TLS エラーで落ちる。
-   - 選択肢：
-     - **Advanced Certificate Manager**（有料、月額）で `*.agents.ludion.ai` の証明書を発行する。**SSL/TLS** → **Edge Certificates** → **Order Advanced Certificate**。
-     - 名前を1段目に寄せる：`dvr-x.ludion.ai`。この場合は spec の変更が要る。
-     - Card Host を別のドメインに置く。
-   - 決めるまで、Card Host は `*.workers.dev` か、利用者自身のドメインで動かす（DIV-2 はそれで PASS している）。
+なぜ買うか：`dvr-x.agents.ludion.ai` はワイルドカードの2段目の名前で、無料の Universal SSL（`ludion.ai` と `*.ludion.ai` だけ）では守れない。証明書がないと、エージェントの鍵の取得も MCP の client 文書の取得も TLS で落ちる。
+
+やるのは人間（お金と本番）。順番は 4.1 → 4.2 → 4.3 で、終わってから 6.4 で Card Host を出す。
+
+### 4.1 ACM を有効にする（お金）
+
+1. ダッシュボードで本番のアカウント → ゾーン `ludion.ai` を開く。
+2. **SSL/TLS** → **Edge Certificates** → **Advanced Certificate Manager** を有効にする（月額の契約）。
+
+### 4.2 証明書を1枚注文する
+
+1. 同じ画面の **Order an advanced certificate**。
+2. 次のとおりに入れる。
+   - Hostnames：`*.agents.ludion.ai` の1つだけ（`agents.ludion.ai` そのものは使わないので入れない）。
+   - Certificate Authority：既定のままでよい。
+   - Validation method：**TXT**（ワイルドカードは TXT でしか検証できない。ゾーンが Cloudflare にあるので、検証のレコードは Cloudflare が自分で置く）。
+   - Validity：既定のまま（期限の前に Cloudflare が自動で更新する）。
+3. **Edge Certificates** の一覧で、その証明書が **Active** になるまで待つ（数分から）。
+
+### 4.3 DNS のレコードを1つ作る
+
+**DNS** → **Records** → **Add record**：
+
+- Type：`AAAA`
+- Name：`*.agents`
+- IPv6 address：`100::`（行き先の実体は Worker のルートなので、ダミーでよい）
+- Proxy status：**Proxied**（オレンジの雲。これが無いとルートも証明書も効かない）
+
+Worker のルート（`*.agents.ludion.ai/*`）は、`packages/card-host/wrangler.json` がデプロイと一緒に付ける。手で足さない（Workers のカスタムドメインはワイルドカードを受けないので、ルートで結ぶ）。
+
+### 4.4 確かめる（6.4 で Card Host を出したあと）
+
+```sh
+curl -s -o /dev/null -w "%{http_code} %{ssl_verify_result}\n" https://dvr-aaaaaaaaaaaaaaaa.agents.ludion.ai/card
+```
+
+- `404 0`：TLS の検証が通り（`0`）、登録のない Diver なので 404。
+- TLS のエラーになるなら、4.2 の証明書が Active か、4.3 のレコードが Proxied かを見る。
 
 ## 5. エージェントのトークンと本番（2026-10-01 に確かめた事実と対策）
 
@@ -365,8 +386,8 @@ Card Host は、名簿の Durable Object を `script_name: "ludion-registry"` �
 npx wrangler@4.144.0 deploy --config packages/card-host/wrangler.json
 ```
 
-- **証明書（要判断・お金）**：`*.agents.ludion.ai` は2段目のワイルドカードで、Universal SSL の範囲外（4 の 3）。決めるまで、Card Host を出しても TLS で落ちる。名簿だけを先に出してよい。
-- DNS の `*.agents` のレコードは 4 の 1。ルートは `wrangler.json` が付ける（4 の 2 は手で付けなくてよい）。
+- **先に 4 を済ませる**：ACM の証明書（4.2）が Active で、DNS の `*.agents` のレコード（4.3）が Proxied であること。どちらかが欠けると、Card Host を出しても TLS で落ちる。名簿（6.3）は先に出してよい。
+- ルートは `wrangler.json` が付ける（手で付けなくてよい）。
 - ダッシュボードで確かめる：**Workers & Pages** → `ludion-card-host` → **Settings** → **Observability** が無効、**Logpush** が無効、**Trigger Events** に Tail がない。
 
 ### 6.5 確かめる
@@ -378,7 +399,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://registry.ludion.ai/__card/dvr-a
 
 - 1つ目：`keys` の kid が 6.1 で控えたものと一致する。
 - 2つ目：`404`（Card Host の内向きの問いは、外からは聞けない）。
-- 証明書が入ったあと、Card Host：
+- Card Host（4.4 と同じ）：
 
 ```sh
 curl -s -o /dev/null -w "%{http_code}\n" https://dvr-aaaaaaaaaaaaaaaa.agents.ludion.ai/card
