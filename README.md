@@ -1,5 +1,7 @@
 # Ludion
 
+[日本語](README.ja.md)
+
 **A neutral checkpoint that verifies AI agents' accountability, on [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) ([RFC 9421](https://www.rfc-editor.org/rfc/rfc9421)).**
 
 Agents now browse, compare, log in, book and buy on people's behalf. A site that receives one cannot answer three questions:
