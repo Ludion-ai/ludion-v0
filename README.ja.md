@@ -18,7 +18,7 @@ npx ludion init --name "My Agent" --contact mailto:ops@example.com
 あなたの AI の名前：https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai
 
   Web    Signature-Agent: sig1="https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai"
-  MCP    client_id = https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/card
+  MCP    client_id = https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/client
   消す   npx ludion revoke   （1時間以内に、世界中で通らなくなります）
 
   README に貼るバッジ：
@@ -26,7 +26,7 @@ npx ludion init --name "My Agent" --contact mailto:ops@example.com
 ```
 
 - **Web**：要求に署名する。`npx ludion sign GET https://example.com/` は、どの HTTP クライアントにも貼れる署名のヘッダーを出す。Node なら `ludion/diver` の `ludionFetch` が、署名、鍵の回転、nonce、本文のダイジェストを引き受ける。
-- **MCP**：同じ名札の URL（`…/card`）を client_id にする。名札は CIMD の形で、`redirect_uris` は loopback（`http://127.0.0.1/callback`）、認可サーバーへは Session 鍵の `private_key_jwt` で名乗る（`ludion/diver` の `clientAssertion`）。秘密の文字列は持たない。
+- **MCP**：同じオリジンの `…/client` を client_id にする。中身は OAuth の client metadata（CIMD）だけで、鍵の一覧は Web と同じ。`redirect_uris` は loopback（`http://127.0.0.1/callback`）、認可サーバーへは Session 鍵の `private_key_jwt` で名乗る（`ludion/diver` の `clientAssertion`）。秘密の文字列は持たない。CIMD を有効にした Keycloak 26.8.0 で、認可まで通ることを確かめている（MCP-1）。
 - **消す**：`npx ludion revoke` で、名簿（Registry）に失効を出す。名簿を購読している Gate には数秒で、そうでない Gate にも名簿の証明（Staple）の寿命（最長1時間）のうちに届く。
 - 目的の申告：要求に「何をしに来たか」を一語（`read` か `act`）と一文で添えられる（`Ludion-Purpose`、署名で覆う）。一文にメールアドレス、電話番号、URL、長い数字があれば、送る前に止める。
 
@@ -90,7 +90,7 @@ app.use(await ludion());
 
 - **npm への公開はまだ。** それまでは、このリポジトリから動かす（`npm ci` のあと、下の例）。
 - **名簿（Registry）と名札の置き場（`*.agents.ludion.ai`）は、まだ本番で動いていない。** 設定と手順は揃っている（[docs/DEPLOY.md](docs/DEPLOY.md) §6）。それまで `register` と `revoke` は、手元で動かす参照の名簿（[`services/registry`](services/registry)）に向ける。
-- **MCP**：CIMD を有効にした Keycloak 26.8.0 で確かめた。名札のうち Ludion と Web Bot Auth の項目（`ludion`、`web_bot_auth`）を、Keycloak が知らない項目として拒む（[keycloak/keycloak#51236](https://github.com/keycloak/keycloak/issues/51236)）。その2つを除けば、loopback、PKCE、Session 鍵の `private_key_jwt` で認可が通る。扱いは決めているところだ。
+- **MCP**：名札（`/card`）を client_id にすると、Keycloak 26.8.0 は Ludion と Web Bot Auth の項目を知らない項目として拒む（[keycloak/keycloak#51236](https://github.com/keycloak/keycloak/issues/51236)）。だから client_id は、拡張のない `…/client` に分けた。これで認可が通る（MCP-1）。
 - 保証（Ballast）、委任の同意画面（Mandate）、段階（Depth）のコードはあるが、今は表に出していない。
 
 ## 作り方

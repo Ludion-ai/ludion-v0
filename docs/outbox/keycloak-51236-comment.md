@@ -1,4 +1,4 @@
-# 下書き：keycloak/keycloak#51236 へのコメント（人間が投稿する）
+# 投稿済み：keycloak/keycloak#51236 へのコメント（2026-10-04、人間の許可で Claude が投稿。https://github.com/keycloak/keycloak/issues/51236#issuecomment-5977718433 。再現のリンクは、案 C の前のコミット bfb8dc7 に向けた）
 
 - 宛先：https://github.com/keycloak/keycloak/issues/51236 （CIMD: authorization request rejected when Client ID Metadata Document contains unknown properties）
 - 関連：修正の PR https://github.com/keycloak/keycloak/pull/51235 （2026-10-04 時点で open、未マージ）
