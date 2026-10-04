@@ -86,7 +86,7 @@ npx ludion init --name "My Agent" --contact mailto:ops@example.com --domain agen
 
 ### ディレクトリとカードを公開する
 
-公開するファイルを、`https://agent.example.com/.well-known/http-message-signatures-directory` と `https://agent.example.com/card` で配ります。静的なホストならどこでも構いません。届くかを確かめます。
+公開するファイルを、`https://agent.example.com/.well-known/http-message-signatures-directory` と `https://agent.example.com/card`、MCP のサーバー向けに `https://agent.example.com/client` で配ります。静的なホストならどこでも構いません。届くかを確かめます。
 
 ```sh
 npx ludion doctor

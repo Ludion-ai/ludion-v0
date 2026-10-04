@@ -86,7 +86,7 @@ npx ludion init --name "My Agent" --contact mailto:ops@example.com --domain agen
 
 ### Publish the directory and the card
 
-Serve the public files at `https://agent.example.com/.well-known/http-message-signatures-directory` and `https://agent.example.com/card` from any static host. Then check that they can be reached:
+Serve the public files at `https://agent.example.com/.well-known/http-message-signatures-directory`, `https://agent.example.com/card` and (for MCP servers) `https://agent.example.com/client` from any static host. Then check that they can be reached:
 
 ```sh
 npx ludion doctor

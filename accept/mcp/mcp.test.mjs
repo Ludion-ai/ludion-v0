@@ -19,7 +19,7 @@ import os from "node:os";
 import path from "node:path";
 import https from "node:https";
 import cardWorker from "../../packages/card-host/worker.mjs";
-import { nodeListener, CARD_PATH, DIRECTORY_PATH } from "../../packages/card-host/src/index.mjs";
+import { nodeListener, CARD_PATH, CLIENT_PATH, DIRECTORY_PATH } from "../../packages/card-host/src/index.mjs";
 import registryWorker, { RegistryState } from "../../services/registry/worker.mjs";
 import { memoryStorage } from "../../services/registry/src/durable.mjs";
 import { diverStore } from "../../services/registry/test/support.mjs";
@@ -57,7 +57,7 @@ async function buildWorld() {
     const u = new URL(request.url);
     const r = await cardWorker.fetch(request, env);
     seen.push({ host: u.hostname, path: u.pathname, status: r.status });
-    if (!strip.has(u.hostname) || u.pathname !== CARD_PATH || !r.ok) return r;
+    if (!strip.has(u.hostname) || u.pathname !== CLIENT_PATH || !r.ok) return r;
     const card = await r.json();
     for (const k of EXTENSIONS) delete card[k];
     return new Response(JSON.stringify(card), { status: 200, headers: r.headers });
@@ -66,7 +66,7 @@ async function buildWorld() {
   const server = https.createServer({ pfx: tls.pfx, passphrase: tls.passphrase }, nodeListener(cardHost));
   const cardPort = await freePort();
   await new Promise((ok) => server.listen(cardPort, "127.0.0.1", ok));
-  for (const a of Object.values(agents)) a.clientId = `https://${a.host}:${cardPort}${CARD_PATH}`;
+  for (const a of Object.values(agents)) a.clientId = `https://${a.host}:${cardPort}${CLIENT_PATH}`;
 
   const kc = await startKeycloak({ java: T.java, kc: T.kc, dir, trust: [tls.pem], hosts: Object.fromEntries(Object.values(agents).map((a) => [a.host, "127.0.0.1"])) });
   await createRealm(kc, cimdRealm({ name: "mcp", user: USER }));
@@ -112,7 +112,7 @@ test("MCP-1: Keycloak (CIMD on) authorizes the card URL as client_id — loopbac
   const problems = authorizedProblems(r, { clientId: a.clientId, issuer: W.issuer });
   if (problems.length) assert.fail(`${problems.join("; ")}. ${await diagnose(r)}`);
   const fetched = W.seen.filter((s) => s.host === a.host);
-  assert.ok(fetched.some((s) => s.path === CARD_PATH && s.status === 200), "Keycloak fetched the card");
+  assert.ok(fetched.some((s) => s.path === CLIENT_PATH && s.status === 200), "Keycloak fetched the client document");
   assert.ok(fetched.some((s) => s.path === DIRECTORY_PATH && s.status === 200), "Keycloak fetched the key directory");
   console.log(`MCP-1: Keycloak ${KEYCLOAK_VERSION} (CIMD) issued a token to ${a.clientId.replace(/:\d+\//, "/")} (${r.steps.join(" → ")}); it fetched the card and the directory itself`);
 });
@@ -162,6 +162,6 @@ test("MCP-2: a revoked agent's card URL is refused at the authorization request 
   const a = W.agents.revoked;
   const { r, reasons } = await withReasons(() => W.flow(a));
   assert.equal(r.stage, "authorize", `got to ${r.stage}`);
-  assert.ok(W.seen.some((s) => s.host === a.host && s.path === CARD_PATH && s.status === 404), "the Card Host answered 404 for the revoked agent's card");
+  assert.ok(W.seen.some((s) => s.host === a.host && s.path === CLIENT_PATH && s.status === 404), "the Card Host answered 404 for the revoked agent's client document");
   assert.ok(reasons.includes("Client Metadata fetch failed") && !reasons.some((x) => /unrecognized field/.test(x)), `refused because the card was not found: ${reasons.join("; ")}`);
 });

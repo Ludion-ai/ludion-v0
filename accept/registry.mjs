@@ -417,7 +417,7 @@ export const ORACLES = [
     run: nodeTest(["packages/report/test/one5.test.mjs"], "^ONE-5:", { metric: (out) => (/^# ONE-5: (.+)$/m.exec(out) ?? [])[1] }) },
   // MCP-1/2 run in their own CI job (`mcp`, Java and Keycloak), outside LOOP-2's 10 minutes (the human's
   // decision, 2026-10-03). Keycloak fetches the card from the production Card Host Worker (accept/mcp/).
-  { id: "MCP-1", m: "M9", kind: "+", level: 1, job: "mcp", pair: "MCP-2", property: "mcp-client-id", title: "e2e with Keycloak (CIMD on) as the authorization server: the card URL as client_id is authorized",
+  { id: "MCP-1", m: "M9", kind: "+", level: 1, job: "mcp", pair: "MCP-2", property: "mcp-client-id", title: "e2e with Keycloak (CIMD on) as the authorization server: the agent's client document (…/client, the card's origin and keys) as client_id is authorized",
     timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-1:", { timeoutMs: 580_000, metric: (out) => (/^# MCP-1: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "MCP-2", m: "M9", kind: "-", level: 1, job: "mcp", property: "mcp-client-id", title: "Keycloak gives no token to what is not the card's: the Root key, a stranger's key, another audience, a used assertion, an unlisted redirect, a revoked agent — each refused at its own step",
     timeoutMs: 600_000, run: nodeTest(["accept/mcp/mcp.test.mjs"], "^MCP-2:", { timeoutMs: 580_000 }) },

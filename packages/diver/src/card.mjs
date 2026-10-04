@@ -26,6 +26,32 @@ export { HTTP_MESSAGE_SIGNATURES_DIRECTORY };
  */
 export const LOOPBACK_REDIRECT_URIS = Object.freeze(["http://127.0.0.1/callback", "http://[::1]/callback"]);
 
+/** Where an agent's OAuth client document lives: its MCP client_id (ADR 2026-10-04-mcp-client-document). */
+export const CLIENT_PATH = "/client";
+
+/**
+ * The agent's client metadata for MCP authorization servers (CIMD): the same name and the same keys
+ * (jwks_uri) as its card, and nothing an authorization server does not know — no web_bot_auth, no
+ * ludion object — so a strict server takes it (Keycloak 26.8 refuses unknown members:
+ * keycloak/keycloak#51236). Loopback redirect_uris, the code flow, private_key_jwt (ADR-039).
+ * @param {{ origin: string, name: string, contacts?: string[], about?: string, logo?: string }} x
+ */
+export function clientDocument(x) {
+  const origin = new URL(x.origin).origin;
+  return {
+    client_id: `${origin}${CLIENT_PATH}`,
+    client_name: x.name,
+    ...(x.about ? { client_uri: x.about } : {}),
+    ...(x.logo ? { logo_uri: x.logo } : {}),
+    ...(x.contacts?.length ? { contacts: x.contacts } : {}),
+    jwks_uri: `${origin}${HTTP_MESSAGE_SIGNATURES_DIRECTORY}`,
+    redirect_uris: [...LOOPBACK_REDIRECT_URIS],
+    grant_types: ["authorization_code"],
+    response_types: ["code"],
+    token_endpoint_auth_method: "private_key_jwt",
+  };
+}
+
 /**
  * Signature Agent Card = OAuth Client ID Metadata Document + web_bot_auth object
  * (draft-meunier-webbotauth-registry-03). Ludion's accountability fields live in

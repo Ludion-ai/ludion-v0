@@ -39,7 +39,7 @@ export function screenProblems(out, { id, origin, lang = "en" }) {
   if (lines[0] !== first) p.push(`first line ${JSON.stringify(lines[0])}`);
   const screen = lines.slice(0, 8).join("\n");
   if (!screen.includes(`Signature-Agent: sig1="${origin}"`)) p.push("no Web line");
-  if (!screen.includes(`client_id = ${origin}/card`)) p.push("no MCP line");
+  if (!screen.includes(`client_id = ${origin}/client`)) p.push("no MCP line");
   if (!/npx ludion revoke/.test(screen)) p.push("no revoke line");
   if (!(lang === "ja" ? /1時間以内に、世界中で通らなくなります/ : /within 1 hour, it stops working everywhere/).test(screen)) p.push("no erase promise");
   if (!screen.includes(`[![Ludion ID](https://ludion.ai/badge/${id}.svg)](${origin})`)) p.push("no badge");
@@ -50,7 +50,7 @@ export function screenProblems(out, { id, origin, lang = "en" }) {
 
 test("DIV-5: the checker catches a screen that is not the one screen (planted)", () => {
   const id = "dvr-aaaaaaaaaaaaaaaa", origin = `https://${id}.agents.ludion.ai`;
-  const good = [`Your AI's name: ${origin}`, "", `  Web    Signature-Agent: sig1="${origin}"`, `  MCP    client_id = ${origin}/card`,
+  const good = [`Your AI's name: ${origin}`, "", `  Web    Signature-Agent: sig1="${origin}"`, `  MCP    client_id = ${origin}/client`,
     "  Erase  npx ludion revoke   (within 1 hour, it stops working everywhere)", "", "  README badge:", `  [![Ludion ID](https://ludion.ai/badge/${id}.svg)](${origin})`].join("\n");
   assert.deepEqual(screenProblems(good, { id, origin }), [], "control");
   for (const [what, bad, why] of [

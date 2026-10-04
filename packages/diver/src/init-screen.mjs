@@ -41,7 +41,7 @@ export function initScreen({ diverId, origin, lang = "en" }) {
     `${t.name}${origin}`,
     "",
     `  Web    Signature-Agent: sig1="${origin}"`,
-    `  MCP    client_id = ${origin}/card`,
+    `  MCP    client_id = ${origin}/client`,
     `  ${t.erase}  npx ludion revoke   ${t.eraseNote}`,
     "",
     `  ${t.badge}`,

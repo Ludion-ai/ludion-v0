@@ -5,7 +5,7 @@
 // It writes nothing and logs nothing; the Worker runs with observability and logpush off
 // (wrangler.json). A revoked or unknown Diver is 404.
 import { createCardHost } from "./src/index.mjs";
-import { cardDocument, directoryDocument } from "@ludion/diver/card";
+import { cardDocument, clientDocument, directoryDocument } from "@ludion/diver/card";
 
 export const AGENTS_SUFFIX = ".agents.ludion.ai";
 export const REGISTRY_ORIGIN = "https://registry.ludion.ai";
@@ -24,6 +24,7 @@ export function registryLookup(namespace, { suffix = AGENTS_SUFFIX } = {}) {
     return {
       directory: directoryDocument(rec.keys),
       card: cardDocument({ origin, name: rec.name ?? "Unnamed agent", contacts: rec.contacts ?? [], ludion: { diver_id: rec.diver_id, registry: REGISTRY_ORIGIN, root_kid: rec.root_kid } }),
+      client: clientDocument({ origin, name: rec.name ?? "Unnamed agent", contacts: rec.contacts ?? [] }),
     };
   };
 }

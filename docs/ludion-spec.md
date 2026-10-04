@@ -1,6 +1,6 @@
-# Ludion — 作成spec v2.0.1（完全版）
+# Ludion — 作成spec v2.0.2（完全版）
 
-版：v2.0.1（2026-10-03）｜置き場所：`docs/ludion-spec.md`（このファイル）とプロジェクトのナレッジ｜v1.0.1 を置き換える
+版：v2.0.2（2026-10-04。MCP の client_id を `…/client` に。v2.0.1 は 2026-10-03）｜置き場所：`docs/ludion-spec.md`（このファイル）とプロジェクトのナレッジ｜v1.0.1 を置き換える
 
 > **Claude Code へ**：実装の合否は `docs/MISSION.md` のオラクルで決まる（ADR-017）。本ファイルとオラクルが食い違ったら、勝手に直さず、差分を `docs/outbox/` に書いて人間に上げる。【要確認】の付いた事実は、実装や公開の根拠にする前に一次情報で確かめる。
 
@@ -319,7 +319,7 @@ Ludion は、AI に自分の鍵と名札を持たせる。名札は MCP（CIMD�
 | ONE-3 | 通す・壁・止めるは設定1行で効き、1行で戻る。人間の経路の差分は0（GATE-1） |
 | ONE-4 | 止められたエージェントは Ludion-Error と help のリンクを受け取り、help から `npx ludion init` で VERIFIED まで3分以内 |
 | ONE-5 | クローラーを名乗る書き込みは「偽物の疑い」として報告される（固定データで誤判定0） |
-| MCP-1 | CIMD を有効にした Keycloak を認可サーバーにした e2e で、名札の URL を client_id として認可が通る |
+| MCP-1 | CIMD を有効にした Keycloak を認可サーバーにした e2e で、エージェントの client 文書（`…/client`）の URL を client_id として認可が通る |
 
 ### 9.4 一点に入るもの（ローンチの範囲）
 
@@ -356,7 +356,7 @@ flowchart LR
   R -->|"名札と鍵の一覧を公開"| C
   D <-->|"Staple（最長1時間ごと）"| R
   D ==>|"署名した要求（Staple と目的つき）"| G
-  D -->|"client_id ＝ 名札の URL"| M
+  D -->|"client_id ＝ …/client"| M
   G -->|"鍵の一覧と名札を取りに行く（キャッシュ）"| C
   M -->|"名札を取りに行く（キャッシュ）"| C
 ```
@@ -383,7 +383,7 @@ Ludion Cloud（任意）は、Gate からメタデータだけを受け取り、
 1. **登録**：Operator が `npx ludion init` で Root 鍵を作り、名簿に登録する。Card Host が名札と鍵の一覧を公開する。
 2. **状態の取得**：エージェントは定期的に Staple を取り直す（最長1時間の寿命）。
 3. **委任（任意）**：Principal が同意画面でパスキー認証し、Mandate を発行させる。
-4. **リクエスト**：エージェントは Session 鍵で署名し、Staple・Mandate・目的の申告を添える。MCP では名札の URL を client_id として使う。
+4. **リクエスト**：エージェントは Session 鍵で署名し、Staple・Mandate・目的の申告を添える。MCP では同じオリジンの client 文書（`…/client`）の URL を client_id として使う。
 5. **判定**：Gate が署名・Staple・Mandate・目的を確かめ、サイトの判断（通す・壁・止める）に従う。
 6. **記録**：Gate は受領証（Glass）を作る。来訪ごとの記録は、サイトの中に7日だけ置いて消す。Cloud に送るのは1時間ごとの集計だけで、送信はサイトが止められる。
 7. **評判**：Cloud が評判イベントを集め、名簿が Depth を更新する。次の Staple に反映される。
@@ -421,9 +421,10 @@ scripts/              scoreboard.mjs・loop.sh
 ### 11.2 識別子と名札
 
 - `diver_id`：Root 公開鍵の JWK サムプリント（RFC 7638、SHA-256）の先頭80ビットを、小文字の base32 にしたもの。表記は `dvr-` ＋16文字（例：`dvr-k7q2m6x4pcab3cde`）。
-- 名札の所在：`https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai`。`/.well-known/http-message-signatures-directory` に鍵の一覧（JWKS）を、`/card` に名札を置く。
+- 名札の所在：`https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai`。`/.well-known/http-message-signatures-directory` に鍵の一覧（JWKS）を、`/card` に名札を、`/client` に MCP 用の client 文書を置く。
 - 名札は OAuth の Client ID Metadata Document（CIMD）の形をとる。`client_id` は名札の URL そのもので、`jwks_uri` は鍵の一覧を指す。Ludion の拡張は単一の `ludion` オブジェクトに入れる（ADR-013、draft-meunier-webbotauth-registry-03 準拠）。
-- **一つの名前で二つの世界に通じる。** MCP では名札の URL（`…/card`）を client_id に、Web では同じオリジンを Signature-Agent に入れる【要確認：MCP の CIMD 要件（redirect_uris と localhost の扱い）】。
+- **一つの名前で二つの世界に通じる。** MCP では client 文書の URL（`…/client`）を client_id に、Web では同じオリジンを Signature-Agent に入れる。鍵の一覧は一つ。
+- client 文書は、拡張のない CIMD にする：`client_id`、`client_name`、`contacts`、`jwks_uri`（同じ鍵の一覧）、`redirect_uris`（loopback だけ）、`grant_types`、`response_types`、`token_endpoint_auth_method: private_key_jwt`。認可サーバーには、知らない項目のある文書を拒むものがある（Keycloak 26.8：keycloak/keycloak#51236）。名札（`/card`）は Web Bot Auth の名札として `web_bot_auth` と `ludion` を持ったままにする（docs/adr/2026-10-04-mcp-client-document.md、ADR-039）。
 - 自前のドメインを持つ運営者は、そこで公開してよい（Bring Your Own Domain）。名簿には所在を登録するだけでいい。
 - Principal の識別子は、サイトごとの仮名にする：`prn = "pw-" + base32(HMAC-SHA256(k_principal, site_origin))`。サイト同士が突き合わせても、同一人物だとは分からない。
 
@@ -438,6 +439,20 @@ scripts/              scoreboard.mjs・loop.sh
     "operator": { "verified": "domain" },
     "commitments": ["abuse_response_24h", "revocation_consent", "glass_consent"]
   }
+}
+```
+
+MCP 用の client 文書（`…/client`）：
+
+```json
+{
+  "client_id": "https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/client",
+  "client_name": "Example Agent",
+  "jwks_uri": "https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/.well-known/http-message-signatures-directory",
+  "redirect_uris": ["http://127.0.0.1/callback", "http://[::1]/callback"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "private_key_jwt"
 }
 ```
 
@@ -769,7 +784,7 @@ npx ludion init
 あなたの AI の名前：https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai
 
   Web  : Signature-Agent: sig1="https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai"
-  MCP  : client_id = https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/card
+  MCP  : client_id = https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/client
   消す : npx ludion revoke   （1時間以内に、世界中で通らなくなります）
 
   README に貼るバッジ：
@@ -1051,7 +1066,7 @@ const res = await ludionFetch("https://shop.example/api/cart", {
 
 - [ ] scan のサンプル（ludion.ai/scan で、手元のログから15分で数字が出る）
 - [ ] `npx ludion init` から VERIFIED まで3分以内（新しい環境で3回）
-- [ ] 名札の URL が MCP の client_id として通る（MCP-1）
+- [ ] client 文書の URL が MCP の client_id として通る（MCP-1）
 - [ ] tracecheck.dev の7日分のデータ
 - [ ] README（日英）、ドキュメント、セキュリティの連絡先（security@ が受信できる）
 - [ ] git の秘密情報が0件（gitleaks）
@@ -1135,7 +1150,7 @@ const res = await ludionFetch("https://shop.example/api/cart", {
 | ID | 確かめること |
 | --- | --- |
 | ONE-1〜5 | 一点の体験（§9.3） |
-| MCP-1 | 名札の URL が MCP の client_id として通る（CIMD を有効にした Keycloak での e2e） |
+| MCP-1 | client 文書（`…/client`）の URL が MCP の client_id として通る（CIMD を有効にした Keycloak での e2e） |
 | PUR-1 | 署名で覆われていない申告は「署名なしの言い分」として扱い、照合に使わない |
 | PUR-2 | `note` は Gate の外に出ない（PRIV-1 のカナリアで試験） |
 | PUR-3 | `read` の申告（またはクローラーの名乗り）で書き込むと「矛盾」になる |
@@ -1213,7 +1228,7 @@ const res = await ludionFetch("https://shop.example/api/cart", {
 | ~~Q5~~ | 最初の本投稿は英語（Show HN） |
 | ~~Q6~~ | 新しいドメインにも AI は来る。tracecheck.dev で7日間に OpenAI 559件、Anthropic 251件、Perplexity 121件を観測 |
 | ~~Q17~~ | npm の `ludion` は、Trusted Publishing で CLI だけを公開する（PUBLISH.md §0.5） |
-| ~~Q19~~ | 名札の `redirect_uris` は loopback だけ（`http://127.0.0.1/callback` と `http://[::1]/callback`。ポートは RFC 8252 どおり任意）。`token_endpoint_auth_method` は `private_key_jwt`、`jwks_uri` は鍵の一覧を指す。Keycloak が EdDSA の client assertion を受けなければ、OAuth 専用の jwks（ES256）を別の URL に分ける（MCP-1） |
+| ~~Q19~~ | 名札の `redirect_uris` は loopback だけ（`http://127.0.0.1/callback` と `http://[::1]/callback`。ポートは RFC 8252 どおり任意）。`token_endpoint_auth_method` は `private_key_jwt`、`jwks_uri` は鍵の一覧を指す。Keycloak が EdDSA の client assertion を受けなければ、OAuth 専用の jwks（ES256）を別の URL に分ける（MCP-1）。2026-10-04：EdDSA で通った。client_id は `…/client`（拡張のない CIMD）に分けた |
 
 ## 26. やらないこと
 
