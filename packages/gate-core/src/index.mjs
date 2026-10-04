@@ -21,6 +21,7 @@ import { memoryLedger, isLedger } from "./ledger.mjs";
 import { bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS } from "./digest.mjs";
 import { createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR } from "./hourly.mjs";
 import { memoryRecords, RECORD_DAYS } from "./records.mjs";
+import { createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED } from "./decisions.mjs";
 
 export {
   createResolver, createStapleVerifier, issueStaple, classify, createPolicy, createNonceCache, decide, compileRoute, CLASSES,
@@ -31,6 +32,7 @@ export {
   verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, memoryLedger, isLedger,
   bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS,
   createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, MAX_ROWS_PER_HOUR, memoryRecords, RECORD_DAYS,
+  createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED,
 };
 
 export const LUDION_VERSION = "0";
@@ -84,6 +86,8 @@ export function denialHeaders(decision) {
  * @property {boolean} [requireNonce]
  * @property {{ maxEntries?: number, perOwnerMax?: number }} [nonceCache]  replay cache bounds; default
  *           100,000 live entries, and once half full at most a quarter of them per signer identifier
+ * @property {object[]} [decisions]               the site's own let-through / wall / block lines (spec §12.4,
+ *           ADR-032; decisions.mjs). Only ever from the site's config: nothing the Gate fetches can add one
  * @property {() => number} [now]
  */
 
@@ -164,6 +168,7 @@ export async function createGate(config) {
   }
 
   const policy = createPolicy({ pressure: config.pressure, routes: config.routes });
+  const decisions = createDecisions(config.decisions, { now });
   const nonceCache = createNonceCache({ now, ...(config.nonceCache ?? {}) });
   const categories = config.categories == null ? [] : config.categories;
   if (!Array.isArray(categories) || !categories.every((c) => typeof c === "string" && /^[a-z0-9-]{1,32}$/.test(c))) {
@@ -228,7 +233,9 @@ export async function createGate(config) {
       gateError = e;
       cls = faultClass(route, e);
     }
-    let decision = decide(cls, route);
+    const write = WRITE_METHODS.has(String(req.method ?? "").toUpperCase()) && !route.readOnly;
+    const site = decisions.match(cls, { path, write });
+    let decision = decide(cls, route, site);
     const unprovable = (cls.stapleError === "no_registry_keys" && STANDING_ERRORS.has(decision.error))
       || (cls.mandateError === "no_registry_keys" && decision.error === "mandate_required");
     if (decision.action === "deny" && unprovable && !failClosed) {

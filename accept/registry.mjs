@@ -387,7 +387,8 @@ export const ORACLES = [
   // own config. Added PENDING (2026-10-03); wired when built.
   { id: "ONE-1", m: "M9", kind: "+", level: 1, title: "an empty Next.js and Express app: Gate install → first record visible ≤60s (median of 3)" },
   { id: "ONE-2", m: "M9", kind: "+", level: 1, title: "the morning report has one headline number and one main decision" },
-  { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)" },
+  { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)",
+    run: nodeTest(["packages/gate-node/test/one3.test.mjs"], "^ONE-3:", { metric: (out) => (/^# ONE-3: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "ONE-4", m: "M9", kind: "+", level: 1, title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min" },
   { id: "ONE-5", m: "M9", kind: "±", level: 1, title: "a write by something claiming to be a crawler is reported as a suspected fake (fixed data, 0 misjudged)" },
   // MCP-1/2 run in their own CI job (`mcp`, Java and Keycloak), outside LOOP-2's 10 minutes (the human's
@@ -402,5 +403,6 @@ export const ORACLES = [
   { id: "PUR-4", m: "M9", kind: "+", level: 1, title: "a diver that gets purpose_required retries with a purpose on its own" },
   { id: "PUR-5", m: "M9", kind: "-", level: 0, title: "the note is shown escaped, and URLs in it are not links" },
   { id: "PUR-6", m: "M9", kind: "-", level: 0, title: "the diver does not send a note holding an email address, a phone number, a URL or a long number" },
-  { id: "BLK-1", m: "M9", kind: "±", level: 1, title: "a block takes effect with one config line and undoes with one; Ludion's servers have no path to block" },
+  { id: "BLK-1", m: "M9", kind: "±", level: 1, title: "a block takes effect with one config line and undoes with one; Ludion's servers have no path to block",
+    run: nodeTest(["packages/gate-node/test/blk1.test.mjs"], "^BLK-1:", { metric: (out) => [...out.matchAll(/^# BLK-1: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
 ];

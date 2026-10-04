@@ -10,7 +10,7 @@ import VerifyPath from "../../../../partials/verify-path.ja.mdx";
 
 ## 何が起きたか
 
-このサイトの運営者が、この経路で、あなたのエージェント（または名乗らない自動化）を止めると決めました。決めたのはサイト自身で、その判断はサイトの設定の中にあります。Ludion のサーバーには、誰かを止めるスイッチがありません（[仕様 §12.4](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#124-通す壁止める)）。このコードは Ludion Protocol v0 が定めているものです。オープンソースの Gate は、まだこれを返しません。
+このサイトの運営者が、この経路で、あなたのエージェント（または名乗らない自動化）を止めると決めました。決めたのはサイト自身で、その判断はサイトの設定の中にあります。Ludion のサーバーには、誰かを止めるスイッチがありません（[仕様 §12.4](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#124-通す壁止める)）。止める設定は `{ "who": "GPTBot", "action": "block", "scope": "writes" }` のような1行で、その行を消せば解けます。
 
 ## サイトがこれを求める理由
 

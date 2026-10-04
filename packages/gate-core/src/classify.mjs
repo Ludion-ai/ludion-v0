@@ -332,16 +332,20 @@ export function createPolicy(config = {}) {
      */
     forPath(path) {
       let pressure = -1, top = null;
-      const requires = [];
+      const requires = [], matched = [];
       for (const c of routeCandidates(path)) {
         const hits = routes.filter((r) => r.re.test(c));
         if (!hits.length && base > pressure) { pressure = base; top = null; }
         for (const r of hits) {
+          matched.push(r);
           if ((r.pressure ?? base) > pressure) { pressure = r.pressure ?? base; top = r; }
           requires.push(r.require);
         }
       }
-      return { pressure, require: strictest(requires), template: top?.match ?? null };
+      // "writes": false marks a route read-only (a POST that only reads, e.g. /graphql): a write
+      // anywhere it overlaps a route that says nothing stays a write only if a route says "writes": true.
+      const flags = matched.map((r) => r.writes).filter((w) => typeof w === "boolean");
+      return { pressure, require: strictest(requires), template: top?.match ?? null, readOnly: flags.includes(false) && !flags.includes(true) };
     },
   };
 }
@@ -349,8 +353,20 @@ export function createPolicy(config = {}) {
 /**
  * Decide what to do. Never touches UNKNOWN (humans). Returns {action, status?, error?}.
  * action: "allow" | "friction" | "deny"
+ * `site`: the site's own decision that names this visitor (decisions.mjs), if any. It is the site's
+ * call and comes last (ADR-032): a block stops it (blocked_by_site), a let-through lets a signed
+ * identity in, a wall puts up the site's friction unless the route already refuses.
  */
-export function decide(cls, route) {
+export function decide(cls, route, site = null) {
+  const d = decideRoute(cls, route);
+  if (!site || !AUTOMATION.has(cls.class)) return d;
+  if (site.action === "block") return { action: "deny", status: 403, error: "blocked_by_site", site };
+  if (site.action === "allow" && cls.class === "VERIFIED") return { action: "allow", exempt: true, site };
+  if (site.action === "wall") return d.action === "deny" ? d : { action: "friction", site };
+  return d;
+}
+
+function decideRoute(cls, route) {
   const p = route.pressure;
   if (!AUTOMATION.has(cls.class)) return { action: "allow" };
   if (p <= 0) return { action: "allow" };
@@ -384,4 +400,5 @@ export const ERROR_HELP = (code) => `<https://ludion.ai/e/${code}>; rel="help"`;
 export const ERRORS = Object.freeze({
   signature_required: 401, invalid_signature: 401, staple_expired: 401,
   revoked: 403, depth_insufficient: 403, ballast_required: 403, mandate_required: 403, mandate_scope: 403,
+  blocked_by_site: 403,
 });

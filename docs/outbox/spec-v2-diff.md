@@ -261,3 +261,11 @@ spec の差し替えで、ラチェット済みの WEB-3 と WEB-2 が FAIL に�
 | §11.2 の名札の例（JSON） | `redirect_uris`、`grant_types`、`response_types` がない | ADR-039 のとおり、`"redirect_uris": ["http://127.0.0.1/callback", "http://[::1]/callback"]`、`"grant_types": ["authorization_code"]`、`"response_types": ["code"]` を足す。コードは足した（`packages/diver/src/card.mjs`） |
 | §11.2 の名札の例（JSON）の `ludion` | `diver`、`operator`、`commitments` | コードの `ludion` は `version`、`diver_id`、`registry`、`root_kid`。どちらかに揃える（ADR-013） |
 | §11.2「Ludion の拡張は単一の `ludion` オブジェクトに入れる」 | `web_bot_auth` と `ludion` を名札に置く | **Keycloak 26.8.0 は、知らない項目のある名札を拒む**（keycloak/keycloak#51236、修正の PR #51235 は未マージ）。この2つを外した名札は、同じ e2e で認可が通る。判断は STATE.md の人間待ち |
+
+## 追記（2026-10-04、BLK-1・ONE-3 の実装から）
+
+| 条項 | 現状 | 提案 |
+|---|---|---|
+| §12.7 の設定例 `"until": "7d"` | 期間を相対で書いている | ファイルの中の「7日」には起点がない（再起動のたびに延びる）。コードは日時（RFC 3339、例 `"2026-10-11T00:00:00Z"`）だけを受け、`"7d"` は理由を添えて起動時に止める。例を日時に直す。1タップの画面や CLI が、押した時刻から日時を書く |
+| §12.7 の `decisions` の `action` | `"block"` だけ | コードは §12.4 の表どおり3つ：`"allow"`（名乗った＝署名のある相手だけ）、`"wall"`（名乗らない自動化だけ、`"who": "unnamed"`）、`"block"`（誰でも）。表にない組み合わせは起動時に止める。例に1行ずつ足す |
+| §12.7 の `decisions` の `who` | Diver の id だけの例 | コードは、Diver の id、Ludion でない署名者のホスト（`chatgpt.com`）、名乗りのトークン（`GPTBot`）、`"unnamed"` を受ける（運営者のキーと同じ。ADR-038）。例に足す |
