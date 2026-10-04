@@ -162,4 +162,4 @@ export function diverIdFromRoot(rootPublicJwk) {
 
 // The two public documents (directory and card) live in card.mjs: no crypto, so the Card Host Worker
 // builds them too (ADR-041).
-export { directoryDocument, cardDocument, DIRECTORY_MEDIA_TYPE, HTTP_MESSAGE_SIGNATURES_DIRECTORY, LOOPBACK_REDIRECT_URIS } from "./card.mjs";
+export { directoryDocument, cardDocument, clientDocument, CLIENT_PATH, DIRECTORY_MEDIA_TYPE, HTTP_MESSAGE_SIGNATURES_DIRECTORY, LOOPBACK_REDIRECT_URIS } from "./card.mjs";

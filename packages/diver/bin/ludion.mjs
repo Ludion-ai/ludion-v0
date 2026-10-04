@@ -20,7 +20,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { initScreen, screenLang, shouldAsk, askWhy, ANSWER_URL } from "../src/init-screen.mjs";
-import { generateEd25519, diverIdFromRoot, directoryDocument, cardDocument, createDiverSigner, sealRootKey, openRootKey, isSealedRoot, MIN_PASSPHRASE_LENGTH,
+import { generateEd25519, diverIdFromRoot, directoryDocument, cardDocument, clientDocument, createDiverSigner, sealRootKey, openRootKey, isSealedRoot, MIN_PASSPHRASE_LENGTH,
   rotateSession, RotationPendingError, DEFAULT_OVERLAP_S, createRegistryClient } from "../src/index.mjs";
 
 const args = process.argv.slice(2);
@@ -89,13 +89,15 @@ async function init() {
   fs.mkdirSync(".well-known", { recursive: true });
   fs.writeFileSync(path.join(".well-known", "http-message-signatures-directory"), JSON.stringify(dir, null, 2));
   fs.writeFileSync("card", JSON.stringify(card, null, 2));
+  // The MCP client_id: the same name and keys, in the shape every authorization server reads.
+  fs.writeFileSync("client", JSON.stringify(clientDocument({ origin, name: store.name, contacts: store.contacts }), null, 2));
   // One screen (spec §9.2, DIV-5): the name, the same name on the web and on MCP, how to erase it, a badge.
   const lang = screenLang();
   for (const line of initScreen({ diverId, origin, lang })) out(line);
   if (DEV) devBanner();
   out("");
   out(`  Wrote ludion.json (KEEP PRIVATE — ${DEV ? "DEV MODE: Root key in plaintext" : "Root key sealed with your passphrase; the passphrase is not stored"})`);
-  out(`  Wrote .well-known/http-message-signatures-directory and card: publish them at ${origin} (or run \`npx ludion register\` once the Registry is live)`);
+  out(`  Wrote .well-known/http-message-signatures-directory, card and client: publish them at ${origin} (or run \`npx ludion register\` once the Registry is live)`);
   out(`  Next: npx ludion sign GET https://example.com/`);
   // One optional question (DIV-6): only at a terminal, never in CI; skipping sends nothing.
   if (shouldAsk({ force: has("ask"), refuse: has("no-question"), stdinTTY: process.stdin.isTTY, stdoutTTY: process.stdout.isTTY })) {
@@ -233,16 +235,16 @@ async function doctor() {
   const skew = Math.abs(Date.now() - Date.now()); // placeholder: compare against a time source in v0.1
   out(`✔ clock: local time ${new Date().toISOString()} (no external time check yet; signatures allow ±30s)`);
   const origin = store.signature_agent;
-  for (const p of ["/.well-known/http-message-signatures-directory", "/card"]) {
+  for (const p of ["/.well-known/http-message-signatures-directory", "/card", "/client"]) {
     try {
       const r = await fetch(origin + p, { redirect: "manual" });
-      const okType = p === "/card" || (r.headers.get("content-type") ?? "").includes("http-message-signatures-directory+json");
+      const okType = p === "/card" || p === "/client" || (r.headers.get("content-type") ?? "").includes("http-message-signatures-directory+json");
       if (r.status !== 200) problems.push(`${p} returned ${r.status} (must be 200, no redirect)`);
       else if (!okType) problems.push(`${p} served with ${r.headers.get("content-type")} — must be application/http-message-signatures-directory+json`);
       else {
         const j = await r.json();
-        if (p !== "/card" && !j.keys?.some((k) => k.kid === store.session.kid)) problems.push("directory does not contain the current session key");
-        if (p === "/card" && j.client_id !== `${origin}/card`) problems.push("card client_id must equal its URL");
+        if (p.startsWith("/.well-known") && !j.keys?.some((k) => k.kid === store.session.kid)) problems.push("directory does not contain the current session key");
+        if ((p === "/card" || p === "/client") && j.client_id !== `${origin}${p}`) problems.push(`${p.slice(1)} client_id must equal its URL`);
         if (!problems.length) out(`✔ ${origin}${p}`);
       }
     } catch (e) { problems.push(`${p} unreachable: ${e.message}`); }

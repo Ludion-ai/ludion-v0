@@ -11,6 +11,8 @@
 export const DIRECTORY_PATH = "/.well-known/http-message-signatures-directory";
 export const DIRECTORY_MEDIA_TYPE = "application/http-message-signatures-directory+json";
 export const CARD_PATH = "/card";
+/** The agent's OAuth client document: its MCP client_id. */
+export const CLIENT_PATH = "/client";
 
 // Public JWK members for the key types a directory may carry. Everything else (d, p, q, dp,
 // dq, qi, k, oth, …) is dropped, never served.
@@ -69,11 +71,16 @@ export function createCardHost({ lookup, maxAgeS = 300 }) {
     async fetch(request) {
       const url = new URL(request.url);
       if (request.method !== "GET" && request.method !== "HEAD") return problem(405, "method_not_allowed");
-      if (url.pathname !== DIRECTORY_PATH && url.pathname !== CARD_PATH) return problem(404, "not_found");
+      if (url.pathname !== DIRECTORY_PATH && url.pathname !== CARD_PATH && url.pathname !== CLIENT_PATH) return problem(404, "not_found");
       const host = url.hostname.toLowerCase();
       const docs = await lookup(host, url.origin);
       if (!docs) return problem(404, "unknown_agent");
       if (url.pathname === DIRECTORY_PATH) return json(200, await servableKeys(docs.directory, docs.card), DIRECTORY_MEDIA_TYPE, maxAgeS);
+      if (url.pathname === CLIENT_PATH) {
+        if (!docs.client) return problem(404, "no_client");
+        if (docs.client.client_id !== `${url.origin}${CLIENT_PATH}`) return problem(500, "client_id_mismatch");
+        return json(200, docs.client, "application/json", maxAgeS);
+      }
       if (!docs.card) return problem(404, "no_card");
       const here = `${url.origin}${CARD_PATH}`;
       if (docs.card.client_id !== here) return problem(500, "card_client_id_mismatch");
