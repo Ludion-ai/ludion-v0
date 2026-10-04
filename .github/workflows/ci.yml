@@ -29,6 +29,10 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 22, cache: npm }
+      # STD-3 (pyauth, the non-JS implementation) and DIV-1 (the Python Diver) need CPython >= 3.11 on
+      # the host; the Python packages themselves come hash-pinned from interop/py/requirements.lock.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: { python-version: "3.12" }
       - run: npm ci
       - name: Scoreboard — shard ${{ matrix.shard }} of the loop job's oracles
         run: node scripts/scoreboard.mjs --base "origin/${{ github.base_ref || 'main' }}" --job loop --shard ${{ matrix.shard }}/4 --out shard-${{ matrix.shard }}.json
@@ -116,6 +120,10 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 24, cache: npm }
+      # STD-3 (pyauth, the non-JS implementation) and DIV-1 (the Python Diver) need CPython >= 3.11 on
+      # the host; the Python packages themselves come hash-pinned from interop/py/requirements.lock.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: { python-version: "3.12" }
       - run: npm ci
       - run: node scripts/scoreboard.mjs --base origin/main --job loop
   # Oracles about CI itself (LOOP-2 reads main's latest push run). Nightly, never in a PR's run:

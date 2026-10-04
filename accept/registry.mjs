@@ -129,7 +129,13 @@ export const ORACLES = [
     ] }) },
   { id: "STD-2", m: "M1", kind: "-", level: 1, property: "signature-validity", title: "tamper / wrong key / wrong authority / expired / future / >1h (>60s without a nonce) / wrong tag all rejected",
     run: nodeTest(["packages/gate-core/test/std2.test.mjs"], "^STD-2:") },
-  { id: "STD-3", m: "M1", kind: "+", level: 1, pair: "STD-2", property: "signature-validity", title: "interop both ways with ≥2 independent implementations (one non-JS)" },
+  // Cloudflare web-bot-auth (JS) and pyauth http-message-signatures (Python, hash-pinned venv in the OS temp dir).
+  { id: "STD-3", m: "M1", kind: "+", level: 1, pair: "STD-2", property: "signature-validity", title: "interop both ways with ≥2 independent implementations (one non-JS)",
+    timeoutMs: 600_000, run: nodeTest(["interop/std3.test.mjs"], "^STD-3:", { timeoutMs: 590_000,
+      metric: (out) => {
+        const pairs = /^# interop: (\d+\/\d+) /m.exec(out)?.[1], impl = /web-bot-auth ([\d.]+).*?http-message-signatures ([\d.]+)/m.exec(out);
+        return [pairs && `${pairs} pairs`, impl && `web-bot-auth ${impl[1]} + pyauth ${impl[2]}`].filter(Boolean).join(", ");
+      } }) },
   // The pins (accept/std4/pins.json) against the live datatracker, following replacements, with 7 days'
   // grace and the issue text for a draft that moved; and against every reference in the repository.
   // A datatracker that cannot be read is a FAIL. The checker's own failure paths run offline too.
@@ -196,7 +202,10 @@ export const ORACLES = [
     run: nodeTest(["packages/card-host/test/priv5.test.mjs"], "^PRIV-5:", { metric: (out) => (/^# PRIV-5: (.+)$/m.exec(out) ?? [])[1] }) },
 
   // ── M2 diver ───────────────────────────────────────────────────────────────────
-  { id: "DIV-1", m: "M2", kind: "+", level: 1, pair: "DIV-3", property: "signing-key", title: "clean container → init → VERIFIED ≤180s (TS and Python)" },
+  // A clean container pinned by digest (Linux CI, required there) or, elsewhere, an isolated temp dir; the metric says which ran.
+  { id: "DIV-1", m: "M2", kind: "+", level: 1, pair: "DIV-3", property: "signing-key", title: "clean container → init → VERIFIED ≤180s (TS and Python)",
+    timeoutMs: 1_200_000, run: nodeTest(["clean-room/div1.test.mjs"], "^DIV-1:", { timeoutMs: 1_150_000,
+      metric: (out) => [...out.matchAll(/^# div1 (ts|py): ([\d.]+)s (container|fallback)/gm)].map((m) => `${m[1]} ${m[2]}s ${m[3]}`).join(", ") }) },
   { id: "DIV-2", m: "M2", kind: "+", level: 1, pair: "DIV-3", property: "signing-key", title: "Card is a valid CIMD Signature Agent Card and resolves end to end",
     run: nodeTest(["packages/card-host/test/div2.test.mjs"], "^DIV-2:") },
   { id: "DIV-3", m: "M2", kind: "-", level: 1, property: "signing-key", title: "Root key never signs, never in the directory, never plaintext on disk outside dev",
@@ -286,6 +295,9 @@ export const ORACLES = [
   // endpoints in code; standard reference implementations only by exact name@version (ADR-027).
   { id: "NEUT-2", m: "M5", kind: "-", level: 1, property: "neutrality", title: "no CDN/cloud vendor SDK in gate-core's dependency tree",
     run: nodeScript("accept/neutral/deps.mjs") },
+  // gitleaks pinned by version and SHA-256 (accept/gitleaks/gitleaks.mjs), with .gitleaks.toml's narrow exceptions (ADR-042).
+  { id: "SEC-1", m: "M5", kind: "±", level: 1, title: "0 secrets in the git history and the working tree (gitleaks); planted secrets — in a file, a deleted commit, the excepted files — are found",
+    timeoutMs: 600_000, run: nodeTest(["accept/gitleaks/sec1.test.mjs"], "^SEC-1:", { timeoutMs: 590_000, metric: (out) => (/^# SEC-1: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "CRY-1", m: "M5", kind: "-", level: 0, title: "no home-made crypto: primitives only inside allowlisted modules", run: async () => {
     const allow = new Set(["packages/gate-core/src/staple.mjs", "packages/gate-core/src/receipt.mjs", "packages/diver/src/keys.mjs"]);
     // WebCrypto (also via a destructured `subtle`), node:crypto's cipher / KDF / signing / key
@@ -391,7 +403,8 @@ export const ORACLES = [
     run: nodeTest(["packages/report/test/one2.test.mjs"], "^ONE-2:", { metric: (out) => (/^# ONE-2: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "ONE-3", m: "M9", kind: "±", level: 1, title: "let through / wall / stop take effect with one config line and undo with one; the human path's diff is 0 (GATE-1)",
     run: nodeTest(["packages/gate-node/test/one3.test.mjs"], "^ONE-3:", { metric: (out) => (/^# ONE-3: (.+)$/m.exec(out) ?? [])[1] }) },
-  { id: "ONE-4", m: "M9", kind: "+", level: 1, title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min" },
+  { id: "ONE-4", m: "M9", kind: "+", level: 1, title: "a stopped agent gets Ludion-Error and the help link; from help, npx ludion init reaches VERIFIED in ≤3 min",
+    timeoutMs: 1_500_000, run: nodeTest(["site/test/one4.test.mjs"], "^ONE-4:", { timeoutMs: 1_480_000, metric: (out) => (/^# ONE-4: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "ONE-5", m: "M9", kind: "±", level: 1, title: "a write by something claiming to be a crawler is reported as a suspected fake (fixed data, 0 misjudged)",
     run: nodeTest(["packages/report/test/one5.test.mjs"], "^ONE-5:", { metric: (out) => (/^# ONE-5: (.+)$/m.exec(out) ?? [])[1] }) },
   // MCP-1/2 run in their own CI job (`mcp`, Java and Keycloak), outside LOOP-2's 10 minutes (the human's
