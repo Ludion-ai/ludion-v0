@@ -115,7 +115,7 @@
   - 案 C（推す）：MCP の client_id を、拡張のない CIMD（例：`<origin>/oauth-client`）に分ける。`/card` は Web Bot Auth の名札のまま（DIV-2 はそのまま）。名前（オリジン）は同じ。厳しい認可サーバーにも通り、Keycloak の修正を待たない。client_id は認可サーバーでの身元なので、決めたら変えない。spec §11.2 と §13.1 の例（`MCP client_id = …/card`）と init の画面（DIV-5）を直す。
   - 案 A：spec のまま、Keycloak の修正を待つ。#51236 へのコメントの下書きは `docs/outbox/keycloak-51236-comment.md`（投稿は人間）。10/10 までに修正版が出なければ、切る線どおり HN から MCP を外す。
   - 案 B：`/card` から `web_bot_auth` と `ludion` を外す。DIV-2（ラチェット済み）の緩和になる。推さない。
-  - 決まったら：C なら半日で入れる（e2e はそのまま使える）。A なら何もしない。
+  - **案 C はブランチ `mcp/client-document` に用意した**（`<origin>/client`、ADR 案 docs/adr/2026-10-04-mcp-client-document.md）。そのブランチで MCP-1、MCP-2 は Keycloak 26.8.0 で PASS（DIV-2、DIV-5、PRIV-5、WEB-10 も PASS のまま）。承認されたら PR を出す。spec §11.2 と §13.1 の例（`MCP client_id = …/card`）を `…/client` に直す承認も一緒に要る。A なら、そのブランチは捨てる。
 
 - [x] **spec v2.0 の判断**（2026-10-03）：決定1〜9（ADR-035〜039、041、042）。spec v2.0.1 と CLAUDE.md の芯を直した。
 - [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（2段目のワイルドカード、お金の判断、§4）は人間。
