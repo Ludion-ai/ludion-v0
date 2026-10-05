@@ -22,9 +22,9 @@
 | 4 npm の Trusted Publisher | コマンドを用意した（下の「人間待ち」と PUBLISH.md §6.1） |
 | 5 プレビューの secret | secret はもう入っている。赤いのはトークンの範囲（ゾーンが見える）。2行は下の「人間待ち」 |
 | 6 押すボタンの一覧 | 下の「人間待ち」 |
-| 7 DEPLOY.md | 次 |
+| 7 DEPLOY.md | PR #147（§0「上から順に」の5段、各段に `node scripts/prod-check.mjs <段>`。朝の報告も同じ PR） |
 | 8 LOOP-2 | トークンの範囲が直ったら、main への push を3回測る |
-| 9 runbook.md | 改名だけ済み（この PR）。3つの問いへの書き直しは次 |
+| 9 runbook.md | PR `lane3/runbook`（#146 の後に出す）：3つの問いを前日に1つずつ確かめる、`ludion-ai`、PowerShell で動く形、確かめは prod-check |
 | 10 LIVE-1〜3 | 人間が本番を立てた後 |
 
 ### environment `npm` の読み出し（2026-10-05 22:38 UTC、`gh api`）
@@ -50,6 +50,7 @@ GET repos/Ludion-ai/Ludion/environments/npm/deployment-branch-policies
 5. **オラクルの題名は PUB と WEB だけ直した**（registry.mjs と MISSION.md の PUB-1・PUB-3・WEB-7・WEB-12）。DIV-5 と ONE-4 の題名の `npx ludion init` は、レーン1のオラクルなので残した（中身の検査は改名に合わせて通る）。
 6. **持ち主のはっきりしないテストの道具も直した**：`reference/`（参照アプリのインストールの行。GATE-3 が README と照合する）、`clean-room/agent-ts.mjs`（DIV-1）、`examples/demo-site`（PRS-5）。直さないと、名前が `ludion-ai` になった tarball で落ちる。
 7. **WEB-12 と WEB-13 に負の例を足した**：断られた名前（`ludion/gate/node`、`npm install ludion`、`ludion/diver`）のページを捕まえる。強化なので自由の範囲。
+9. **デモのショップ（`https://shop.demo.ludion.ai`、examples/demo-shop）をどこで動かすかが、どの文書にも無い。** show-hn.md の前提と、runbook の前日の確かめに入っている。Node のサーバー（`npm start`、失効の配信を購読し続ける）なので、Workers ではなく常に動く機械が要る。決めずに、人間待ちの9に書いた。
 8. **PUBLISH.md から「初版を手で出す」を外した**：0.0.1 が出たので、trusted publisher はもう設定できる。0.1.0 からは release.yml だけ。§6.1 の4（トークンでの公開を止める）を押すと、手元の `npm publish` は通らなくなる。
 
 ## 人間待ち（押すボタンだけ。上から）
@@ -73,12 +74,13 @@ GET repos/Ludion-ai/Ludion/environments/npm/deployment-branch-policies
 6. **本番を立てる**（docs/DEPLOY.md。レーン3が「上から順に押すだけ」に仕上げ中）：ACM → 証明書 → DNS → 名簿と Card Host → ludion.ai を main から出し直す。
 7. **npm の 0.1.0**：本番が立った後。版を上げる PR は Claude が作る。Actions → release → Run workflow（dry run → 承認 → 本番 → 承認）。PUBLISH.md §6.2。
 8. （お金）Workers Paid にするか。DEPLOY.md §7.3。
+9. **デモのショップの置き場所を決める**（`shop.demo.ludion.ai`。常に動く Node のサーバーと、DNS の1行）。決まれば、手順を DEPLOY.md に足す（レーン3）。
 
 ## 次の一手
 
 1. 改名の PR を出す（auto-merge）。CI の `loop` を見る。
-2. DEPLOY.md を「上から順に押すだけ」に（spec の7）。各段に確かめるコマンドを1つ。
-3. runbook.md を3つの問いに（spec の9）。
+2. #146 が入ったら、runbook の PR（`lane3/runbook`）を main の上に載せ直して出す（`git rebase --onto origin/main lane3/npm-name-ludion-ai`）。
+3. #147（DEPLOY.md）の CI を見る。
 4. preview のトークンが直ったら LOOP-2（spec の8）。本番が立ったら LIVE-1〜3（spec の10）。
 
 ## 直近のセッション
