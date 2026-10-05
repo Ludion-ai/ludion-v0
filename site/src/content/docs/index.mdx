@@ -1,13 +1,13 @@
 ---
 title: Ludion
-description: Give your AI agent its own key and name. Create it with a command, use the same name on MCP and on the web, erase it everywhere. Sites get a free checkpoint that reads the name.
+description: Identity, limits and a kill switch for AI agents. Who is this AI, what may it do, how do you stop it — answered at your own site, by a free checkpoint you run.
 template: splash
 head:
   - tag: title
-    content: Ludion — a key and a name for your AI agent
+    content: Ludion — identity, limits and a kill switch for AI agents
 hero:
-  title: Give your AI agent its own key and name.
-  tagline: Create it with a command. Use the same name on MCP and on the web. Erase it everywhere, any time.
+  title: Identity, limits and a kill switch for AI agents.
+  tagline: Who is this AI? What may it do? How do you stop it? Your site answers all three, with a free checkpoint of its own.
   actions:
     - text: Give your agent a name
       link: /quickstart
@@ -19,12 +19,25 @@ hero:
 import SignupForm from "../../components/SignupForm.astro";
 
 ```sh
-npx ludion init --name "My Agent" --contact mailto:you@example.com
+npx ludion-ai init --name "My Agent" --contact mailto:you@example.com
 ```
 
-- **For agents:** that line gives your agent one name, `https://dvr-….agents.ludion.ai`. On the web it is your `Signature-Agent` ([Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)); for MCP servers, its `/client` is your `client_id`, and you authenticate with your own key, never a shared secret. `npx ludion revoke` takes it offline everywhere within an hour ([spec](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)).
-- **For sites:** a free, open-source checkpoint (the Gate) reads that name. It installs with [3 lines of your code or fewer](/gate) ([measured](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)), shows which agents came and what they touched, and lets you let them through, put up a wall or stop them, each with one line of your own config ([checked](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md)). Only your site decides; Ludion has no switch to stop anyone.
-- **Start from your logs:** drop an access log on [the scan page](/scan) to see how often unsigned automation touched your checkout and login. The log never leaves your device.
+## Three questions
+
+- **Who is this AI?** That line gives an agent its own key and one name, `https://dvr-….agents.ludion.ai`. It signs every request with that name ([Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)), and the same name is its MCP `client_id`, proven with its own key, never a shared secret.
+- **What may it do?** Its operator puts a Mandate on it: the scopes it may use on each site (`read`, `checkout`, …), signed with the operator's Root key, which the running agent never holds. A site's Gate refuses anything outside it with [`403 mandate_scope`](/e/mandate_scope), also when a prompt injection has taken over the agent, or someone signs with its stolen session key.
+- **How do you stop it?** `npx ludion-ai revoke`. Sites that subscribe to revocations stop it within seconds; every other site within an hour ([spec](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)).
+
+**For sites:** the Gate is free and open source. It installs with [3 lines of your code or fewer](/gate) ([measured](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)), shows which agents came and what they touched, and lets you let them through, put up a wall or stop them, each with one line of your own config ([checked](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md)). Only your site decides; Ludion has no switch to stop anyone.
+
+**Start from your logs:** drop an access log on [the scan page](/scan) to see how often unsigned automation touched your checkout and login. The log never leaves your device.
+
+## What Ludion does not prevent
+
+- A Mandate today is the limit an agent's operator puts on it, not the consent of the person the agent acts for. That consent page is not open yet.
+- Only a site with a Gate holds an agent to its Mandate. On a site without one, nothing stops the agent there.
+- Whoever steals the Root key as well can issue new Mandates. Keep the Root key off the machine the agent runs on, in your OS keychain or a KMS; today the command line seals it with your passphrase.
+- Ludion does not detect prompt injection, and does not judge whether an allowed action is wise. A request inside the Mandate passes, even when the agent was tricked into it.
 
 ## Early access
 

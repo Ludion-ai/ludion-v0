@@ -1,0 +1,13 @@
+{
+  "name": "ludion-demo-shop",
+  "private": true,
+  "type": "module",
+  "description": "The 60-second demo: a shop behind the Gate where every route names its scope, and an agent that is hijacked and stays inside its Mandate.",
+  "scripts": {
+    "start": "node server.mjs",
+    "agent": "node agent.mjs --scripted"
+  },
+  "dependencies": {
+    "ludion-ai": "*"
+  }
+}
