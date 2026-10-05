@@ -77,6 +77,8 @@ export function createReceipts({ siteId, siteKey, now = () => Date.now() }) {
         pressure: x.pressure,
         // What the agent said it came to do, when its signature covers it (spec §11.7). Never the note.
         purpose: x.purpose ?? null,
+        // The Mandate's part: ok, required or scope where the route held the request to one, else none.
+        mandate: x.mandate ?? "none",
         req_digest: x.signature ? `sha-256=:${createHash("sha256").update(x.signature).digest("base64")}:` : null,
         kid: siteKey.kid,
       };
@@ -123,6 +125,8 @@ export function metadataEvent({ receipt, path, ip, ipSalt, country, operator, pu
     // What it said it came to do, set against what it did (spec §11.7, PUR-1, PUR-3). The note is the
     // agent's own sentence, unchecked; it stays in this record on the site (7 days), never in a count.
     purpose: purpose && !purpose.problem ? { kind: purpose.kind, signed: !!purpose.signed, note: purpose.note ?? null } : null,
+    // The Mandate's part in the decision (ok, required, scope, none), never the Mandate.
+    mandate: receipt.mandate ?? "none",
     said: verdict?.said ?? null, said_by: verdict?.by ?? null, verdict: verdict?.verdict ?? "undeclared",
     country: countryCode(country),
     ip_h: hashIp(ip, ipSalt),

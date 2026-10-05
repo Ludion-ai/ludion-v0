@@ -8,7 +8,7 @@
 
 import { createResolver } from "./resolver.mjs";
 import { createStapleVerifier, issueStaple } from "./staple.mjs";
-import { classify, createPolicy, createNonceCache, decide, ERROR_HELP, ERRORS, AUTOMATION, compileRoute, CLASSES } from "./classify.mjs";
+import { classify, createPolicy, createNonceCache, decide, ERROR_HELP, ERRORS, AUTOMATION, compileRoute, CLASSES, mandateVerdict, MANDATE_VERDICTS } from "./classify.mjs";
 import { createReceipts, importSiteKey, generateSiteKey, metadataEvent, countryCode, templatePath, hashIp } from "./receipt.mjs";
 import { KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, READ_ONLY_KINDS, knownAgentToken, isReadOnlyAgent } from "./agents.mjs";
 import { GateFault, within, clock } from "./budget.mjs";
@@ -16,7 +16,7 @@ import { isPublicAddress, isIpLiteral } from "./address.mjs";
 import { createAuthorities, requestAuthority } from "./authority.mjs";
 import { createRevocationList, subscribeRevocations, REVOCATION_TYP } from "./revocation.mjs";
 import { routeKind, isCritical, pathOf, originForm, routeCandidates, queryKeys, templateSegment, publicTemplateSegment, publicTemplatePath, isRouteWord, ROUTE_KINDS, CRITICAL_KINDS, WRITE_METHODS } from "./route.mjs";
-import { verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S } from "./mandate.mjs";
+import { verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, SELF, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S } from "./mandate.mjs";
 import { memoryLedger, isLedger } from "./ledger.mjs";
 import { bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS } from "./digest.mjs";
 import { createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, ACCESS, MAX_ROWS_PER_HOUR } from "./hourly.mjs";
@@ -26,11 +26,11 @@ import { parsePurpose, readPurpose, purposeVerdict, PURPOSE_HEADER, PURPOSE_KIND
 
 export {
   createResolver, createStapleVerifier, issueStaple, classify, createPolicy, createNonceCache, decide, compileRoute, CLASSES,
-  ERROR_HELP, ERRORS, AUTOMATION, createReceipts, importSiteKey, generateSiteKey, metadataEvent, countryCode, templatePath, hashIp,
+  ERROR_HELP, ERRORS, AUTOMATION, mandateVerdict, MANDATE_VERDICTS, createReceipts, importSiteKey, generateSiteKey, metadataEvent, countryCode, templatePath, hashIp,
   KNOWN_AGENT_TOKENS, AUTOMATION_SIGNALS, matchKnownAgent, matchAutomationSignal, READ_ONLY_KINDS, knownAgentToken, isReadOnlyAgent, GateFault, isPublicAddress, isIpLiteral,
   createAuthorities, requestAuthority, createRevocationList, subscribeRevocations, REVOCATION_TYP,
   routeKind, isCritical, pathOf, originForm, routeCandidates, queryKeys, templateSegment, publicTemplateSegment, publicTemplatePath, isRouteWord, ROUTE_KINDS, CRITICAL_KINDS, WRITE_METHODS,
-  verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, memoryLedger, isLedger,
+  verifyMandate, chargeProblem, LIMIT_KEYS, MandateError, MANDATE_TYP, SCOPES, CHARGE_SCOPE, SELF, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, memoryLedger, isLedger,
   bodyNeeded, checkContentDigest, parseContentDigest, readWebBody, DEFAULT_MAX_BODY_BYTES, DEFAULT_BODY_TIMEOUT_MS,
   createHourly, operatorOf, HOUR_S, BATCH_KIND, ROW_KEYS, ACCESS, MAX_ROWS_PER_HOUR, memoryRecords, RECORD_DAYS,
   createDecisions, parseDecisions, whoKind, DECISION_ACTIONS, UNNAMED,
@@ -262,11 +262,15 @@ export async function createGate(config) {
     if (decision.action === "deny" && unprovable && !failClosed) {
       decision = { action: "allow", failOpen: "no_registry_keys" };
     }
+    // The Mandate's part (lane 2 spec §3.3): ok, required or scope where the route held the request to
+    // one, else none. In the receipt and the hourly key; the Mandate itself never leaves the site.
+    const mandate = decision.error === "mandate_required" ? "required" : decision.error === "mandate_scope" ? "scope"
+      : decision.action === "allow" && !decision.site && !decision.failOpen && route.pressure >= 2 && cls.class === "VERIFIED" ? mandateVerdict(cls, route.require) : "none";
     const headers = { "Ludion-Version": LUDION_VERSION, ...denialHeaders(decision) };
     let receipt = null;
     try {
       const sigField = req.fields.find((f) => f.name.toLowerCase() === "signature")?.value;
-      receipt = await receipts.issue({ method: req.method, path, cls, decision, pressure: route.pressure, signature: sigField, purpose: purpose?.signed ? purpose.kind : null });
+      receipt = await receipts.issue({ method: req.method, path, cls, decision, pressure: route.pressure, signature: sigField, purpose: purpose?.signed ? purpose.kind : null, mandate });
       headers["Ludion-Receipt"] = receipts.toHeader(receipt);
     } catch (e) { gateError ??= e; } // a receipt is evidence, not the decision: losing it never changes the response
     if (receipt && AUTOMATION.has(cls.class)) {

@@ -21,7 +21,7 @@ export const DEFAULT_LIFETIME_S = 60;
  * Create a Diver signer from a SESSION private JWK and the origin where its
  * directory is published (the Signature-Agent identifier).
  * @param {{ sessionPrivateJwk: JsonWebKey, signatureAgent: string, label?: string,
- *           staple?: () => (string|undefined), mandate?: () => (string|undefined),
+ *           staple?: () => (string|undefined), mandate?: (req: { method: string, url: string }) => (string|undefined),
  *           lifetimeS?: number, now?: () => number, cimd?: boolean }} x
  */
 export async function createDiverSigner(x) {
@@ -57,7 +57,7 @@ export async function createDiverSigner(x) {
     }
     const staple = x.staple?.();
     if (staple) { headers["ludion-staple"] = staple; additional.push("ludion-staple"); }
-    const mandate = x.mandate?.();
+    const mandate = x.mandate?.({ method, url: req.url }); // which site it goes to picks the Mandate (mandateFor)
     if (mandate) { headers["ludion-mandate"] = mandate; additional.push("ludion-mandate"); }
     if (req.purpose) { headers["ludion-purpose"] = purposeField(req.purpose); additional.push("ludion-purpose"); }
 

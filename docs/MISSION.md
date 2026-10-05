@@ -227,7 +227,7 @@
 |---|---|---|---|---|
 | MND-1 | ± | 0 | 委任の発行は、Root 鍵の署名でだけ通る。Session 鍵で署名した発行の依頼は拒否される。SDK の実行時は Root 鍵を読み込まない | |
 | MND-2 | ± | 1 | 正しく署名された要求でも、委任の範囲の外なら、Gate が 403 `mandate_scope` を返す。範囲の中は通る。検査を外す突然変異で落ちる | |
-| MND-3 | − | 1 | aud 違い・sub 違い・期限切れ・取り消し済みの委任は、無効として扱われる（403 `mandate_required`） | |
+| MND-3 | − | 1 | aud 違い・sub 違い・期限切れ・取り消し済みの委任は、無効として扱われる（403 `mandate_required`）。ただし sub 違い（別の Diver の Mandate を運ぶ）と偽造は、PRS-2（ラチェット済み）のとおり SPOOFED（401 `invalid_signature`）で拒否する。403 にするかは人間待ち（STATE.lane2.md） | |
 | MND-4 | ± | 1 | `per_day` は、数える場所を持つ Gate でだけ効く。持たない Gate は、`per_day` 付きの委任を拒否する | |
 | MND-5 | ± | 0 | （任意）委任が付いている時、SDK は範囲の外の要求に署名しない | |
 | DEMO-1 | ± | 1 | レーン2 spec §3.4 の流れが、CI で通る（決まった動きの乗っ取りで）：init、mandate create（read と checkout、1日3回）、見てカートに入れる → 通る、罠のページを読んでパスワードの変更と削除 → 403 `mandate_scope`、SDK を通さず Session 鍵で直接署名 → それでも 403 `mandate_scope`、委任の作り直し → Root 鍵が無いので名簿が拒否、revoke → 全部が REVOKED | |

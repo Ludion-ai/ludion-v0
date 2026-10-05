@@ -6,3 +6,4 @@ export { BALLAST_V0 } from "./ballast.mjs";
 export { createDiverSigner, ludionFetch, DEFAULT_LIFETIME_S } from "./sign.mjs";
 export { purposeField, noteProblem, purposeForMethod, PurposeError, PURPOSE_KINDS, NOTE_MAX } from "./purpose.mjs";
 export { rotateSession, RotationPendingError, DEFAULT_OVERLAP_S } from "./rotate.mjs";
+export { mandateFor, mandateTerms, describeMandate, parseLifetime, MandateTermsError, MANDATE_SCOPES } from "./mandate.mjs";

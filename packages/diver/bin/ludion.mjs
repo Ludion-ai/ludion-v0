@@ -7,6 +7,8 @@
 //   npx ludion register [--registry https://registry.ludion.ai]  # register with the Registry (Root), approve the session key, fetch a Staple
 //   npx ludion staple                                      # fetch a fresh Staple (signed by the session key)
 //   npx ludion revoke [--compromised] [--key <kid>]        # revoke this Diver (or one session key) at the Registry (Root)
+//   npx ludion mandate create --site <origin> --scope read,checkout [--checkout-max N --currency JPY --per-day N] [--expires 24h]
+//   npx ludion mandate list | revoke <jti>                 # the operator's own limits on this agent (Root)
 //   npx ludion doctor                                      # self-check: keys, clock, directory, card
 //   npx ludion scan <access.log|dir|-> [--json]            # log-first Gate: what touched what, unsigned
 //   npx ludion report --events <events.ndjson> [--date D] [--tz Asia/Tokyo] [--lang ja] [--format html]  # the daily report
@@ -21,7 +23,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { initScreen, screenLang, shouldAsk, askWhy, ANSWER_URL } from "../src/init-screen.mjs";
 import { generateEd25519, diverIdFromRoot, directoryDocument, cardDocument, clientDocument, createDiverSigner, sealRootKey, openRootKey, isSealedRoot, MIN_PASSPHRASE_LENGTH,
-  rotateSession, RotationPendingError, DEFAULT_OVERLAP_S, createRegistryClient } from "../src/index.mjs";
+  rotateSession, RotationPendingError, DEFAULT_OVERLAP_S, createRegistryClient, mandateTerms, describeMandate } from "../src/index.mjs";
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -258,6 +260,43 @@ async function doctor() {
   if (!problems.length && !warnings.length) out(`\nAll good. Sites running Ludion Gate will see you as VERIFIED (depth 0 until you register).`);
 }
 
+// ---- mandate: the operator's own limits on this agent (lane 2 spec §3.2) -----
+// Issued and withdrawn by the Registry on a statement the Root signs; kept in ludion.json, where
+// mandateFor(me) finds the one for each site. The running agent needs no Root for any of it.
+async function mandate() {
+  const sub = args[1];
+  const { store } = await loadSigner();
+  const now = Math.floor(Date.now() / 1000);
+  if (sub === "list") {
+    const all = store.mandates ?? [];
+    if (!all.length) return out("No Mandates. Create one: npx ludion-ai mandate create --site https://shop.example --scope read");
+    for (const m of all) {
+      const state = m.revoked ? "revoked" : m.exp <= now ? "expired" : `until ${new Date(m.exp * 1000).toISOString()}`;
+      out(`${m.jti}  ${describeMandate(m)}  (${state})`);
+    }
+    return;
+  }
+  if (sub !== "create" && sub !== "revoke") return out("usage: ludion mandate <create --site <https origin> --scope read,checkout [--checkout-max N --currency JPY] [--per-day N] [--expires 24h] | list | revoke <jti>>");
+  if (!store.registry) throw new Error("not registered: run `ludion register` first (the Registry issues and withdraws Mandates)");
+  const client = registryClient(store);
+  if (sub === "create") {
+    const terms = mandateTerms({ site: flag("site"), scope: flag("scope"), perDay: flag("per-day"), checkoutMax: flag("checkout-max"), currency: flag("currency"), expires: flag("expires") });
+    const r = await client.createMandate(store, await openRoot(store), terms);
+    const m = { jti: r.jti, aud: terms.aud, scope: terms.scope, ...(terms.limits ? { limits: terms.limits } : {}), iat: now, exp: r.exp, mandate: r.mandate };
+    store.mandates = [...(store.mandates ?? []).filter((x) => x.exp > now - 86_400), m];
+    save(store);
+    out(`✔ Mandate ${r.jti}: ${describeMandate(m)}, until ${new Date(r.exp * 1000).toISOString()}`);
+    out(`  Attach it: createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent, staple: () => me.staple?.staple, mandate: mandateFor(me) })`);
+    return;
+  }
+  const jti = args[2];
+  if (!/^mdt-[A-Za-z0-9_-]{8,64}$/.test(jti ?? "")) throw new Error("usage: ludion mandate revoke <jti> (see `ludion mandate list`)");
+  const r = await client.revokeMandate(store, await openRoot(store), jti);
+  store.mandates = (store.mandates ?? []).map((m) => (m.jti === jti ? { ...m, revoked: { seq: r.seq, at: new Date().toISOString() } } : m));
+  save(store);
+  out(`✔ Withdrew ${jti} (entry ${r.seq}). Subscribed Gates refuse it within seconds; every other Gate when the last Staple expires (≤1 h).`);
+}
+
 // ---- scan: the log-first Gate (@ludion/scan) ---------------------------------
 async function scan() {
   const { main } = await import("@ludion/scan/cli");
@@ -270,6 +309,6 @@ async function report() {
   process.exitCode = await main(args.slice(1));
 }
 
-const commands = { init, sign: signCmd, rotate, register, staple: stapleCmd, revoke, doctor, scan, report };
-if (!commands[cmd]) { out("usage: ludion <init|sign|rotate|register|staple|revoke|doctor|scan|report> …"); process.exit(1); }
+const commands = { init, sign: signCmd, rotate, register, staple: stapleCmd, revoke, mandate, doctor, scan, report };
+if (!commands[cmd]) { out("usage: ludion <init|sign|rotate|register|staple|revoke|mandate|doctor|scan|report> …"); process.exit(1); }
 commands[cmd]().catch((e) => { console.error("✖", e.message); process.exit(1); });

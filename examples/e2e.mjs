@@ -101,7 +101,7 @@ check((await r.json()).class === "SPOOFED", "swapped Staple under a valid signat
 // What leaves the Gate is hourly counts (ADR-038): close the hour, then look at everything sent.
 gate.gate.flush({ all: true });
 const rows = events.flatMap((b) => b.rows ?? []);
-const ROW = "access,class,count,decision,operator,route";
+const ROW = "access,class,count,decision,mandate,operator,route";
 check(events.length >= 1 && events.every((b) => b.kind === "ludion.hourly" && Object.keys(b).sort().join() === "hour,kind,rows,site,v")
   && rows.reduce((n, x) => n + x.count, 0) >= 6 && rows.every((x) => Object.keys(x).sort().join() === ROW && x.route && !/\d{3}/.test(x.route)),
   `metadata sink received ${events.length} hourly batch(es), ${rows.reduce((n, x) => n + x.count, 0)} visits counted: route templates only, no visit, no content, no raw IP`);

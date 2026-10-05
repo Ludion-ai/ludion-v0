@@ -16,12 +16,13 @@ For a payment, this is also the answer when it goes past the Mandate's limits: t
 
 ## Why this site asks
 
-A Mandate is only useful if its limits hold. An agent allowed to browse is not allowed to pay; an agent allowed to book is not allowed to cancel an account. The site enforces the Principal's own boundaries.
+A Mandate is only useful if its limits hold. An agent allowed to browse is not allowed to pay; an agent allowed to book is not allowed to cancel an account. A hijacked agent, or someone signing with its stolen session key, gets this answer too. The site enforces the boundaries the Mandate draws.
 
 ## How to fix it
 
-- Ask your Principal for a Mandate whose scope includes this action. The scopes are `read`, `account`, `post`, `reserve`, `checkout` and `delete`.
-- If a payment needs a higher limit, ask your Principal for a new Mandate that carries it. Do not split a payment to pass under a limit: the checkouts per day are counted too.
+- If you run the agent and this action is one it should do, put a new Mandate on it whose scope includes it, with your Root key: `npx ludion-ai mandate create --site https://shop.example --scope read,account`. The scopes are `read`, `account`, `post`, `reserve`, `checkout` and `delete`.
+- If you did not mean your agent to do this, it is doing what its Mandate was there to stop: look at what it read before it asked.
+- If a payment needs a higher limit, create a new Mandate that carries it. Do not split a payment to pass under a limit: the checkouts per day are counted too.
 - Do not widen a Mandate on your own: it is signed, and any change breaks it.
 
 ## Get verified in 3 minutes
