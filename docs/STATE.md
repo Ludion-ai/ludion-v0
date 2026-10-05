@@ -1,6 +1,6 @@
 # STATE
 
-最終更新：2026-10-05 夜（Claude Code、1本目のレーン。夜間モード：人間は朝まで不在。LEAK-1 のあと、名簿・Gate・diver の直しとラチェット）
+最終更新：2026-10-05 深夜（Claude Code、1本目のレーン。夜間モード：LEAK-1、名簿の掃除と丸ごと配布、DIV-7、ラチェット 97 → 107）
 
 ## 現在地
 
@@ -12,10 +12,11 @@
   - M2：DIV-2/3/4 と PUB-1/2/3 まで（DIV-1 が残り）。
   - M3：REG-2/4 まで。
   - M5：PRS-1〜4、NEUT-1/2、CRY-1 まで。
-- 2026-10-03 から、レーンは2本（人間の指示）。ぶつからないように担当を分けている。
-  - **1本目**（このファイル、作業ツリー `C:\Users\haya0\ludion`）：GATE-8 → CI を10分以内（B1、LOOP-2）と夜間のジョブ → npm の公開の仕組み → `@ludion/gate-*` の公開。夜間のジョブ（Windows）の面倒も見る。
-  - **2本目**（`docs/STATE.lane2.md`、作業ツリー `C:\Users\haya0\ludion-lane2`）：tracecheck.dev の計測、ローンチの文書（README、クイックスタート、/scan のサンプル）。
-  - プレビューは1つを2本で共有する。どちらかが出し直すと、もう片方の手元の WEB-1 は「古い」で落ちる。
+- 2026-10-05 から、レーンは3本（人間の指示。docs/lanes/）。
+  - **1本目**（このファイル、作業ツリー `C:\Users\haya0\ludion`）：LEAK-1、名簿・Gate・diver の中身、ラチェットの書き込み（レーン2とレーン3のオラクルも、main で PASS したら入れる）。夜間の Windows も見る。
+  - **2本目**（`docs/STATE.lane2.md`、`docs/lanes/lane2-spec.md`、作業ツリー `C:\Users\haya0\ludion-lane2`）：3つの問い。MND・DEMO・CEN・MSG。README の冒頭、トップページ、show-hn.md、faq.md、demo-script.md、census、Mandate の新しいファイル。
+  - **3本目**（`docs/STATE.lane3.md`、`docs/lanes/lane3-spec.md`、作業ツリー `C:\Users\haya0\ludion-lane3`）：公開と運用。PUB・LOOP。packages/ludion/、.github/workflows/、PUBLISH.md、DEPLOY.md、runbook.md、wrangler の設定、ludion-ai への改名、LOOP-2 の計測。
+  - プレビューは1つを3本で共有する。誰かが出し直すと、ほかの手元の WEB-1 は「古い」で落ちる。
   - 夜勤（`C:\Users\haya0\ludion-night`、`.loop/NIGHT.md`）は 2026-10-01 08:48 に終わった。もう動かない。
 - **サイト**：プレビュー https://ludion-site-preview.ludion-agents.workers.dev （エージェント用のアカウント `Ludion Agents`、WEB-1 PASS）。本番（ludion.ai）への切り替えは人間（docs/DEPLOY.md §3）。
   - **Claude はプレビュー以外にデプロイしない**（2026-10-01、人間の決定）。本番への最初のデプロイ、ludion.ai の付け替え、DNS、旧資源の削除は人間がやる。
@@ -76,7 +77,7 @@
 **次の一手**（2026-10-05 から、ローンチ 10/13 22:00 JST まで）
 
 1. 人間の手が要るもの（人間待ちの表）：npm の初版、本番の名簿と Card Host のデプロイ（`*.agents.ludion.ai` の証明書はお金の判断）、ludion.ai の切り替え、`preview` の secret、security@ と privacy@ の受信、PILOT-2 のトークン。
-2. secret が入ったら：LOOP-2 を main への push の実行で3回測り、人間に報告する（仕組みは入れた。ADR 2026-10-04-preview-versions-and-split-lighthouse）。
+2. LOOP-2 の3回の計測はレーン3（lane3-spec の8）。いまは preview のトークンがゾーン `ludion.ai` を見えるので、デプロイの前の検査が止めている（人間待ち）。
 3. WEB-7 は Node・Next.js・Workers で PASS（人間の決定）。FastAPI・WordPress・Python は「対応予定」の1行だけで、GATE-9 と PyPI はローンチの後。
 4. spec の残りの食い違い（outbox）：C7（名簿の事前登録、ローンチの後）。
 5. 夜間の Windows（`nightly-windows`）の結果を毎朝見る。赤なら最優先で直す。
@@ -122,6 +123,8 @@
 - 2026-10-05 夜：DIV-7（`ludion doctor` の時計）。比べる相手は、エージェント自身のオリジンの Date ヘッダー（doctor がもう取りに行っている3つのファイル）。外の時刻のサービスは足さない。Date ヘッダーが無ければ「比べられなかった」と言うだけで、落とさない。問題にするのは、往復と秒の切り捨ての誤差を引いてもなお ±30秒（spec §10.4）を越える時だけ。
 - 2026-10-05 夜：spec §12.9「初回の鍵の取得中は Pressure 0〜1 なら通す」は、今夜は入れない（コードフリーズ中に Gate の通り道を変えない）。入れると、P0〜1 で初めて来たエージェントの1回目は UNVERIFIED になり、1回目の VERIFIED を前提にしたオラクル（DIV-1、ONE-4、GATE-3 など）の書き直しが要る。今の害は、遅い鍵の一覧を持つエージェント自身の要求が最大 2.75 秒待つことだけ（人間は待たない）。ローンチの後に入れるかを決めてほしい。
 - 2026-10-05 夜：壁（`wall`、Pressure 1）は、摩擦がつながっていないと効かない（Node で `onFriction` が無い時、Next.js と Workers はいつも）。なのに記録とレポートは「既存の摩擦がかかった」と言う。`friction_hook` は設定で受け付けるが使っていない。spec は `friction_hook` の意味を決めていないので、今夜は直さない。案：摩擦がつながっていない Gate は、壁を「通した」として記録し、起動時に1行で警告する（ONE-3 の対に、つながっていない壁を仕込む）。
+- 2026-10-05 夜：Durable Object のキーの一括の操作は128件までとみなし、名簿の掃除を128件ずつにした（#131、#133）。手元の workerd（SQLite の DO）は300件を通した。本番の上限の資料は夜は読めないので、安全な方に倒した。
+- 2026-10-05 夜：REG-7 の「連絡先ごとに1日5件」は、LEAK-1 のあと、名簿が連絡先を持たず確かめもしないので、他人のメールを書いた登録を5回送れば、そのメールの持ち主を1日止められる（自分で作った Root の署名で足りる）。連絡先を書かない登録は止まらない。上限を緩めるのは人間の判断なので、そのままにした。案：連絡先ごとの上限を外す（IP ごとと全体の上限は残す）か、上限を越えた連絡先は数えずに捨てて登録は通す。
 
 ## 人間待ち
 
@@ -248,6 +251,7 @@
 - DIV-2 で未カバーの部分：
   - TLS は通していない（Host ヘッダーを保ってローカルに転送）
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
+- REG-7 の連絡先ごとの上限は、他人のメールで使い切れる（上の「朝に見てほしい判断」）。
 
 ## 直近のセッション
 
@@ -255,6 +259,10 @@
   - LEAK-1 は #127 で main に入った（CI で PASS。29 の保存値・応答・名札・丸ごと配布のどこにも連絡先は無い）。
   - DIV-7（±、L0）：`ludion doctor` が時計を、エージェント自身のオリジンの Date ヘッダーと比べる。±30秒を越えると問題（ずれの秒数と直し方）、20秒は通る、Date ヘッダーが無ければ言うだけ。比べない doctor は落ちる。既知の問題から消した。
   - CI の preview のトークンがゾーンを見えて、境界の検査で止まっている（人間待ちに書いた）。
+  - 名簿（Durable Object）の掃除：REG-7 の数と使った同意は、自分の鍵だけを読み、期限切れの掃除は1分に1回、128件ずつ（#131、#133）。登録ごとに全部を並べていた（7万2千件で約115 ms、1登録で約350 ms）。
+  - 丸ごと配布（REG-5 を強化、#137）：誰でも引けるのに、毎回全員を並べて拇印を作って署名していた。版ごとに1回作り、(版, since) ごとに1分使い回す。誰が引いたかは何も残らない。
+  - ラチェット 97 → 104（#134：DIV-7、LEAK-1、MND-1〜4、PRS-5）→ 107（この PR：DEMO-1、MND-5、MSG-1）。全オラクル：PASS 107 / FAIL 1（LOOP-2：preview のトークン）/ PENDING 6（GATE-9、LIVE-1〜3、CEN-1、CEN-2）/ SKIP 1（PILOT-2）。
+  - 教訓（メモリ）：WEB-2 の仕込みの文は MISSION.md を出所に引く。MISSION.md の新しい行に「5分」があると、WEB-2 が赤くなる（#130 で一度）。
 
 - 2026-10-05 夜（Claude Code、1本目）：レーン2とレーン3が立った（docs/lanes/lane2-spec.md、lane3-spec.md）。
   - レーン2：README の冒頭、トップページ、show-hn.md、faq.md、demo-script.md、census、Mandate の新しいファイル（MND・DEMO・CEN・MSG）。

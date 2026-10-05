@@ -3,6 +3,7 @@
   "passed": [
     "BLK-1",
     "CRY-1",
+    "DEMO-1",
     "DIV-1",
     "DIV-2",
     "DIV-3",
@@ -37,6 +38,8 @@
     "MND-2",
     "MND-3",
     "MND-4",
+    "MND-5",
+    "MSG-1",
     "NEUT-1",
     "NEUT-2",
     "ONE-1",
