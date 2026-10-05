@@ -1,8 +1,114 @@
 # DEPLOY — プレビューから ludion.ai の本番へ
 
-最終更新：2026-10-03（Claude Code。6 を足した）。この文書は手順だけを書く。Claude は本番、DNS、削除に触れない。それは人間がやる。
+最終更新：2026-10-06（Claude Code、レーン3。§0 を「上から順に押すだけ」にした）。この文書は手順だけを書く。Claude は本番、DNS、削除に触れない。それは人間がやる。
 
-## 0. 今の状態（ludion.ai と棚卸しは 2026-10-01 09:10 JST、プレビューとトークンは 11:05 JST）
+## 0. 本番を立てる：上から順に（人間）
+
+ローンチ（10/13）の前に1回。全部で1時間ほど（証明書の発行待ちが一番長い）。各段の最後の「確かめる」が `OK` を出したら、次の段へ進む。`NG` なら、その行が直す場所を言う。
+
+- 使うもの：PowerShell（新しい窓。古い窓には `CLOUDFLARE_API_TOKEN` が残っていることがある。残っていると wrangler がそれを使い、`Ludion Agents` に出してしまう）、ブラウザの Cloudflare のダッシュボード（本番のアカウント、ゾーン `ludion.ai`）。
+- 手元の準備（最初に1回、リポジトリの直下で）：
+  ```powershell
+  git switch main; git pull; npm ci
+  ```
+- 確かめるコマンド `node scripts/prod-check.mjs <段>` は GET だけで、資格情報を使わない。何度回してもよい。
+
+| 段 | やること | どこで | 確かめる |
+|---|---|---|---|
+| 1 | ACM を有効にする（お金） | 画面 | 画面で見る（下） |
+| 2 | `*.agents.ludion.ai` の証明書を注文する | 画面 | `node scripts/prod-check.mjs cert` |
+| 3 | DNS のレコード `*.agents` を1つ作る | 画面 | `node scripts/prod-check.mjs dns` |
+| 4 | 名簿と Card Host を出す | PowerShell | `node scripts/prod-check.mjs registry --kid <kid>`、`node scripts/prod-check.mjs card-host` |
+| 5 | ludion.ai を main から出し直す | PowerShell | `node scripts/prod-check.mjs site` |
+
+### 段1　ACM を有効にする（お金。詳しくは §4.1）
+
+1. ダッシュボードで本番のアカウント → ゾーン **`ludion.ai`** → 左の **SSL/TLS** → **Edge Certificates**。
+2. **Advanced Certificate Manager** を有効にする（月額の契約）。
+
+- 確かめる：コマンドは無い（契約は外から見えない）。同じ画面で **Order an advanced certificate** が押せれば済み。段2のコマンドが `OK` なら、ACM も確かに有効。
+
+### 段2　証明書を1枚注文する（詳しくは §4.2）
+
+1. 同じ画面の **Order an advanced certificate**。
+2. Hostnames：**`*.agents.ludion.ai` の1つだけ**。Validation method：**TXT**。ほかは既定のまま。
+3. 一覧でその証明書が **Active** になるまで待つ（数分から）。
+
+- 確かめる：
+  ```powershell
+  node scripts/prod-check.mjs cert
+  ```
+  `OK  cert: a certificate for *.agents.ludion.ai is issued: …` なら済み（公開の記録（Certificate Transparency）を crt.sh で読む。画面で Active になってから数分遅れることがある）。
+
+### 段3　DNS のレコードを1つ作る（詳しくは §4.3）
+
+1. 左の **DNS** → **Records** → **Add record**。
+2. Type：**AAAA**、Name：**`*.agents`**、IPv6 address：**`100::`**、Proxy status：**Proxied**（オレンジの雲）→ **Save**。
+
+- 確かめる：
+  ```powershell
+  node scripts/prod-check.mjs dns
+  ```
+  `OK  dns: dvr-aaaaaaaaaaaaaaaa.agents.ludion.ai resolves and its TLS verifies …` なら済み。Card Host はまだ無いので、答えの番号（5xx など）は気にしない。
+
+### 段4　名簿と Card Host を出す（詳しくは §6）
+
+1. 名簿の署名鍵を作る（リポジトリの外に。中身は表示されない）：
+   ```powershell
+   node services/registry/bin/keygen.mjs $HOME\.config\ludion\registry-secrets.json
+   ```
+   出力の `{"kid":"…"}` の kid を控える。ファイルの控えをどこに置くか（パスワード管理など）は人間が決める。
+2. 本番のアカウントにログインする（ブラウザが開く）：
+   ```powershell
+   npx wrangler@4.144.0 login
+   npx wrangler@4.144.0 whoami
+   ```
+   `whoami` に本番のアカウントが出ること（`Ludion Agents` ではない）。アカウントが2つ見えるなら、この窓で `$env:CLOUDFLARE_ACCOUNT_ID = "<本番のアカウントの ID>"` を先に打つ。
+3. 名簿を出す（秘密も同じ一回で入る）：
+   ```powershell
+   npx wrangler@4.144.0 deploy --config services/registry/wrangler.json --secrets-file $HOME\.config\ludion\registry-secrets.json
+   ```
+   - 確かめる（`<kid>` は 1 で控えたもの）：
+     ```powershell
+     node scripts/prod-check.mjs registry --kid <kid>
+     ```
+     `OK  registry: the Registry serves key <kid> (the one keygen printed); /__card/ is not open (404).` なら済み。`registry.ludion.ai` の DNS と証明書は Cloudflare が作るので、最初の数分は `NG`（名前が引けない）になることがある。少し待って回し直す。
+4. Card Host を出す（名簿の後。段2と段3が `OK` であること）：
+   ```powershell
+   npx wrangler@4.144.0 deploy --config packages/card-host/wrangler.json
+   ```
+   - 確かめる：
+     ```powershell
+     node scripts/prod-check.mjs card-host
+     ```
+     `OK  card-host: dvr-aaaaaaaaaaaaaaaa.agents.ludion.ai/card is 404 unknown_agent over verified TLS …` なら済み（誰も持っていない名前を聞いているので、404 が正しい）。
+5. 画面で一度だけ見る：**Workers & Pages** → `ludion-card-host` → **Settings**：Observability が無効、Logpush が無効（訪問者の何も残さない。PRIV-5）。
+6. ログアウトする（本番に効く資格情報をこの機械に残さない）：
+   ```powershell
+   npx wrangler@4.144.0 logout
+   ```
+
+### 段5　ludion.ai を main から出し直す（詳しくは §1.5）
+
+段4の窓のまま（ログアウトしたなら、もう一度 `npx wrangler@4.144.0 login`）。リポジトリの直下で：
+
+```powershell
+git switch main; git pull; npm ci
+node site/build.mjs --out site/dist
+cd site/edge; npm ci; npx wrangler deploy --name ludion-site; cd ../..
+npx wrangler@4.144.0 logout
+```
+
+- 確かめる：
+  ```powershell
+  node scripts/prod-check.mjs site
+  ```
+  `OK  site: https://ludion.ai serves this checkout's build (…)` と、init が指すページ（`/quickstart`、`/agent`、`/mandate`、`/e/signature_required`、バッジ、init の答えの受け口）が全部答える、なら済み。`NG` は、どのページが何を返したかを言う。
+- 済んだら Claude に「本番を立てた」と伝える。Claude が LIVE-1〜3 を回して報告する（レーン3 spec の10）。npm の 0.1.0 は、そのあと（docs/PUBLISH.md §6.2）。
+
+## 0.1 これまでの状態（2026-10-01 の記録。ludion.ai は 2026-10-04 に新しいサイトに切り替わった）
+
+（ludion.ai と棚卸しは 2026-10-01 09:10 JST、プレビューとトークンは 11:05 JST）
 
 - **いまの ludion.ai は旧 Ludion。**
   - 配っているのは Worker **`ludion`** の**カスタムドメイン**（`ludion.ai` と `www.ludion.ai`、environment は production）。だから切り替えは 3 の一本道でよい。
@@ -144,7 +250,7 @@ npm run deploy:preview
   - 全ページのバイトがビルドと一致すること。
   - 英日の全ページで、Lighthouse（モバイル）の4項目が95以上であること。
 
-## 3. 本番への切り替え（人間。クリック単位）
+## 3. 本番への切り替え（人間。クリック単位。済み：2026-10-04 に ludion.ai が新しいサイトを配っていると確かめた。戻すときのために残す）
 
 前提：WEB-1 が PASS で、プレビューの URL で表示を確かめたこと。所要時間は15分。サイトが落ちるのは、手順 4 から 5 の間の数分だけ。
 
@@ -420,7 +526,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://registry.ludion.ai/__card/dvr-a
 curl -s -o /dev/null -w "%{http_code}\n" https://dvr-aaaaaaaaaaaaaaaa.agents.ludion.ai/card
 ```
 
-  - 登録のない Diver なので `404`。`npx ludion register`（既定の名簿は `https://registry.ludion.ai`）で登録した Diver なら、`/card` が名札（`client_id` が `https://<diver_id>.agents.ludion.ai/card`）、`/client` が MCP 用の client 文書（`client_id` が `https://<diver_id>.agents.ludion.ai/client`）、`/.well-known/http-message-signatures-directory` が承認済みのセッション鍵だけを返す。
+  - 登録のない Diver なので `404`。`npx ludion-ai register`（既定の名簿は `https://registry.ludion.ai`）で登録した Diver なら、`/card` が名札（`client_id` が `https://<diver_id>.agents.ludion.ai/card`）、`/client` が MCP 用の client 文書（`client_id` が `https://<diver_id>.agents.ludion.ai/client`）、`/.well-known/http-message-signatures-directory` が承認済みのセッション鍵だけを返す。
 
 ### 6.6 終わったら
 
@@ -430,11 +536,11 @@ curl -s -o /dev/null -w "%{http_code}\n" https://dvr-aaaaaaaaaaaaaaaa.agents.lud
 
 ## 7. 本番で init が依存するもの（ローンチの前に）
 
-`npx ludion init` から、名前が世界で通じるまで（`register`、Card Host、MCP）に、本番で必要になるものの全部。各行の手順がこの文書のどこにあるかと、無かったものはここに足した（2026-10-04）。
+`npx ludion-ai init` から、名前が世界で通じるまで（`register`、Card Host、MCP）に、本番で必要になるものの全部。各行の手順がこの文書のどこにあるかと、無かったものはここに足した（2026-10-04）。
 
 | # | 依存 | 無いと / 壊れると | 手順 |
 |---|---|---|---|
-| 1 | npm の `ludion`（`npx ludion`） | init が始まらない | docs/PUBLISH.md §0.5（初版は人間が手で） |
+| 1 | npm の `ludion-ai`（`npx ludion-ai`。コマンド名は `ludion`） | init が始まらない | docs/PUBLISH.md §6.2（0.0.1 は名前を押さえる版。0.1.0 を本番の後に release ワークフローから） |
 | 2 | 利用者の Node 20 以上 | `npx` が動かない | `package.json` の `engines`。README に書いてある |
 | 3 | ludion.ai の `POST /api/init-answer`（任意の1問） | 答えた人の1語が届かない。init は止まらない（DIV-6：答えなければ何も送らない） | §1.5 で出し直す。秘密 `SIGNUP_WEBHOOK_URL` は §3 の手順 1 |
 | 4 | ludion.ai の `/badge/<id>.svg`（init の画面の README バッジ） | バッジが 404 | §1.5 |
@@ -469,7 +575,7 @@ npx wrangler@4.144.0 deploy --config services/registry/wrangler.json --var REGIS
 
 - 止めているあいだ、新しい名前の登録（と、凍結中の Principal の登録）は `503 registration_paused`（`Retry-After: 3600`）。CLI には `✖ registry: 503 registration_paused — new registrations are paused; existing names keep working`。
 - 秘密はそのまま残る（`--secrets-file` を付けない再デプロイは秘密を消さない）。
-- 確かめる：新しい名前で `npx ludion register` が 503。登録済みの名前で `npx ludion staple` が通る。
+- 確かめる：新しい名前で `npx ludion-ai register` が 503。登録済みの名前で `npx ludion-ai staple` が通る。
 
 ### 7.3 Cloudflare のプランの上限（お金の判断は人間）
 
