@@ -270,6 +270,9 @@ export const ORACLES = [
   // existing name keeps working.
   { id: "REG-7", m: "M3", kind: "±", level: 0, title: "new registrations are limited (per IP per hour, per contact per day, in all per hour) by the production config, through the Durable Object, keeping no address; a pause stops new names only; planted unlimited and ignored-pause registries caught",
     run: nodeTest(["services/registry/test/reg7.test.mjs"], "^REG-7", { metric: (out) => (/^# REG-7: (.+)$/m.exec(out) ?? [])[1] }) },
+  // The Registry keeps no contact (the human's decision, 2026-10-05): a leak of the Registry leaks no email.
+  { id: "LEAK-1", m: "M3", kind: "±", level: 0, title: "the Registry keeps no contact: registrations carrying canary contacts (again, revoked) leave none — plain, any case or base64url — in what it stores, the bulk copy, cards, client documents, public records, Staples or its responses; a kept signed statement and a card with the contact are caught",
+    run: nodeTest(["services/registry/test/leak1.test.mjs"], "^LEAK-1", { metric: (out) => (/^# LEAK-1: (.+)$/m.exec(out) ?? [])[1] }) },
 
   // ── M4 fear → number ───────────────────────────────────────────────────────────
   { id: "SCAN-1", m: "M4", kind: "+", level: 1, pair: "SCAN-5", property: "parse-rate", title: "scan parse rate ≥99% across the log-format corpus",

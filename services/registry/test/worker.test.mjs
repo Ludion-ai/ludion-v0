@@ -65,7 +65,7 @@ test("registry worker: a Diver's public record has its public members only; unkn
   const r = await w.durable.fetch(new Request(`https://registry.internal${CARD_PREFIX}${d.store.diver_id}`));
   assert.equal(r.status, 200);
   const rec = await r.json();
-  assert.deepEqual(Object.keys(rec).sort(), ["contacts", "diver_id", "keys", "name", "root_kid"]);
+  assert.deepEqual(Object.keys(rec).sort(), ["diver_id", "keys", "name", "root_kid"], "no contact: the Registry keeps none (LEAK-1)");
   assert.deepEqual(rec.keys.map((k) => Object.keys(k).sort()), [["crv", "kid", "kty", "x"]]);
   assert.ok(!JSON.stringify(rec).includes(d.root.d) && !JSON.stringify(rec).includes(d.session.d), "no private member");
   for (const id of ["dvr-aaaaaaaaaaaaaaaa", "dvr-short", "../divers", ""]) {
