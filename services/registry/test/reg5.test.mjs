@@ -88,6 +88,39 @@ for (const kind of ["memory", "durable"]) {
   });
 }
 
+test("REG-5: the copy is listed once per version and signed once a minute per (version, since), never stale past a change", async () => {
+  const key = await generateRegistryKey();
+  const store = createMemoryStore();
+  let lists = 0;
+  const listDivers = store.listDivers.bind(store);
+  store.listDivers = async () => { lists++; return listDivers(); };
+  let t = Date.now();
+  const registry = await createRegistry({ key: key.privateJwk, origin: ORIGIN, store, now: () => t });
+  const w = { fetch: (url, init) => registry.fetch(new Request(url, init)), verifier: await createStapleVerifier({ keys: [key.publicJwk] }, { issuer: ORIGIN, now: () => t }) };
+  w.client = createRegistryClient({ url: ORIGIN, fetch: w.fetch });
+  const a = await diver(w, "Bulk A");
+  lists = 0;
+  // 40 asks of the whole copy and of deltas, unchanged: one listing; the whole copy signed once.
+  const jwss = new Set();
+  for (let i = 0; i < 40; i++) {
+    const body = await (await w.fetch(`${ORIGIN}/v0/bulk?since=${i % 2 ? 1 : 0}`)).json();
+    if (body.since === 0) jwss.add(body.jws);
+  }
+  assert.equal(lists, 1, `listed ${lists} times for 40 asks of an unchanged copy`);
+  assert.equal(jwss.size, 1, "the whole copy is signed once a minute");
+  // A change is in the next copy at once.
+  const b = await diver(w, "Bulk B");
+  const now = await take(w);
+  assert.deepEqual(now.divers.map((d) => d.diver_id).sort(), [a.store.diver_id, b.store.diver_id].sort(), "a new Diver is in the next copy");
+  // A minute on, the same copy is signed afresh.
+  t += 61_000;
+  const later = await (await w.fetch(`${ORIGIN}/v0/bulk?since=0`)).json();
+  assert.ok(!jwss.has(later.jws) && (await take(w)).iat === Math.floor(t / 1000), "signed again after a minute");
+  // Many different deltas keep a bounded set of signed copies, each still correct.
+  for (let s = 0; s < 40; s++) assert.equal((await take(w, s)).since, s);
+  console.log(`REG-5: 40 asks of an unchanged copy listed the Registry once; a change showed at once; a minute on it was signed again`);
+});
+
 /** What a request left behind: the store changed, a canary kept, a log line. */
 export function traceProblems({ before, after, logged }) {
   const out = [];
