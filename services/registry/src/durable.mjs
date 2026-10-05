@@ -8,7 +8,7 @@
 const REV = (seq) => `rev:${String(seq).padStart(12, "0")}`;
 /** The most keys one storage call is given (the key-value API's batch limit). */
 const BATCH = 128;
-/** How often, at most, the expired rate-limit counters are swept (one listing of all of them). */
+/** How often, at most, expired entries (rate-limit counters, used consents) are swept: one listing of them all. */
 const SWEEP_S = 60;
 
 /** @param {{ get(k: string): Promise<any>, put(k: string|object, v?: any): Promise<void>, list(o: object): Promise<Map<string, any>>, delete(k: string|string[]): Promise<any> }} storage */
@@ -16,7 +16,14 @@ export async function createDurableStore(storage) {
   let seq = (await storage.get("seq")) ?? 0;
   let stapleCount = (await storage.get("stapleCount")) ?? 0;
   let ver = (await storage.get("ver")) ?? 0;
-  let swept = -Infinity;
+  const swept = {};
+  /** Delete the expired entries under `prefix`, at most once a minute, in batches. */
+  async function sweep(prefix, expired, nowS) {
+    if (nowS - (swept[prefix] ?? -Infinity) < SWEEP_S) return;
+    swept[prefix] = nowS;
+    const stale = [...(await storage.list({ prefix }))].filter(([, v]) => expired(v, nowS)).map(([k]) => k);
+    for (let i = 0; i < stale.length; i += BATCH) await storage.delete(stale.slice(i, i + BATCH));
+  }
   return {
     getDiver: (id) => storage.get(`diver:${id}`),
     /** Every change to a Diver takes the next version (the bulk copy's delta, REG-5). */
@@ -37,13 +44,15 @@ export async function createDurableStore(storage) {
     putPrincipal: (rec) => storage.put(`principal:${rec.id}`, rec),
     getMandate: (jti) => storage.get(`mandate:${jti}`),
     putMandate: (jti, rec) => storage.put(`mandate:${jti}`, rec),
-    /** Record a consent's challenge; false if it was already used (checked and set in one step). */
+    /**
+     * Record a consent's challenge; false if it was already used (checked and set in one step). It reads
+     * only its own key (an expired one counts as gone); the expired are swept at most once a minute.
+     */
     async useConsent(challenge, untilS, nowS) {
-      const all = await storage.list({ prefix: "consent:" });
-      const stale = [...all].filter(([, t]) => t < nowS).map(([k]) => k);
-      if (stale.length) await storage.delete(stale);
+      await sweep("consent:", (t, now) => t < now, nowS);
       const key = `consent:${challenge}`;
-      if (all.has(key) && !stale.includes(key)) return false;
+      const held = await storage.get(key);
+      if (held !== undefined && !(held < nowS)) return false;
       await storage.put(key, untilS);
       return true;
     },
@@ -65,11 +74,7 @@ export async function createDurableStore(storage) {
      * once a minute, so a busy hour costs one listing a minute, not one per registration.
      */
     async hit(key, windowS, nowS) {
-      if (nowS - swept >= SWEEP_S) {
-        swept = nowS;
-        const stale = [...(await storage.list({ prefix: "hit:" }))].filter(([, h]) => h.until <= nowS).map(([k]) => k);
-        for (let i = 0; i < stale.length; i += BATCH) await storage.delete(stale.slice(i, i + BATCH));
-      }
+      await sweep("hit:", (h, now) => h.until <= now, nowS);
       const k = `hit:${key}`;
       const got = await storage.get(k);
       const prev = got && got.until > nowS ? got : undefined;

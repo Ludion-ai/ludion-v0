@@ -47,3 +47,26 @@ test("registry: REG-7's counters on the Durable Object store read only their own
   for (let i = 0; i < 50; i++) await store.hit(`contact:${i}`, 86_400, later + 1 + i);
   assert.equal(lists, before, "counts within a minute of a sweep list nothing");
 });
+
+test("registry: used consents on the Durable Object store read only their own key; a reuse is refused while held; the expired are swept at most once a minute, in batches of 128", async () => {
+  const { createDurableStore, memoryStorage } = await import("../src/durable.mjs");
+  const inner = memoryStorage();
+  let lists = 0;
+  const storage = {
+    ...inner,
+    get: (k) => inner.get(k), put: (k, v) => inner.put(k, v),
+    async list(o) { if (o?.prefix === "consent:") lists++; return inner.list(o); },
+    async delete(k) { if (Array.isArray(k) && k.length > 128) throw new Error(`delete of ${k.length} keys (max 128)`); return inner.delete(k); },
+  };
+  const store = await createDurableStore(storage);
+  const t0 = 2_000_000_000;
+  for (let i = 0; i < 300; i++) assert.equal(await store.useConsent(`c${i}`, t0 + 600, t0 + Math.floor(i / 10)), true);
+  assert.ok(lists <= 1, `300 consents listed every consent ${lists} times (once a minute at most)`);
+  assert.equal(await store.useConsent("c5", t0 + 600, t0 + 40), false, "a consent is used once while it is held");
+  assert.equal(await store.useConsent("c5", t0 + 600, t0 + 600), false, "held through its last second");
+  // After they lapse: the 300 go in batches, and the next use is new.
+  const later = t0 + 600 + 120;
+  assert.equal(await store.useConsent("c5", later + 600, later), true, "a lapsed consent is gone, swept or not");
+  const left = [...(await inner.list({ prefix: "consent:" })).keys()];
+  assert.deepEqual(left, ["consent:c5"], `the lapsed consents were swept: ${left.length} left`);
+});
