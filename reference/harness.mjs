@@ -192,6 +192,16 @@ export async function freePorts(n) {
 
 export async function freePort() { return (await freePorts(1))[0]; }
 
+/**
+ * Remove a server's scratch folder. workerd, killed with its tree, may hold its SQLite files a moment
+ * longer on Windows (EPERM/EBUSY: NEUT-1 and WEB-7 failed on the nightly Windows run, 2026-10-05).
+ * Retry, then leave the folder to the OS: cleaning up must never fail what the server was started to
+ * measure. Returns whether it is gone.
+ */
+export function removeQuietly(dir) {
+  try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); return true; } catch { return false; }
+}
+
 const running = new Set();
 const STOP_WAIT_MS = 15_000;
 /** Children this process started and has not stopped (harness self-test). */
@@ -252,7 +262,7 @@ export async function start(app, dir, port, { env = {}, ready = true, readyTimeo
     if (!exited()) { try { child.kill("SIGKILL"); } catch {} }
     child.stdout.destroy(); child.stderr.destroy(); // our end of the pipes never keeps the test process alive
     running.delete(child);
-    if (state) fs.rmSync(state, { recursive: true, force: true });
+    if (state) removeQuietly(state);
   } };
   if (ready) {
     try { await waitReady(server, readyTimeoutMs ? { timeoutMs: readyTimeoutMs } : {}); }

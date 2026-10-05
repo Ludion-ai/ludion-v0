@@ -63,3 +63,19 @@ test("GATE-1: harness: a prepared install is whole only with its build (a half-r
     assert.equal(intact("express", { A: path.join(root, "none"), B: path.join(root, "none") }), true, "an app without a build step has nothing to lose");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test("GATE-1: harness: a scratch folder the OS will not let go of (EPERM, as workerd's on Windows) fails nothing", async () => {
+  const { default: fs } = await import("node:fs");
+  const { removeQuietly } = await import("../harness.mjs");
+  const dir = fs.mkdtempSync(`${os.tmpdir()}/ludion-harness-locked-`);
+  const real = fs.rmSync;
+  let tries = 0;
+  fs.rmSync = () => { tries++; throw Object.assign(new Error(`EPERM, Permission denied: '${dir}'`), { code: "EPERM" }); };
+  try {
+    assert.doesNotThrow(() => removeQuietly(dir));
+    assert.equal(removeQuietly(dir), false, "it says the folder is still there");
+    assert.ok(tries >= 2);
+  } finally { fs.rmSync = real; }
+  assert.equal(removeQuietly(dir), true);
+  assert.equal(fs.existsSync(dir), false);
+});
