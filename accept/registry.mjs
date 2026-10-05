@@ -44,9 +44,17 @@ export function firstFailure(out) {
   if (!m) return "(no failing test in the output: the file itself failed)";
   const block = m[2];
   let err = /^ {2}error: '((?:[^'\\]|\\.)*)'$/m.exec(block)?.[1];
+  // A message with a single quote in it (a Windows path) is written double-quoted.
+  if (err == null) { const d = /^ {2}error: "((?:[^"\\]|\\.)*)"$/m.exec(block)?.[1]; if (d != null) err = d.replace(/\\(.)/g, "$1"); }
   if (err == null) {
     const b = /^ {2}error: \|-?\n((?: {4}.*\n?)+)/m.exec(block);
     err = b ? b[1].split("\n").map((l) => l.trim()).filter((l) => l && l !== "+ actual - expected").slice(0, 10).join(" / ") : "";
+  }
+  if (!err) {
+    // No message (an empty Error, a cancelled test, a failure in a hook): say what kind, and where.
+    const field = (k) => new RegExp(`^ {2}${k}: '([^']*)'$`, "m").exec(block)?.[1];
+    const stack = /^ {2}stack: \|-?\n {4}(.*)$/m.exec(block)?.[1]?.trim();
+    err = [field("failureType") && `failureType ${field("failureType")}`, field("code") && `code ${field("code")}`, stack].filter(Boolean).join(", ") || "(no message)";
   }
   return `${m[1]}: ${err}`.slice(0, 900);
 }
