@@ -58,7 +58,7 @@
 4. **デモは新しい `examples/demo-shop`**。レーン1の `examples/demo-site`（PRS-5、scope delete）には触っていない。
 5. **台本（`docs/outbox/launch/demo-script.md`）を §3.4 の流れに書き直した**。前の台本の MCP の場面は、spec の流れに無いので外した（MCP-1 は残っている）。
 6. **罠の文は、デモの店の商品レビューに置いた**（攻撃者が書いた体）。不変条件16（ページの中で AI に問いかけない）は Ludion 自身のページの話と読んだ。デモの店のページにだけ置き、README と台本に「仕込んだ攻撃」と書いた。
-7. **`agent.mjs --model`**（録画用、任意）の既定のモデルは `claude-sonnet-5-5`。鍵が無いので一度も動かしていない。CI は `--scripted` だけ。
+7. **`agent.mjs --model`**（録画用、任意）の既定のモデルは `claude-sonnet-5-5`。本物のモデルでは一度も動かしていない（鍵が無い）。手元の偽のモデル（Messages API の形、`DEMO_MODEL_URL`）で、道具の呼び出しから拒否が返るまでを DEMO-1 で回している。
 8. 夜間モードの指示が届く前に、#128 に PR のコメントを1つ書いた（SEED-2 の対照を変えた説明）。それ以降、外への書き込みはしていない。
 9. **HN のタイトルは、レーン2 spec の「Show HN: Ludion – Identity, limits and a kill switch for AI agents」にした**。親 spec §20.1 の推奨（「Give your AI agent its own key, revocable everywhere in one line」）と違う。レーン2 spec は、ローンチの中心を3つの問いに変えるための、後から出た人間の指示なので、そちらを採った。spec-v2-diff.md に書いた。
 10. **トップページの中心を、spec §9 の一点（鍵と名前）から3つの問いに変えた**（レーン2 spec §3.6）。init の1行と、通す・壁・止める、scan への導線は残した。数字は今までどおり出所のリンク付き（WEB-2 PASS）。

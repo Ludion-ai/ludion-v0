@@ -518,7 +518,7 @@ export const ORACLES = [
   { id: "MND-5", m: "M10", kind: "±", level: 0, title: "(optional) with a Mandate attached, the SDK does not sign a request outside its scope",
     run: nodeTest(["packages/diver/test/mnd5.test.mjs"], "^MND-5", { metric: (out) => [...out.matchAll(/^# MND-5(?: planted)?: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
   { id: "DEMO-1", m: "M10", kind: "±", level: 1, title: "lane 2 spec §3.4's flow passes in CI with a scripted hijack: in-scope browsing and cart pass; the trap page's password change and delete get 403 mandate_scope, also signed directly with the stolen session key; re-issuing the Mandate without the Root is refused; revoke makes everything REVOKED",
-    timeoutMs: 600_000, run: nodeTest(["examples/demo-shop/demo1.test.mjs"], "^DEMO-1", { timeoutMs: 580_000, metric: (out) => [...out.matchAll(/^# DEMO-1(?: planted)?: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
+    timeoutMs: 600_000, run: nodeTest(["examples/demo-shop/demo1.test.mjs"], "^DEMO-1", { timeoutMs: 580_000, metric: (out) => [...out.matchAll(/^# DEMO-1(?: planted| model)?: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
   { id: "CEN-1", m: "M10", kind: "±", level: 1, title: "every census value has a source and the date it was checked; no forbidden evaluative words; the page builds" },
   { id: "CEN-2", m: "M10", kind: "±", level: 1, title: "the census has a method section and a corrections contact; the data and the table's rows match" },
   { id: "MSG-1", m: "M10", kind: "±", level: 0, title: "the README's opening, the top page, show-hn.md and faq.md carry the three questions and 'what Ludion does not prevent'; no overclaims (unhackable, bulletproof, prevents breaches, 100% secure, 絶対に, 完全に防ぐ …)",
