@@ -1,0 +1,62 @@
+---
+title: エージェントにできることを限る
+description: AI エージェントに委任（Mandate）をかける。サイトごとに何をしてよいかを、あなたの Root 鍵で署名する。Gate のあるサイトは、その外を断る。エージェントが乗っ取られても、Session 鍵が盗まれても。
+---
+
+エージェントは、リクエストに Session 鍵で署名します。その上限は、あなたの Root 鍵で署名します。動いているエージェントは Root 鍵を持ちません。だから、エージェントを乗っ取るプロンプト注入も、Session 鍵を盗んだ者も、Gate のあるサイトでは、その外に出られません。
+
+## エージェントに委任をかける
+
+委任は名簿（Registry）が出すので、先にエージェントを登録します（`npx ludion-ai register`）。そのあと、Root 鍵の合言葉をあなた自身のシェルに置いて：
+
+```sh
+npx ludion-ai mandate create --site https://shop.example --scope read,checkout --checkout-max 5000 --currency JPY --per-day 3
+```
+
+- `--site`：サイトの https のオリジン。委任はそのサイトでだけ効きます。
+- `--scope`：そこで何をしてよいか。`read`、`account`、`post`、`reserve`、`checkout`、`delete`。
+- `--checkout-max` と `--currency` は決済ごとの上限（通貨の最小の単位で）、`--per-day` は決済の回数の上限です。`checkout` を含む委任は、いつも決済ごとの上限を持ちます。
+- `--expires` は有効な長さ。既定は短く、長くするより、出し直してください。
+
+コマンドは、委任の id と、付け方の行を出します。
+
+## 付ける
+
+```js title="agent.mjs"
+import fs from "node:fs";
+import { createDiverSigner, ludionFetch, mandateFor } from "ludion-ai/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent, staple: () => me.staple?.staple, mandate: mandateFor(me) });
+
+const res = await ludionFetch("https://shop.example/cart", { method: "POST", body: JSON.stringify({ product: "42" }), scope: "checkout" }, { signer });
+```
+
+どのリクエストも、行き先のサイトの委任を、署名の中に入れて運びます。エージェントには、Root 鍵も合言葉も要りません。
+
+## サイトがすること
+
+サイトの Gate は、経路ごとに求める範囲（`ludion.config.json` の `"require": { "scope": "checkout" }`）でリクエストを見ます。
+
+- 委任の範囲の外：[`403 mandate_scope`](/ja/e/mandate_scope)
+- そこで効く委任が無い（別のサイト向け、期限切れ、取り消し済み）：[`403 mandate_required`](/ja/e/mandate_required)
+- `--per-day` は、サイトが共有の記録を持つときに数えます。持たないサイトは、`--per-day` 付きの委任での決済を断ります。
+
+## エージェントの側のシートベルト
+
+`mandateFor(me, { strict: true })` にすると、あなたのエージェント自身のコードも線を守ります。Gate の無いサイトでも同じです。委任のあるサイトへのリクエストは、使う範囲を名乗り（`scope: "checkout"`。GET は `read`）、範囲の外なら、署名も送信もする前に `MandateScopeError` を投げます。縛れるのはあなたのエージェントのコードです。盗んだ Session 鍵で手で署名する者を止めるのは、サイトの Gate です。
+
+## 取り消す
+
+```sh
+npx ludion-ai mandate list
+npx ludion-ai mandate revoke mdt-…
+```
+
+失効を購読しているサイトは数秒で断ります。それ以外のサイトも、エージェントの今の状態証明が切れれば断ります（[仕様](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)）。`npx ludion-ai revoke` は、エージェントそのものを、どこでも止めます。
+
+## これが防がないもの
+
+- 今の委任は、運営者のあなたが自分のエージェントにかける上限です。エージェントが代理する人の同意ではありません。その同意の画面は、まだ開いていません。
+- 委任の外を止めるのは、Gate のあるサイトだけです。Gate の無いサイトでは、エージェントの側のシートベルトを入れていなければ、そこでは止まりません。
+- Root 鍵まで盗まれると、委任を作り直されます。Root 鍵は、エージェントが動く機械に置かないでください。

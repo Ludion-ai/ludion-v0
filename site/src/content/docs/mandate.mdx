@@ -1,0 +1,62 @@
+---
+title: Limit what your agent may do
+description: Put a Mandate on your AI agent — what it may do on each site — signed with your Root key. Sites with a Gate refuse anything outside it, even when the agent is hijacked or its session key is stolen.
+---
+
+Your agent signs its requests with a session key. Its limits are signed with your Root key, which the running agent never holds. So a prompt injection that takes over the agent, or someone who steals its session key, cannot step outside them at a site with a Gate.
+
+## Put a Mandate on your agent
+
+A Mandate is issued by the Registry, so your agent is registered first (`npx ludion-ai register`). Then, with your Root key's passphrase in your own shell:
+
+```sh
+npx ludion-ai mandate create --site https://shop.example --scope read,checkout --checkout-max 5000 --currency JPY --per-day 3
+```
+
+- `--site`: the site's https origin. A Mandate holds for that site only.
+- `--scope`: what the agent may do there: `read`, `account`, `post`, `reserve`, `checkout`, `delete`.
+- `--checkout-max` and `--currency` limit each checkout (in the currency's smallest unit), and `--per-day` caps how many checkouts it may make. A Mandate with `checkout` always carries a per-checkout limit.
+- `--expires` sets how long it lasts. It is short by default: renew it rather than make it long.
+
+The command prints the Mandate's id and the line that attaches it.
+
+## Attach it
+
+```js title="agent.mjs"
+import fs from "node:fs";
+import { createDiverSigner, ludionFetch, mandateFor } from "ludion-ai/diver";
+
+const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
+const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent, staple: () => me.staple?.staple, mandate: mandateFor(me) });
+
+const res = await ludionFetch("https://shop.example/cart", { method: "POST", body: JSON.stringify({ product: "42" }), scope: "checkout" }, { signer });
+```
+
+Each request carries the Mandate for the site it goes to, inside the signature. The agent needs neither the Root key nor your passphrase.
+
+## What a site does with it
+
+A site's Gate holds each route to the scope it names, with `"require": { "scope": "checkout" }` in its `ludion.config.json`:
+
+- a request outside the agent's Mandate gets [`403 mandate_scope`](/e/mandate_scope);
+- a request with no Mandate that holds there (another site's, expired, withdrawn) gets [`403 mandate_required`](/e/mandate_required);
+- `--per-day` is counted where the site keeps a shared record of it; a site without one refuses a checkout under a Mandate with `--per-day`.
+
+## A seatbelt in your own agent
+
+`mandateFor(me, { strict: true })` makes your agent's own code hold the line too, also at sites with no Gate. A request to a site under a Mandate names the scope it uses (`scope: "checkout"`; a GET is `read`), and one outside the Mandate throws `MandateScopeError` before anything is signed or sent. It binds your agent's code; someone who signs by hand with a stolen session key is held by the site's Gate.
+
+## Withdraw it
+
+```sh
+npx ludion-ai mandate list
+npx ludion-ai mandate revoke mdt-…
+```
+
+Sites that subscribe to revocations refuse it within seconds; every other site once the agent's current status runs out ([spec](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)). `npx ludion-ai revoke` stops the agent itself, everywhere.
+
+## What this does not prevent
+
+- A Mandate today is the limit you, the operator, put on your agent. It is not the consent of the person the agent acts for; that consent page is not open yet.
+- Only a site with a Gate holds an agent to its Mandate. On a site without one, nothing stops the agent there, unless your own agent's seatbelt is on.
+- Whoever steals the Root key as well can issue new Mandates. Keep the Root key off the machine the agent runs on.

@@ -266,6 +266,25 @@ test("MND-1: the CLI's own flow — init, register, mandate create — then an a
   console.log(`MND-1: CLI → ${jti}; an agent with no passphrase VERIFIED with it`);
 });
 
+test("MND-1: the /mandate page says what the CLI does — its mandate create lines parse with the CLI's own flags, and it attaches with the line the CLI prints (en, ja)", () => {
+  const printed = /Attach it: (createDiverSigner\(\{.*?\}\))/.exec(fs.readFileSync(CLI, "utf8"))?.[1];
+  assert.ok(printed, "the CLI prints an attach line");
+  const KNOWN = ["site", "scope", "per-day", "checkout-max", "currency", "expires"];
+  for (const f of ["site/src/content/docs/mandate.mdx", "site/src/content/docs/ja/mandate.mdx"]) {
+    const page = fs.readFileSync(path.join(ROOT, f), "utf8");
+    const creates = [...page.matchAll(/^npx ludion-ai mandate create (.+)$/gm)].map((m) => m[1].trim().split(/\s+/));
+    assert.ok(creates.length >= 1, `${f} shows mandate create`);
+    for (const a of creates) {
+      const flags = a.filter((x) => x.startsWith("--")).map((x) => x.slice(2));
+      assert.deepEqual(flags.filter((x) => !KNOWN.includes(x)), [], `${f}: flags the CLI does not know`);
+      const flag = (n) => { const i = a.indexOf(`--${n}`); return i >= 0 ? a[i + 1] : undefined; };
+      assert.doesNotThrow(() => mandateTerms({ site: flag("site"), scope: flag("scope"), perDay: flag("per-day"), checkoutMax: flag("checkout-max"), currency: flag("currency"), expires: flag("expires") }), `${f}: ${a.join(" ")}`);
+    }
+    assert.ok(page.includes(printed), `${f} attaches with the CLI's own line`);
+    for (const sub of ["list", "revoke"]) assert.match(page, new RegExp(`^npx ludion-ai mandate ${sub}`, "m"), `${f} shows mandate ${sub}`);
+  }
+});
+
 test("MND-1: mandate create's flags — limits go with checkout; 7 days at most; an https origin", () => {
   const ok = mandateTerms({ site: ORIGIN, scope: "read,checkout", checkoutMax: "5000", currency: "jpy", perDay: "3", expires: "24h", now: 0 });
   assert.deepEqual(ok, { aud: ORIGIN, scope: ["read", "checkout"], limits: { checkout_max: 5000, currency: "JPY", per_day: 3 }, exp: 86_400 });

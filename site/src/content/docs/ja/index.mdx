@@ -25,7 +25,7 @@ npx ludion-ai init --name "My Agent" --contact mailto:you@example.com
 ## 問いと答え
 
 - **この AI は誰か。** このコマンドで、エージェントが自分の鍵と名前を持ちます：`https://dvr-….agents.ludion.ai`。すべてのリクエストにその名前で署名し（[Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)）、同じ名前が MCP の `client_id` になります。名乗りは自分の鍵で示し、共有の秘密は持ちません。
-- **何をしていいのか。** 運営者がエージェントに委任（Mandate）をかけます。サイトごとに使ってよい範囲（`read`、`checkout` など）を、運営者の Root 鍵で署名したものです。動いているエージェントは Root 鍵を持ちません。範囲の外は、サイトの Gate が [`403 mandate_scope`](/ja/e/mandate_scope) で拒否します。プロンプト注入でエージェントが乗っ取られても、盗んだ Session 鍵で誰かが署名しても、同じです。
+- **何をしていいのか。** 運営者がエージェントに委任（Mandate）をかけます。サイトごとに使ってよい範囲（`read`、`checkout` など）を、運営者の Root 鍵で署名したものです。動いているエージェントは Root 鍵を持ちません（[やり方](/ja/mandate)）。範囲の外は、サイトの Gate が [`403 mandate_scope`](/ja/e/mandate_scope) で拒否します。プロンプト注入でエージェントが乗っ取られても、盗んだ Session 鍵で誰かが署名しても、同じです。
 - **どう止めるのか。** `npx ludion-ai revoke`。失効を購読しているサイトでは数秒で、それ以外のサイトでも1時間以内に止まります（[仕様](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)）。
 
 **サイトには**、無料でオープンソースの関所（Gate）。[コード3行以内](/ja/gate)（[測った値](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)）で入り、どのエージェントが来て何に触れたかを見せ、通す・壁・止めるを、自分の設定の1行で決められます（[確かめている](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md)）。決めるのはサイトだけで、Ludion には誰かを止めるスイッチがありません。
