@@ -334,3 +334,11 @@ spec の差し替えで、ラチェット済みの WEB-3 と WEB-2 が FAIL に�
 | §11.2 名札の例の `"contacts": [...]` | Card Host の名札では空 | 例はそのまま（自前のドメインの名札の例として）でよい。Card Host の名札には出ない、と1行足す |
 
 将来（今は作らない。人間、2026-10-05）：運営者が自分で公開を選んだ連絡先だけを、Card Host の名札に載せる道。名簿は今と同じく、選ばれなかった連絡先を持たない。
+
+## 追記（2026-10-05 夜、レーン2：文面）
+
+| 条項 | 現状 | 提案 |
+|---|---|---|
+| §20.1 タイトルの推奨 | 「Show HN: Ludion – Give your AI agent its own key, revocable everywhere in one line」 | レーン2 spec §0 の「Show HN: Ludion – Identity, limits and a kill switch for AI agents」に。show-hn.md の下書きはこちらで書いた |
+| §3 一行・三行・三十秒、§9 磨く一点 | 中心は「AI が自分の鍵と名前を持つ」 | レーン2 spec §0 のとおり、ローンチの中心を3つの問い（誰か・何をしていいか・どう止めるか）に。鍵と名前は「誰か」の答えとして残る。README の冒頭とトップページはこの形にした |
+| §9.5 凍結：Mandate の同意画面 | 凍結 | 変えない。運営者が自分にかける Mandate（`prn: "self"`）は凍結の外で出した（レーン2 spec §3.2） |

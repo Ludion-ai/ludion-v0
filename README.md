@@ -2,9 +2,24 @@
 
 [日本語](README.ja.md)
 
-**Give your AI agent its own key and name. One line to create it, the same name on MCP and on the web, one line to erase it everywhere.**
+**Identity, limits and a kill switch for AI agents.**
 
-Agents now read, compare, log in and buy on people's behalf, and the sites they reach cannot tell whose agent is whose. Ludion gives an agent a name and keys, and gives sites a free, open-source checkpoint (the Gate) that reads that name. It is built on the standards: [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) ([RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) signatures) for the web, and the OAuth Client ID Metadata Document (CIMD) for MCP.
+Three questions a site should be able to answer about every AI agent that reaches it:
+
+| Question | How Ludion answers it |
+|---|---|
+| **Who is this AI?** | Its own key and a public name, made with one line (`npx ludion-ai init`). It signs every request ([Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/), [RFC 9421](https://www.rfc-editor.org/rfc/rfc9421)), and the same name is its MCP `client_id` (OAuth CIMD). |
+| **What may it do?** | A Mandate: the scopes its operator allows on each site (`read`, `checkout`, …), signed with the operator's Root key, which the running agent never holds. The site's Gate refuses anything outside it (`403 mandate_scope`) — also when a prompt injection has taken over the agent, or someone signs with its stolen session key. |
+| **How is it stopped?** | `npx ludion-ai revoke`. Sites that subscribe to revocations stop it within seconds; every other site within the hour its signed status lasts. |
+
+The Gate is the free, open-source checkpoint a site runs on its own server; the decision is always the site's. The whole story runs in [the demo shop](examples/demo-shop): an agent shops inside its Mandate, a planted review hijacks it, and the shop's Gate holds the line.
+
+## What Ludion does not prevent
+
+- A Mandate today is the limit an agent's operator puts on it, not the consent of the person the agent acts for. That consent page is not open yet.
+- Only a site with a Gate holds an agent to its Mandate. On a site without one, nothing stops the agent there.
+- Whoever steals the Root key as well can issue new Mandates. Keep the Root key off the machine the agent runs on, in your OS keychain or a KMS; today the CLI seals it with your passphrase.
+- Ludion does not detect prompt injection, and does not judge whether an allowed action is wise. A request inside the Mandate passes, even when the agent was tricked into it.
 
 ## For an agent: a name and keys, in one line
 

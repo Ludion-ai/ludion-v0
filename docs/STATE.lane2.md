@@ -60,6 +60,10 @@
 6. **罠の文は、デモの店の商品レビューに置いた**（攻撃者が書いた体）。不変条件16（ページの中で AI に問いかけない）は Ludion 自身のページの話と読んだ。デモの店のページにだけ置き、README と台本に「仕込んだ攻撃」と書いた。
 7. **`agent.mjs --model`**（録画用、任意）の既定のモデルは `claude-sonnet-5-5`。鍵が無いので一度も動かしていない。CI は `--scripted` だけ。
 8. 夜間モードの指示が届く前に、#128 に PR のコメントを1つ書いた（SEED-2 の対照を変えた説明）。それ以降、外への書き込みはしていない。
+9. **HN のタイトルは、レーン2 spec の「Show HN: Ludion – Identity, limits and a kill switch for AI agents」にした**。親 spec §20.1 の推奨（「Give your AI agent its own key, revocable everywhere in one line」）と違う。レーン2 spec は、ローンチの中心を3つの問いに変えるための、後から出た人間の指示なので、そちらを採った。spec-v2-diff.md に書いた。
+10. **トップページの中心を、spec §9 の一点（鍵と名前）から3つの問いに変えた**（レーン2 spec §3.6）。init の1行と、通す・壁・止める、scan への導線は残した。数字は今までどおり出所のリンク付き（WEB-2 PASS）。
+11. **FAQ に足しかけた「Mandate も無料のまま」は消した**（会社の約束になるため）。もとの「Gate、検証、止めるは無料のまま」のまま。
+12. **README の冒頭**は、最初の節（「What Ludion does not prevent」）までを指すと読んだ。その下の節（npx の書き換えなど）はレーン3のもの。
 
 ## 人間待ち
 
@@ -76,7 +80,9 @@
 ## 進み具合（レーン2の系列）
 
 - 手元（`lane2/mnd`、main を取り込んだ上）：MND-1〜4 PASS。DEMO-1、CEN-1・2、MSG-1、MND-5 は PENDING。
-- 手元（`lane2/demo`）：DEMO-1 PASS（10秒。流れ全体と、仕込んだ3つ：アカウントの経路に scope が無い店、失効を購読しない店、Session 鍵の文も受け付ける名簿、を3つとも捕まえる）。
+- #128 で MND-1〜4 が main に入った。
+- 手元（`lane2/msg`）：MSG-1 PASS（6つの文面、仕込んだ10を捕まえる）。トップページを変えたので WEB-2・3・5・8・9 も回して PASS。
+- 手元（`lane2/demo`、#129）：DEMO-1 PASS（10秒。流れ全体と、仕込んだ3つ：アカウントの経路に scope が無い店、失効を購読しない店、Session 鍵の文も受け付ける名簿、を3つとも捕まえる）。
   - 同じ変更で回して PASS：LOOP-1・4・5、CRY-1、STD-1・2、GATE-2・5・7・10〜14、PRIV-1〜5、PRS-1〜5、REG-1〜7、LEAK-1、RPT-1・2、DIV-3〜6、PUB-1〜4、SEC-1、NEUT-1、PUR-1〜4、BLK-1、ONE-3、MCP-4、PILOT-1、WEB-2、WEB-3。
   - PRIV-4 の判定の対照（手で組んだ正しい1時間の行）に `mandate` を足した。判定はそのまま（`ROW_KEYS` と比べる）。spec §3.3 の「1時間ごとの集計に委任の判定を入れる」のため。
 

@@ -518,5 +518,6 @@ export const ORACLES = [
     timeoutMs: 600_000, run: nodeTest(["examples/demo-shop/demo1.test.mjs"], "^DEMO-1", { timeoutMs: 580_000, metric: (out) => [...out.matchAll(/^# DEMO-1(?: planted)?: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
   { id: "CEN-1", m: "M10", kind: "±", level: 1, title: "every census value has a source and the date it was checked; no forbidden evaluative words; the page builds" },
   { id: "CEN-2", m: "M10", kind: "±", level: 1, title: "the census has a method section and a corrections contact; the data and the table's rows match" },
-  { id: "MSG-1", m: "M10", kind: "±", level: 0, title: "the README's opening, the top page, show-hn.md and faq.md carry the three questions and 'what Ludion does not prevent'; no overclaims (unhackable, bulletproof, prevents breaches, 100% secure, 絶対に, 完全に防ぐ …)" },
+  { id: "MSG-1", m: "M10", kind: "±", level: 0, title: "the README's opening, the top page, show-hn.md and faq.md carry the three questions and 'what Ludion does not prevent'; no overclaims (unhackable, bulletproof, prevents breaches, 100% secure, 絶対に, 完全に防ぐ …)",
+    run: nodeTest(["accept/msg/msg1.test.mjs"], "^MSG-1", { metric: (out) => [...out.matchAll(/^# MSG-1(?: planted)?: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
 ];

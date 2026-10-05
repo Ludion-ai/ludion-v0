@@ -1,13 +1,13 @@
 ---
 title: Ludion
-description: AI が自分の鍵と名前を持つ。コマンドで作れて、MCP でも Web でも同じ名前で通じ、世界中から消せる。サイトには、その名前を読む無料の関所を。
+description: AI エージェントの名前、許す範囲、止めるスイッチ。この AI は誰か、何をしていいのか、どう止めるのか。自分のサイトで、自分の無料の関所が答えます。
 template: splash
 head:
   - tag: title
-    content: Ludion — AI エージェントに、自分の鍵と名前を
+    content: Ludion — AI エージェントの名前と、許す範囲と、止めるスイッチ
 hero:
-  title: AI エージェントに、自分の鍵と名前を。
-  tagline: コマンドで作れて、MCP でも Web でも同じ名前で通じ、いつでも世界中から消せる。
+  title: AI エージェントの名前と、許す範囲と、止めるスイッチ。
+  tagline: この AI は誰か。何をしていいのか。どう止めるのか。どの問いにも、あなたのサイトが自分の無料の関所で答えます。
   actions:
     - text: エージェントに名前を付ける
       link: /ja/quickstart
@@ -19,12 +19,25 @@ hero:
 import SignupForm from "../../../components/SignupForm.astro";
 
 ```sh
-npx ludion init --name "My Agent" --contact mailto:you@example.com
+npx ludion-ai init --name "My Agent" --contact mailto:you@example.com
 ```
 
-- **エージェントには**、このコマンドで名前が付きます：`https://dvr-….agents.ludion.ai`。Web ではそれが `Signature-Agent`（[Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)）に、MCP のサーバーには `/client` が `client_id` になり、自分の鍵で名乗ります。共有の秘密は持ちません。`npx ludion revoke` で、1時間以内に世界中で通らなくなります（[仕様](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)）。
-- **サイトには**、その名前を読む無料でオープンソースの関所（Gate）。[コード3行以内](/ja/gate)（[測った値](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)）で入り、どのエージェントが来て何に触れたかを見せ、通す・壁・止めるを、自分の設定の1行で決められます（[確かめている](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md)）。決めるのはサイトだけで、Ludion には誰かを止めるスイッチがありません。
-- **ログから始める**：[scan のページ](/ja/scan)にアクセスログを落とすと、署名のない自動化が決済やログインに何回触れたかが分かります。ログは外に出ません。
+## 問いと答え
+
+- **この AI は誰か。** このコマンドで、エージェントが自分の鍵と名前を持ちます：`https://dvr-….agents.ludion.ai`。すべてのリクエストにその名前で署名し（[Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/)）、同じ名前が MCP の `client_id` になります。名乗りは自分の鍵で示し、共有の秘密は持ちません。
+- **何をしていいのか。** 運営者がエージェントに委任（Mandate）をかけます。サイトごとに使ってよい範囲（`read`、`checkout` など）を、運営者の Root 鍵で署名したものです。動いているエージェントは Root 鍵を持ちません。範囲の外は、サイトの Gate が [`403 mandate_scope`](/ja/e/mandate_scope) で拒否します。プロンプト注入でエージェントが乗っ取られても、盗んだ Session 鍵で誰かが署名しても、同じです。
+- **どう止めるのか。** `npx ludion-ai revoke`。失効を購読しているサイトでは数秒で、それ以外のサイトでも1時間以内に止まります（[仕様](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#1111-失効)）。
+
+**サイトには**、無料でオープンソースの関所（Gate）。[コード3行以内](/ja/gate)（[測った値](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m1-gate)）で入り、どのエージェントが来て何に触れたかを見せ、通す・壁・止めるを、自分の設定の1行で決められます（[確かめている](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md)）。決めるのはサイトだけで、Ludion には誰かを止めるスイッチがありません。
+
+**ログから始める**：[scan のページ](/ja/scan)にアクセスログを落とすと、署名のない自動化が決済やログインに何回触れたかが分かります。ログは外に出ません。
+
+## Ludion が防がないもの
+
+- 今の委任は、エージェントの運営者がかける上限です。エージェントが代理する人の同意ではありません。その同意の画面は、まだ開いていません。
+- 委任の範囲の外を止めるのは、Gate のあるサイトだけです。Gate の無いサイトでは、そこでエージェントは止まりません。
+- Root 鍵まで盗まれると、委任を作り直されます。Root 鍵はエージェントが動く機械に置かず、OS の鍵の保管庫か KMS に置いてください。今のコマンドは、Root 鍵をあなたの合言葉で封をして保存します。
+- Ludion はプロンプト注入を見つけません。許された行為が賢いかどうかも判断しません。委任の範囲の中の要求は、エージェントがだまされていても通ります。
 
 ## 先行登録
 
