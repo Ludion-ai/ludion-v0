@@ -64,7 +64,7 @@ const col = await collector();
 after(() => col.close());
 
 test("PRIV-4: the judge catches a delivery that is not an hourly count (planted)", () => {
-  const good = JSON.stringify({ v: 0, kind: BATCH_KIND, site: SITE, hour: 1790000000 - (1790000000 % HOUR_S), rows: [{ route: "/products/:id", access: "read", class: "SUSPECTED", decision: "allow", operator: "none", count: 3 }] });
+  const good = JSON.stringify({ v: 0, kind: BATCH_KIND, site: SITE, hour: 1790000000 - (1790000000 % HOUR_S), rows: [{ route: "/products/:id", access: "read", class: "SUSPECTED", decision: "allow", operator: "none", mandate: "none", count: 3 }] });
   assert.deepEqual(deliveryProblems([good]), [], "control");
   const receipt = { rid: "rcp-x", site: SITE, ts: 1790000123, method: "GET", route: "/p/:id", class: "SUSPECTED", decision: "allow", error: null, pressure: 0, diver: null };
   const planted = [

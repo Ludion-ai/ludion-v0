@@ -269,7 +269,7 @@ async function mandate() {
   const now = Math.floor(Date.now() / 1000);
   if (sub === "list") {
     const all = store.mandates ?? [];
-    if (!all.length) return out("No Mandates. Create one: npx ludion mandate create --site https://shop.example --scope read");
+    if (!all.length) return out("No Mandates. Create one: npx ludion-ai mandate create --site https://shop.example --scope read");
     for (const m of all) {
       const state = m.revoked ? "revoked" : m.exp <= now ? "expired" : `until ${new Date(m.exp * 1000).toISOString()}`;
       out(`${m.jti}  ${describeMandate(m)}  (${state})`);
