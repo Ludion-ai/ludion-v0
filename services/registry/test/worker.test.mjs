@@ -72,3 +72,15 @@ test("registry worker: a Diver's public record has its public members only; unkn
     assert.equal((await w.durable.fetch(new Request(`https://registry.internal${CARD_PREFIX}${id}`))).status, 404, id);
   }
 });
+
+test("registry worker: a start that failed once (a storage hiccup) is tried again on the next request, not kept failed", async () => {
+  const key = await generateRegistryKey();
+  const inner = memoryStorage();
+  let failNext = 1;
+  const storage = { ...inner, get: async (k) => { if (failNext > 0) { failNext--; throw new Error("storage hiccup"); } return inner.get(k); } };
+  const state = new RegistryState({ storage }, { REGISTRY_SIGNING_KEY: JSON.stringify(key.privateJwk) });
+  await assert.rejects(state.fetch(new Request("https://registry.ludion.ai/.well-known/ludion-keys")), /storage hiccup/);
+  const r = await state.fetch(new Request("https://registry.ludion.ai/.well-known/ludion-keys"));
+  assert.equal(r.status, 200, "the next request starts the Registry again");
+  assert.equal((await r.json()).keys?.length, 1);
+});
