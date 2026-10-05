@@ -1,6 +1,6 @@
 # STATE（レーン 2）
 
-最終更新：2026-10-05 夜（Claude Code、レーン 2。作業ツリーは `C:\Users\haya0\ludion-lane2`、ブランチは `lane2/` で始める）
+最終更新：2026-10-05 深夜（Claude Code、レーン 2。作業ツリーは `C:\Users\haya0\ludion-lane2`、ブランチは `lane2/` で始める）
 
 ## 担当（2026-10-05 から）
 
@@ -14,6 +14,9 @@
 
 - 境界（spec §2）：オラクルの系列は MND・DEMO・CEN・MSG だけ。`ratchet.json` は書かない（ラチェットはレーン1）。レーン1の持つファイル（DEPLOY.md、PUBLISH.md、runbook、名簿の保存（LEAK-1）、CI）は触らない。gate-core・registry・diver の既存ファイルは最小の差分。毎日 main を取り込む。
 - 外に出す文章は `docs/outbox/` に下書きまで。出すのは人間。
+- **レーン3**（2026-10-05 夜、`docs/lanes/lane3-spec.md`、作業ツリー `C:\Users\haya0\ludion-lane3`）：公開、運用、`ludion-ai` への改名。npm の `ludion` は似た名前の検査で断られ、`ludion-ai` になった。コマンド名（bin）は `ludion` のまま。
+  - 人間の指示：**レーン2は自分の持つファイルの中だけ `ludion-ai` に合わせる**（`npx ludion-ai …`、`import … from "ludion-ai/…"`）。他のファイルはレーン3が変える。
+  - 合わせたもの：`/e/mandate_required`・`/e/mandate_scope`（英日）、CLI の `mandate list` の案内、ADR。これから書く demo-shop、README の冒頭、トップページ、show-hn、faq、demo-script、census も `ludion-ai` で書く。
 - 毎日の終わりに1行で報告：レーン2の系列の PASS の数と残り。
 - 前の担当（tracecheck.dev の計測、ローンチの文書）は区切りまで終えて main に入っている（#81〜#84、#88、#89）。残りは人間待ち（下）。
 
@@ -57,15 +60,25 @@
 - [ ] （任意）毎朝のレポートの Discord の Webhook（`REPORT_WEBHOOK_URL`）。
 - [ ] `SECURITY.md` を読む（`docs/THREATS.md` が無い、`security@ludion.ai` の受信、24時間・72時間・報奨金の約束）。
 
+## 進み具合（レーン2の系列）
+
+- 手元（`lane2/mnd`、main を取り込んだ上）：MND-1〜4 PASS。DEMO-1、CEN-1・2、MSG-1、MND-5 は PENDING。
+  - 同じ変更で回して PASS：LOOP-1・4・5、CRY-1、STD-1・2、GATE-2・5・7・10〜14、PRIV-1〜5、PRS-1〜5、REG-1〜7、LEAK-1、RPT-1・2、DIV-3〜6、PUB-1〜4、SEC-1、NEUT-1、PUR-1〜4、BLK-1、ONE-3、MCP-4、PILOT-1、WEB-2、WEB-3。
+  - PRIV-4 の判定の対照（手で組んだ正しい1時間の行）に `mandate` を足した。判定はそのまま（`ROW_KEYS` と比べる）。spec §3.3 の「1時間ごとの集計に委任の判定を入れる」のため。
+
 ## 次の一手
 
-1. PR（`lane2/mandate`）：spec を置く、この STATE、オラクル（MND・DEMO・CEN・MSG）を PENDING で目録と registry に足す、`spec-v2-diff.md` に `prn: "self"` と発行の道。
-2. Mandate（MND-1〜4）：名簿の Root の発行と取り消し、gate-core の `prn: "self"`、受領証と1時間の集計に委任の判定、diver の CLI（`mandate create/list/revoke`）と SDK のサイトごとの Mandate、help のページ。
+1. ✅ #126：spec、STATE、オラクルを PENDING で。
+2. PR（`lane2/mnd`）：Mandate（MND-1〜4）。名簿の Root の発行と取り消し、gate-core の `prn: "self"`、受領証・来訪の記録・1時間の集計に委任の判定、diver の CLI（`mandate create/list/revoke`）と SDK の `mandateFor`、help のページ、ADR（docs/adr/2026-10-05-operator-mandate-signed-by-root.md）。
 3. デモ（DEMO-1）：`examples/demo-shop`（レーン1の `examples/demo-site` と PRS-5 には触らない）、決まった動きの乗っ取りのエージェント、台本。
 4. census（CEN-1・2）：`site/src/data/census.json`、`/census` と `/ja/census`、各社への事前連絡の下書き。
 5. 文面（MSG-1）：README の冒頭（英日）、トップページ、`show-hn.md`、`faq.md`、`demo-script.md`。
 
-## 既知の問題（前の担当から）
+## 既知の問題
+
+- `npm test`（全部を並べて回す）で、REG-1 の「名簿が落ちても遅れない」（p99 +8 ms）が一度落ちた。単独では3回とも通る。CI は REG-1 を単独で回す（`npm test` は CI で回らない）。レーン1の系列なので、触らずに記録だけ。
+
+### 前の担当から
 
 - Free の CPU（10 ms）：Gate は 1 リクエスト約 0.1 ms。毎朝のレポートは、自動化が 1 日 1 万件で約 10 ms（Node で測った値）。超えた日は、データを引いて手元の `ludion report` で作る。
 - `www.tracecheck.dev` は DNS only で Vercel を向き、証明書が切れている（2026-10-03 に外から見た）。Gate は www には立たない。
