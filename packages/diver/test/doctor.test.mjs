@@ -4,6 +4,7 @@
 // application/octet-stream), holding the current session key, and the card and client documents each
 // naming their own URL. The origin is https://agent.test; a preload sends this process's fetch for
 // that origin to a local static host, and nothing else.
+// DIV-7: the clock is checked against that origin's Date header (Gates allow ±30 s, spec §10.4).
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -19,6 +20,7 @@ const HOST = "agent.test";
 const PASSPHRASE = "doctor test passphrase";
 let tmp, agent, server, port, shim;
 let serve = () => null; // per test: (pathname) => { status, type, body, location } | null (as published)
+let dateOf = () => undefined; // per test: the host's Date header (a string), none (null), or the host's own (undefined)
 
 const run = (args) => new Promise((resolve) => {
   const p = spawn(process.execPath, ["--import", shim, CLI, ...args], {
@@ -55,7 +57,9 @@ before(async () => {
   server = http.createServer((req, res) => {
     const p = new URL(req.url, "http://x").pathname;
     const x = serve(p) ?? (published[p] ? { status: 200, type: published[p].type, body: fs.readFileSync(path.join(agent, published[p].file)) } : { status: 404, type: "text/plain", body: "not found" });
-    res.writeHead(x.status, { "content-type": x.type, ...(x.location ? { location: x.location } : {}) }).end(x.body);
+    const date = dateOf();
+    if (date === null) res.sendDate = false;
+    res.writeHead(x.status, { "content-type": x.type, ...(x.location ? { location: x.location } : {}), ...(typeof date === "string" ? { date } : {}) }).end(x.body);
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   port = server.address().port;
@@ -105,4 +109,42 @@ test("doctor: a wrong type, a missing file, a redirect, a stale directory and a 
   }
   serve = () => null;
   assert.deepEqual(missed, []);
+});
+
+const offBy = (s) => () => new Date(Date.now() + s * 1000).toUTCString();
+
+test("DIV-7: a clock in step with the agent's origin, or 20 s off, passes; no Date header to compare with is said, not failed", async () => {
+  serve = () => null;
+  const missed = [];
+  for (const [name, date, why] of [
+    ["in step", offBy(0), /✔ clock: within \d+ s of agent\.test/],
+    ["20 s ahead", offBy(-20), /✔ clock: within \d+ s of agent\.test/],
+    ["20 s behind", offBy(20), /✔ clock: within \d+ s of agent\.test/],
+    ["no Date header", () => null, /\? clock: local time .* agent\.test sent no Date header/],
+  ]) {
+    dateOf = date;
+    const r = await run(["doctor"]);
+    if (r.code !== 0 || !why.test(r.out) || !/All good/.test(r.out)) missed.push(`${name}: exit ${r.code}\n${r.out}`);
+  }
+  dateOf = () => undefined;
+  assert.deepEqual(missed, []);
+  console.log("DIV-7: a clock in step, 20 s ahead or behind passes; no Date header is said, not failed");
+});
+
+test("DIV-7: a clock more than 30 s off the agent's origin — ahead or behind — is a problem that says by how much and how to sync", async () => {
+  serve = () => null;
+  const missed = [];
+  for (const [name, off, why] of [
+    ["5 minutes ahead", -300, /✖ clock: this machine is 30\d s ahead of agent\.test; Gates refuse signatures more than 30 s off/],
+    ["5 minutes behind", 300, /✖ clock: this machine is 30\d s behind agent\.test/],
+    ["45 s behind", 45, /✖ clock: this machine is 4\d s behind agent\.test/],
+    ["a day ahead", -86_400, /✖ clock: this machine is 864\d\d s ahead of agent\.test/],
+  ]) {
+    dateOf = offBy(off);
+    const r = await run(["doctor"]);
+    if (r.code === 0 || !why.test(r.out) || /All good/.test(r.out) || !/w32tm \/resync/.test(r.out)) missed.push(`${name}: exit ${r.code}\n${r.out}`);
+  }
+  dateOf = () => undefined;
+  assert.deepEqual(missed, []);
+  console.log("DIV-7: 4 skewed clocks (5 min and 45 s behind, 5 min and a day ahead) each a problem with the skew and the fix");
 });
