@@ -33,7 +33,7 @@ def _write_private(path: pathlib.Path, text: str):
     os.replace(tmp, path)
 
 
-def init(directory=".", *, name="Unnamed agent", contact="mailto:change-me@example.com", domain=None,
+def init(directory=".", *, name="Unnamed agent", contact=None, domain=None,
          passphrase=None, dev=False, force=False) -> dict:
     """Create a Diver: a Root (sealed unless dev) and a Session key, the key directory and the Card.
     Writes ludion.json, .well-known/http-message-signatures-directory and card into `directory`.
@@ -51,9 +51,11 @@ def init(directory=".", *, name="Unnamed agent", contact="mailto:change-me@examp
     root, session = keys.generate_key(), keys.generate_key()
     did = keys.diver_id(root["x"])
     origin = f"https://{domain or did + '.agents.ludion.ai'}"
+    # No placeholder: one would be everyone's mailbox and meet the Registry's per-contact limit (REG-7).
+    contacts = [contact] if contact else []
     store = {
         "v": 0, **({"dev": True} if dev else {}), "diver_id": did, "signature_agent": origin,
-        "name": name, "contacts": [contact],
+        "name": name, "contacts": contacts,
         "root": root if dev else keys.seal_root(root, passphrase),
         "session": session, "created": datetime.datetime.now(tz=datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
     }
@@ -62,9 +64,9 @@ def init(directory=".", *, name="Unnamed agent", contact="mailto:change-me@examp
     (base / ".well-known").mkdir(exist_ok=True)
     (base / ".well-known" / "http-message-signatures-directory").write_text(
         json.dumps(keys.directory_document([keys.public_jwk(session)]), indent=2), encoding="utf-8", newline="\n")
-    card = keys.card_document(origin, name, [contact], did, keys.thumbprint(store["root"]["x"]))
+    card = keys.card_document(origin, name, contacts, did, keys.thumbprint(store["root"]["x"]))
     (base / "card").write_text(json.dumps(card, indent=2), encoding="utf-8", newline="\n")
-    client = keys.client_document(origin, name, [contact])
+    client = keys.client_document(origin, name, contacts)
     (base / "client").write_text(json.dumps(client, indent=2), encoding="utf-8", newline="\n")
     if dev:
         print(f"⚠ {DEV_BANNER}", file=sys.stderr)

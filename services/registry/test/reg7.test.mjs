@@ -14,6 +14,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import registryWorker, { RegistryState, limitsFrom } from "../worker.mjs";
@@ -156,4 +158,26 @@ test("REG-7: a Registry with no limits, or that ignores the pause, is caught", a
   const ignored = await pauseProblems({ REGISTRY_PAUSE_NEW: "0" });
   assert.ok(ignored.some((p) => /a new Diver while paused: 201/.test(p)), ignored.join("; "));
   console.log("REG-7 planted: no limits and an ignored pause caught");
+});
+
+test("REG-7: agents made by a plain `npx ludion init` (no --contact) share no contact — more of them than one contact's daily limit register, each from its own address", async () => {
+  // A placeholder contact written by init would be one mailbox for everyone who did not pass
+  // --contact: past the per-contact limit (a day), every new agent would be refused (found 2026-10-06).
+  const cli = path.resolve(HERE, "../../../packages/diver/bin/ludion.mjs");
+  const w = await worldOf(PROD);
+  const n = L.perContactPerDay + 1;
+  const got = [];
+  for (let i = 0; i < n; i++) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "reg7-init-"));
+    try {
+      const r = spawnSync(process.execPath, [cli, "init", "--dev", "--no-question"], { cwd: dir, encoding: "utf8", env: { ...process.env, CI: "1" }, timeout: 60_000 });
+      assert.equal(r.status, 0, r.stderr);
+      const store = JSON.parse(fs.readFileSync(path.join(dir, "ludion.json"), "utf8"));
+      const ip = `198.51.100.${i + 1}`;
+      const client = createRegistryClient({ url: ORIGIN, fetch: (url, init) => w.fetchVia(url, { ...init, headers: { ...init.headers, "cf-connecting-ip": ip } }) });
+      try { await client.register(store, store.root); got.push("registered"); } catch (e) { got.push(`${e.status ?? ""} ${e.message}`); }
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  }
+  assert.deepEqual(got, Array(n).fill("registered"), "plain inits from different addresses all register");
+  console.log(`REG-7: ${n} agents from a plain init (no --contact), each from its own address, all registered under the production limits`);
 });

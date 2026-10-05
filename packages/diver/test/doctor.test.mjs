@@ -148,3 +148,22 @@ test("DIV-7: a clock more than 30 s off the agent's origin — ahead or behind �
   assert.deepEqual(missed, []);
   console.log("DIV-7: 4 skewed clocks (5 min and 45 s behind, 5 min and a day ahead) each a problem with the skew and the fix");
 });
+
+test("DIV-7: when the Registry refuses a Root statement as stale, the CLI points at this machine's clock and doctor", async () => {
+  // A Registry that answers every statement as stale (as the real one does past ±5 minutes).
+  const stale = http.createServer((req, res) => { req.resume(); res.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ error: "stale_statement", detail: "statement iat is missing or not within 5 minutes of now" })); });
+  await new Promise((r) => stale.listen(0, "127.0.0.1", r));
+  // Any other refusal says nothing about the clock.
+  const other = http.createServer((req, res) => { req.resume(); res.writeHead(429, { "content-type": "application/json", "retry-after": "60" }).end(JSON.stringify({ error: "rate_limited" })); });
+  await new Promise((r) => other.listen(0, "127.0.0.1", r));
+  try {
+    const r = await run(["register", "--registry", `http://127.0.0.1:${stale.address().port}`]);
+    assert.notEqual(r.code, 0, r.out);
+    assert.match(r.out, /stale_statement/);
+    assert.match(r.out, /clock may be off: \`npx ludion doctor\`/, r.out);
+    const o = await run(["register", "--registry", `http://127.0.0.1:${other.address().port}`]);
+    assert.notEqual(o.code, 0, o.out);
+    assert.doesNotMatch(o.out, /clock/, o.out);
+  } finally { stale.close(); other.close(); }
+  console.log("DIV-7: a stale-statement refusal points at the clock and doctor; another refusal does not");
+});
