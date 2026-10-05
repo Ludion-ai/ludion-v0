@@ -23,8 +23,9 @@ export function registryLookup(namespace, { suffix = AGENTS_SUFFIX } = {}) {
     const rec = await r.json();
     return {
       directory: directoryDocument(rec.keys),
-      card: cardDocument({ origin, name: rec.name ?? "Unnamed agent", contacts: rec.contacts ?? [], ludion: { diver_id: rec.diver_id, registry: REGISTRY_ORIGIN, root_kid: rec.root_kid } }),
-      client: clientDocument({ origin, name: rec.name ?? "Unnamed agent", contacts: rec.contacts ?? [] }),
+      // No contacts: the Registry keeps none (LEAK-1). An operator who wants one on its card publishes the card on its own domain.
+      card: cardDocument({ origin, name: rec.name ?? "Unnamed agent", contacts: [], ludion: { diver_id: rec.diver_id, registry: REGISTRY_ORIGIN, root_kid: rec.root_kid } }),
+      client: clientDocument({ origin, name: rec.name ?? "Unnamed agent" }),
     };
   };
 }

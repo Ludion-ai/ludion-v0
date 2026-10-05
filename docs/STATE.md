@@ -243,6 +243,14 @@
 
 ## 直近のセッション
 
+- 2026-10-05 夜（Claude Code、1本目）：レーン2とレーン3が立った（docs/lanes/lane2-spec.md、lane3-spec.md）。
+  - レーン2：README の冒頭、トップページ、show-hn.md、faq.md、demo-script.md、census、Mandate の新しいファイル（MND・DEMO・CEN・MSG）。
+  - レーン3：packages/ludion/、.github/workflows/、PUBLISH.md、DEPLOY.md、runbook.md、wrangler の設定、ludion-ai への改名、LOOP-2 の計測（PUB・LOOP）。
+  - レーン1：LEAK-1、名簿・Gate・diver の中身、ラチェットの書き込み（レーン2とレーン3のオラクルが main で PASS したら入れる）。
+  - レーン3へ：DEPLOY.md §7 の 10（メール）の行は、LEAK-1 で「名簿は連絡先を確かめず、そもそも残さない」になった。DEPLOY.md はレーン3のものなので、こちらでは直していない。
+  - LEAK-1（±、L0、人間が範囲を決めた：名簿に一切残さない）：名簿は登録の連絡先を REG-7 の上限のハッシュにだけ使い、記録、丸ごと配布、名札、client 文書、公開の記録、Staple、応答のどこにも残さない。Card Host の名札の contacts は空。突然変異（連絡先を保存する）で落ちる。spec §14.1 との食い違いは outbox に。
+  - #125：この機械の npm が 12.2.0 になり、`npm pack --json` の形が変わって ONE-4 と ONE-8 が落ちた（CI は Node 22 の npm で無事）。両方の形を読む `packEntry` に直した。
+
 - 2026-10-05 昼（Claude Code、1本目、コードフリーズ中。例外は人間の指示の2だけ）：
   - 記録（#122）：ADR の下書き「Mandate の最初の用途は scope: delete（解約・削除の代理）」（docs/outbox/）。spec-v2-diff.md に3件（§20.4 の仮説、§15 の電話番号、§14.5 の D0）。
   - 条件付きの追加（期限 10/7）：30分で確かめた。Gate はもう Mandate を検証し、`require.scope` で経路を止める（PRS-2、PRS-4、`delete` は語彙にあった）。だから作った：`examples/demo-site`（動画のデモのサイト。POST /account/delete は scope: delete の Mandate だけ。人間がデプロイする）と、PRS-5（±、L1。デモのサイトの自分の処理と設定を、本物の Gate、名簿、エージェント、ソフトウェアのパスキーで）。同意の画面は作っていない（凍結）。show-hn.md の最初のコメントに一行を足した。本番の名簿と Card Host の準備（DEPLOY.md）は済んでいて、遅らせていない。
