@@ -63,7 +63,7 @@ const json = (status, body, type = "application/json", maxAge = 300) => new Resp
 /** The only way a served card or client document may say its client authenticates. */
 export const TOKEN_AUTH_METHOD = "private_key_jwt";
 
-const problem = (status, error) => new Response(JSON.stringify({ error }), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+const problem = (status, error, headers = {}) => new Response(JSON.stringify({ error }), { status, headers: { "content-type": "application/json", "cache-control": "no-store", ...headers } });
 
 /**
  * @param {{ lookup: (host: string) => ({ directory: object, card?: object } | undefined | Promise<any>), maxAgeS?: number }} options
@@ -79,7 +79,10 @@ export function createCardHost({ lookup, maxAgeS = 300 }) {
       if (request.method !== "GET" && request.method !== "HEAD") return problem(405, "method_not_allowed");
       if (url.pathname !== DIRECTORY_PATH && url.pathname !== CARD_PATH && url.pathname !== CLIENT_PATH) return problem(404, "not_found");
       const host = url.hostname.toLowerCase();
-      const docs = await lookup(host, url.origin);
+      let docs;
+      // A lookup that throws could not answer now (its source failed or is unreachable): 503, never
+      // "unknown agent" for an agent that may well exist. Gates retry after their negative cache.
+      try { docs = await lookup(host, url.origin); } catch { return problem(503, "registry_unavailable", { "retry-after": "30" }); }
       if (!docs) return problem(404, "unknown_agent");
       if (url.pathname === DIRECTORY_PATH) return json(200, await servableKeys(docs.directory, docs.card), DIRECTORY_MEDIA_TYPE, maxAgeS);
       if (url.pathname === CLIENT_PATH) {
