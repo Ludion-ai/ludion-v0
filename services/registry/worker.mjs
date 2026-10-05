@@ -30,6 +30,7 @@ export class RegistryState {
   /** @param {{ storage: object }} ctx  @param {Record<string, string>} env */
   constructor(ctx, env) { this.ctx = ctx; this.env = env; }
 
+  /** Start once; a start that failed (a storage hiccup) is forgotten, so the next request tries again. */
   ready() {
     return (this.started ??= (async () => {
       this.store = await createDurableStore(this.ctx.storage);
@@ -41,7 +42,7 @@ export class RegistryState {
         limits: limitsFrom(this.env.REGISTRY_LIMITS),
         pauseNew: this.env.REGISTRY_PAUSE_NEW === "1" || this.env.REGISTRY_PAUSE_NEW === true,
       });
-    })());
+    })().catch((e) => { this.started = undefined; throw e; }));
   }
 
   async fetch(request) {
