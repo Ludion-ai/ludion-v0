@@ -33,6 +33,16 @@ export const manifest = (dir) => JSON.parse(fs.readFileSync(path.join(ROOT, "pac
  * script (ludion vendors the CLI's code at prepack and removes it at postpack). Other lifecycle
  * scripts stay off (--ignore-scripts on the pack itself).
  */
+/**
+ * The one package's entry in `npm pack --json`: npm ≤ 11 prints an array, npm 12 an object keyed by
+ * package name (found 2026-10-05, when this machine's npm became 12.2.0 and ONE-4 broke).
+ */
+export function packEntry(out) {
+  const e = Array.isArray(out) ? out[0] : out && typeof out === "object" ? Object.values(out)[0] : undefined;
+  if (!e || typeof e !== "object" || typeof e.name !== "string") throw new Error(`npm pack --json printed no package: ${JSON.stringify(out).slice(0, 200)}`);
+  return e;
+}
+
 function withLifecycle(dir, pack) {
   const cwd = path.join(ROOT, "packages", dir);
   npm(["run", "prepack", "--if-present"], cwd);
@@ -41,13 +51,13 @@ function withLifecycle(dir, pack) {
 
 /** `npm pack --dry-run --json` for one package: the exact file list npm would publish. */
 export function packList(dir) {
-  const [info] = withLifecycle(dir, (cwd) => JSON.parse(npm(["pack", "--dry-run", "--json", "--ignore-scripts"], cwd)));
+  const info = packEntry(withLifecycle(dir, (cwd) => JSON.parse(npm(["pack", "--dry-run", "--json", "--ignore-scripts"], cwd))));
   return { name: info.name, version: info.version, files: info.files.map((f) => f.path.replace(/\\/g, "/")) };
 }
 
 /** Pack one package of the set into `dest`; returns the tarball path. */
 export function packOne(dir, dest = fs.mkdtempSync(path.join(os.tmpdir(), "ludion-pub-"))) {
-  const [info] = withLifecycle(dir, (cwd) => JSON.parse(npm(["pack", "--json", "--ignore-scripts", "--pack-destination", dest], cwd)));
+  const info = packEntry(withLifecycle(dir, (cwd) => JSON.parse(npm(["pack", "--json", "--ignore-scripts", "--pack-destination", dest], cwd))));
   return path.join(dest, info.filename);
 }
 
