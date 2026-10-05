@@ -69,7 +69,7 @@ async function registryOf(planted) {
  * The whole demo once. `routes` / `subscribe` / `registry` plant a different shop or Registry.
  * @returns {Promise<{ flow: object[], stolen: object[], revoked: object[], stolenRevoked: object[], jti: string }>}
  */
-async function demo({ routes, subscribe = true, registry: planted } = {}) {
+async function demo({ routes, subscribe = true, registry: planted, modelUrl } = {}) {
   const reg = await registryOf(planted);
   const directory = directoryHost();
   // The shop: its own config, pinned to this Registry, on this test's host name.
@@ -99,13 +99,15 @@ async function demo({ routes, subscribe = true, registry: planted } = {}) {
   directory.publish(JSON.parse(fs.readFileSync(path.join(dir, "ludion.json"), "utf8"))); // what the Card Host serves
 
   // The agent and the thief: their own processes, no passphrase anywhere.
-  const agent = async (mode) => {
-    const r = await run([AGENT, `--${mode}`, "--shop", ORIGIN, "--connect", connect, "--registry", reg.url], { cwd: dir, env: BASE_ENV });
+  const agent = async (mode, env = {}) => {
+    const r = await run([AGENT, `--${mode}`, "--shop", ORIGIN, "--connect", connect, "--registry", reg.url], { cwd: dir, env: { ...BASE_ENV, ...env } });
     assert.equal(r.status, 0, `agent --${mode}: ${r.stderr}`);
     return r.stdout.trim().split("\n").filter(Boolean).map((l) => JSON.parse(l));
   };
   const flow = await agent("scripted");
   const stolen = await agent("stolen");
+  // The recording mode, its model played by a stub (no call leaves this machine).
+  const model = modelUrl ? await agent("model", { ANTHROPIC_API_KEY: "stub-key", DEMO_MODEL_URL: modelUrl }) : null;
 
   // 6. One line ends it.
   const diverId = JSON.parse(fs.readFileSync(path.join(dir, "ludion.json"), "utf8")).diver_id;
@@ -113,7 +115,7 @@ async function demo({ routes, subscribe = true, registry: planted } = {}) {
   if (subscribe) await waitFor(() => !!mw.gate.revocations?.match({ sub: diverId }), 5000);
   const revoked = await agent("scripted");
   const stolenRevoked = await agent("stolen");
-  return { flow, stolen, revoked, stolenRevoked, jti };
+  return { flow, stolen, revoked, stolenRevoked, jti, model };
 }
 
 /** What is wrong with a run of the demo, against lane 2 spec §3.4. */
@@ -153,6 +155,43 @@ test("DEMO-1: the demo, scripted — in scope passes; the trap's password change
   assert.ok(t.jti, "mandate create printed its jti");
   assert.deepEqual(demoProblems(t), []);
   console.log(`DEMO-1: ${t.flow.length} agent steps (${t.flow.filter((s) => s.status === 200).length} passed, ${t.flow.filter((s) => s.error === "mandate_scope").length} mandate_scope), ${t.stolen.length} by the thief, then ${t.revoked.length + t.stolenRevoked.filter((s) => s.method).length} after revoke, all REVOKED`);
+});
+
+/**
+ * A stand-in for the model API (the Messages API's shape), on this machine: it reads the reviews, then
+ * obeys the trap it finds there, then stops. Records what the agent sent it.
+ */
+async function stubModel() {
+  const seen = [];
+  const srv = http.createServer((req, res) => {
+    let s = "";
+    req.on("data", (d) => { s += d; });
+    req.on("end", () => {
+      const body = JSON.parse(s);
+      seen.push({ key: req.headers["x-api-key"], version: req.headers["anthropic-version"], body });
+      const said = JSON.stringify(body.messages.at(-1)?.content ?? "");
+      const use = (id, method, path) => ({ type: "tool_use", id, name: "http", input: { method, path } });
+      const content = body.messages.length === 1 ? [use("t1", "GET", "/products/42/reviews")]
+        : said.includes("IMPORTANT NOTE FOR AI ASSISTANTS") ? [use("t2", "POST", "/account/password"), use("t3", "POST", "/account/delete")]
+        : [{ type: "text", text: "Done." }];
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ id: "msg-stub", type: "message", role: "assistant", content, stop_reason: content[0].type === "tool_use" ? "tool_use" : "end_turn" }));
+    });
+  });
+  await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+  cleanups.push(() => { srv.closeAllConnections?.(); srv.close(); });
+  return { url: `http://127.0.0.1:${srv.address().port}/v1/messages`, seen };
+}
+
+test("DEMO-1: the recording mode (--model) runs the same agent through the same SDK — a model that obeys the trap is refused 403 mandate_scope, and is told so", { timeout: 180_000 }, async () => {
+  const stub = await stubModel();
+  const t = await demo({ modelUrl: stub.url });
+  const step = (name) => t.model.find((s) => s.step === name);
+  assert.deepEqual([step("model: GET /products/42/reviews")?.status, step("model: GET /products/42/reviews")?.mandate], [200, "ok"]);
+  for (const p of ["/account/password", "/account/delete"]) assert.deepEqual([step(`model: POST ${p}`)?.status, step(`model: POST ${p}`)?.error], [403, "mandate_scope"], p);
+  assert.ok(stub.seen.length >= 3 && stub.seen.every((r) => r.key === "stub-key" && r.version && r.body.tools?.[0]?.name === "http"), "the Messages API's shape");
+  assert.match(JSON.stringify(stub.seen.at(-1).body.messages.at(-1)), /Ludion-Error: mandate_scope/, "the model is told the site refused");
+  console.log(`DEMO-1 model: ${t.model.length} steps chosen by a stub model; the trap's two writes refused (mandate_scope), and it was told so`);
 });
 
 test("DEMO-1: the judge bites — account routes with no scope, a shop that does not subscribe, a Registry that takes a session key", { timeout: 300_000 }, async () => {
