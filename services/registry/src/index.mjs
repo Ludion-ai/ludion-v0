@@ -403,15 +403,35 @@ export async function createRegistry(o) {
    * after version `since` (0: all of them), revoked ones flagged so a copy drops them, in one JWS the
    * Registry signs. Nothing about who asked is kept: this reads the store and writes nothing.
    */
+  // The bulk copy is asked for far more often than the Registry changes, by anyone: the public records
+  // are listed and thumbprinted once per version, and a signed copy is reused for a minute per
+  // (version, since) — what its max-age already allows. Nothing here knows who asked (REG-5).
+  let recordsAt = null; // { version, records }
+  const copies = new Map(); // `${version}:${since}` → { untilS, body }
+  const COPIES_MAX = 16;
+  async function publicRecordsAt(version) {
+    if (recordsAt?.version !== version) {
+      const all = (await store.listDivers()).sort((a, b) => (a.diver_id < b.diver_id ? -1 : 1));
+      recordsAt = { version, records: await Promise.all(all.map(async (r) => ({ ...(await publicDiverRecord(r)), revoked: !!r.revoked, ver: r.ver }))) };
+    }
+    return recordsAt.records;
+  }
   async function bulk(request) {
     const raw = new URL(request.url).searchParams.get("since") ?? "0";
     const since = Number(raw);
     if (!/^\d{1,15}$/.test(raw) || !Number.isSafeInteger(since)) throw new HttpError(400, "invalid_since", "since must be a version number");
     const version = await store.version();
-    const changed = (await store.listDivers()).filter((r) => (r.ver ?? 0) > since).sort((a, b) => (a.diver_id < b.diver_id ? -1 : 1));
-    const divers = await Promise.all(changed.map(async (r) => ({ ...(await publicDiverRecord(r)), revoked: !!r.revoked, ver: r.ver })));
-    const jws = await signJws(signing.privateKey, signing.kid, BULK_TYP, { iss: issuer, version, since, iat: nowS(), divers });
-    return json(200, { version, since, jws }, { "cache-control": "max-age=60" });
+    const key = `${version}:${since}`, t = nowS();
+    let copy = copies.get(key);
+    if (!copy || copy.untilS <= t) {
+      const divers = (await publicRecordsAt(version)).filter((r) => (r.ver ?? 0) > since);
+      const jws = await signJws(signing.privateKey, signing.kid, BULK_TYP, { iss: issuer, version, since, iat: t, divers });
+      copy = { untilS: t + 60, body: { version, since, jws } };
+      copies.delete(key);
+      copies.set(key, copy);
+      for (const k of copies.keys()) { if (copies.size <= COPIES_MAX) break; copies.delete(k); }
+    }
+    return json(200, copy.body, { "cache-control": "max-age=60" });
   }
 
   async function revocationList(request) {
