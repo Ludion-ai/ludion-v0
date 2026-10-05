@@ -167,3 +167,18 @@ test("DIV-7: when the Registry refuses a Root statement as stale, the CLI points
   } finally { stale.close(); other.close(); }
   console.log("DIV-7: a stale-statement refusal points at the clock and doctor; another refusal does not");
 });
+
+test("doctor: a Card Host's refusal says what to do — not registered yet (register), or the Registry unavailable (try again); any other 404 says nothing more", async () => {
+  const missed = [];
+  for (const [name, x, why, not] of [
+    ["unknown to the Card Host", { status: 404, type: "application/json", body: JSON.stringify({ error: "unknown_agent" }) }, /\/card returned 404 \(must be 200, no redirect\) — the Card Host does not know this agent: not registered yet \(run `npx ludion register`\), or revoked/],
+    ["the Registry unavailable", { status: 503, type: "application/json", body: JSON.stringify({ error: "registry_unavailable" }) }, /\/card returned 503 \(must be 200, no redirect\) — the Registry is unavailable right now; try again in a minute/],
+    ["a plain 404", { status: 404, type: "text/plain", body: "not found" }, /\/card returned 404 \(must be 200, no redirect\)\n/, /register|unavailable/],
+  ]) {
+    serve = (p) => (p === "/card" ? x : null);
+    const r = await run(["doctor"]);
+    if (r.code === 0 || !why.test(r.out) || (not && not.test(r.out))) missed.push(`${name}: exit ${r.code}\n${r.out}`);
+  }
+  serve = () => null;
+  assert.deepEqual(missed, []);
+});
