@@ -1,4 +1,4 @@
-// DIV-5 (±): `npx ludion init` shows one screen (spec §9.2, §13.1): the AI's name; the same name on the
+// DIV-5 (±): `npx ludion-ai init` shows one screen (spec §9.2, §13.1): the AI's name; the same name on the
 // web (Signature-Agent) and on MCP (client_id); the line that erases it; a README badge. Nothing frozen
 // (Depth, Ballast, Mandate, Pressure, Staple) and no secret is on it. English, Japanese, a custom domain.
 // DIV-6 (−): the one optional question sends nothing unless answered. Not at a terminal, in CI, skipped
@@ -40,7 +40,7 @@ export function screenProblems(out, { id, origin, lang = "en" }) {
   const screen = lines.slice(0, 8).join("\n");
   if (!screen.includes(`Signature-Agent: sig1="${origin}"`)) p.push("no Web line");
   if (!screen.includes(`client_id = ${origin}/client`)) p.push("no MCP line");
-  if (!/npx ludion revoke/.test(screen)) p.push("no revoke line");
+  if (!/npx ludion-ai revoke/.test(screen)) p.push("no revoke line");
   if (!(lang === "ja" ? /1時間以内に、世界中で通らなくなります/ : /within 1 hour, it stops working everywhere/).test(screen)) p.push("no erase promise");
   if (!screen.includes(`[![Ludion ID](https://ludion.ai/badge/${id}.svg)](${origin})`)) p.push("no badge");
   for (const w of FROZEN_WORDS) if (new RegExp(`\\b${w}\\b`, "i").test(out)) p.push(`frozen word ${w}`);
@@ -51,7 +51,7 @@ export function screenProblems(out, { id, origin, lang = "en" }) {
 test("DIV-5: the checker catches a screen that is not the one screen (planted)", () => {
   const id = "dvr-aaaaaaaaaaaaaaaa", origin = `https://${id}.agents.ludion.ai`;
   const good = [`Your AI's name: ${origin}`, "", `  Web    Signature-Agent: sig1="${origin}"`, `  MCP    client_id = ${origin}/client`,
-    "  Erase  npx ludion revoke   (within 1 hour, it stops working everywhere)", "", "  README badge:", `  [![Ludion ID](https://ludion.ai/badge/${id}.svg)](${origin})`].join("\n");
+    "  Erase  npx ludion-ai revoke   (within 1 hour, it stops working everywhere)", "", "  README badge:", `  [![Ludion ID](https://ludion.ai/badge/${id}.svg)](${origin})`].join("\n");
   assert.deepEqual(screenProblems(good, { id, origin }), [], "control");
   for (const [what, bad, why] of [
     ["no MCP", good.replace(/ {2}MCP.*\n/, ""), /no MCP line/],

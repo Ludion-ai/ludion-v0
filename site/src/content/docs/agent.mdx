@@ -3,7 +3,7 @@ title: Sign from code
 description: Use your agent's name from Node.js — signed requests with ludionFetch, a stated purpose, and the same name as an MCP client.
 ---
 
-After [`npx ludion init`](/quickstart#create-an-identity), your agent's keys are in `ludion.json`. From Node.js, `ludion/diver` signs each request with them, so every site that runs a Gate sees the same name your agent uses everywhere else.
+After [`npx ludion-ai init`](/quickstart#create-an-identity), your agent's keys are in `ludion.json`. From Node.js, `ludion-ai/diver` signs each request with them, so every site that runs a Gate sees the same name your agent uses everywhere else.
 
 Planned, after the launch: the same for Python.
 
@@ -12,12 +12,12 @@ Planned, after the launch: the same for Python.
 In the directory where you ran `init`:
 
 ```sh
-npm install ludion
+npm install ludion-ai
 ```
 
 ```js title="agent.mjs"
 import fs from "node:fs";
-import { createDiverSigner, ludionFetch } from "ludion/diver";
+import { createDiverSigner, ludionFetch } from "ludion-ai/diver";
 
 const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
 const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
@@ -43,7 +43,7 @@ A request can say, under the same signature, whether it only reads or acts, and 
 
 ```js title="purpose.mjs"
 import fs from "node:fs";
-import { createDiverSigner, ludionFetch } from "ludion/diver";
+import { createDiverSigner, ludionFetch } from "ludion-ai/diver";
 
 const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
 const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
@@ -69,7 +69,7 @@ Your agent's `client_id` is its name plus `/client`: `` `${me.signature_agent}/c
 
 ```js title="token.mjs"
 import fs from "node:fs";
-import { clientAssertion } from "ludion/diver";
+import { clientAssertion } from "ludion-ai/diver";
 
 const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
 const clientId = `${me.signature_agent}/client`;
@@ -92,4 +92,4 @@ const token = await res.json();
 
 `tokenEndpoint` comes from the authorization server's metadata; `code`, `redirectUri` and `codeVerifier` come from the authorization step before it (PKCE, with a loopback redirect to `http://127.0.0.1/callback` or `http://[::1]/callback` on any port). This exchange is checked end to end against Keycloak with Client ID Metadata Documents on ([MCP-1](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m9-一点spec-v20-93234)).
 
-`npx ludion revoke` ends the name everywhere at once: on the web and at every authorization server that reads it.
+`npx ludion-ai revoke` ends the name everywhere at once: on the web and at every authorization server that reads it.

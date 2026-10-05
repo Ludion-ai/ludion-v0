@@ -1,4 +1,4 @@
-// GET /badge/<diver_id>.svg: the README badge `npx ludion init` prints (spec §13.1). It shows the
+// GET /badge/<diver_id>.svg: the README badge `npx ludion-ai init` prints (spec §13.1). It shows the
 // Diver id it is asked for and nothing else: no lookup, no state, so it says nothing about the agent
 // that the README's own link (the agent's name) does not. Anything but a Diver id is 404.
 

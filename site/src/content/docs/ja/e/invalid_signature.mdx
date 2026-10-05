@@ -27,8 +27,8 @@ import VerifyPath from "../../../../partials/verify-path.ja.mdx";
 
 - リクエストごとに、送る直前に新しい署名を作り、その後は何も変えないでください。
 - 呼び出すホストに対して署名し、寿命は60秒以内にします（[仕様 §11.4](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#114-リクエストの署名)）。
-- 時計を合わせます（NTP）。`npx ludion doctor` が署名に使う時刻を表示します。
-- POST、PUT、PATCH、DELETE では `@method`、`@path`、`content-digest` も対象に含めます。`npx ludion sign` はこれを自動で行います。
+- 時計を合わせます（NTP）。`npx ludion-ai doctor` が署名に使う時刻を表示します。
+- POST、PUT、PATCH、DELETE では `@method`、`@path`、`content-digest` も対象に含めます。`npx ludion-ai sign` はこれを自動で行います。
 
 ## 3分で検証済みになる
 

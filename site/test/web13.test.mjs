@@ -1,10 +1,10 @@
 // WEB-13 (±): the "Sign from code" page (/agent, /ja/agent) does what it says. Its blocks are read in
-// order, in both languages (the code must be the same in each): `npm install ludion` is the publish
+// order, in both languages (the code must be the same in each): `npm install ludion-ai` is the publish
 // set's tarball, a block with a title is written as the file it names, a `sh` block is run in the
 // agent's directory, and a `text` block is what the command before it must print.
 //
 // What stands in for the world, and nothing else:
-//   - "After npx ludion init": the quickstart's own init line, run first, as the page says.
+//   - "After npx ludion-ai init": the quickstart's own init line, run first, as the page says.
 //   - http://localhost:3000/ — "the site from the quickstart, once your key directory is published" —
 //     is a Gate (gate-node) on a free port whose key discovery finds the files init wrote.
 //   - token.mjs is a fragment: the authorization step gives it `tokenEndpoint`, `code`, `redirectUri`
@@ -12,7 +12,8 @@
 //     takes the exchange only if it is the one MCP-1 sends Keycloak (accept/mcp/flow.mjs) and the
 //     assertion is the client's: iss = sub = client_id = the agent's name + /client, aud = the token
 //     endpoint, short-lived, signed by a key in the agent's directory.
-// The other side: planted pages — the old package name, a different printed result, a note that
+// The other side: planted pages — the old package names (@ludion/diver, and ludion, which npm refused),
+// a different printed result, a note that
 // names a person, an assertion for another audience, an exchange without the assertion type, a page
 // in one language only — are each caught.
 import { test, before, after } from "node:test";
@@ -89,7 +90,7 @@ before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ludion-web13-"));
   fs.mkdirSync(path.join(tmp, "tgz"));
   const files = packAll(path.join(tmp, "tgz"));
-  const tarball = files[SET.findIndex((d) => manifest(d).name === "ludion")];
+  const tarball = files[SET.findIndex((d) => manifest(d).name === "ludion-ai")];
   env = { ...process.env, npm_config_cache: path.join(tmp, "npm-cache"), npm_config_update_notifier: "false", npm_config_fund: "false", npm_config_audit: "false",
     npm_config_yes: "true", NO_COLOR: "1", LUDION_TARBALL: posix(tarball) };
   for (const k of Object.keys(env)) if (/^(npm_package_|npm_lifecycle_|NODE_TEST_CONTEXT$)/.test(k)) delete env[k];
@@ -98,8 +99,8 @@ before(async () => {
   fs.writeFileSync(path.join(agent, "package.json"), JSON.stringify({ name: "web13-agent", private: true }));
   const inst = await sh(`npm install --no-package-lock "${posix(tarball)}"`, agent);
   assert.equal(inst.code, 0, inst.err.slice(-1500));
-  // "After npx ludion init": the quickstart's line.
-  const init = blocks(fs.readFileSync(path.join(ROOT, QUICKSTART), "utf8")).find((b) => b.lang === "sh" && /^npx ludion init /.test(b.code.trim()));
+  // "After npx ludion-ai init": the quickstart's line.
+  const init = blocks(fs.readFileSync(path.join(ROOT, QUICKSTART), "utf8")).find((b) => b.lang === "sh" && /^npx ludion-ai init /.test(b.code.trim()));
   assert.ok(init, "the quickstart's init line");
   const r = await sh(init.code.trim(), agent, { LUDION_ROOT_PASSPHRASE: PASSPHRASE });
   assert.equal(r.code, 0, r.err);
@@ -155,7 +156,7 @@ async function runPage(page) {
     if (b.title) { fs.writeFileSync(path.join(agent, b.title), local(b.code)); continue; }
     if (b.lang === "text") continue; // read with the command before it
     if (b.lang !== "sh") { problems.push(`a block that is neither a file, a command nor its output: ${b.lang}`); continue; }
-    const code = b.code.trim().replace(/^npm install ludion$/, `npm install --no-package-lock "$LUDION_TARBALL"`);
+    const code = b.code.trim().replace(/^npm install ludion-ai$/, `npm install --no-package-lock "$LUDION_TARBALL"`);
     const r = await sh(code, agent);
     if (r.code !== 0) { problems.push(`\`${b.code.trim()}\` failed (${r.code}): ${r.err.slice(-600)}`); continue; }
     if (next?.lang === "text") {
@@ -188,13 +189,14 @@ test("WEB-13: planted pages are caught", { timeout: 600_000 }, async () => {
     return { ...x, code: x.code.replace(a, b) };
   });
   const planted = [
-    ["the old package name", plant("agent.mjs", 'from "ludion/diver"', 'from "@ludion/diver"'), /agent\.mjs` failed/],
+    ["the old package name", plant("agent.mjs", 'from "ludion-ai/diver"', 'from "@ludion/diver"'), /agent\.mjs` failed/],
+    ["the name npm refused", plant("agent.mjs", 'from "ludion-ai/diver"', 'from "ludion/diver"'), /agent\.mjs` failed/],
     ["a different printed result", plant(null, "200 VERIFIED", "200 UNVERIFIED"), /printed "200 VERIFIED", the page shows "200 UNVERIFIED"/],
     ["a note that names a person", plant("purpose.mjs", "Compare prices for the user", "Compare prices for tanaka@example.com"), /purpose\.mjs` failed/],
     ["an assertion for another audience", plant("token.mjs", "audience: tokenEndpoint", "audience: clientId"), /token\.mjs: .*aud /],
     ["no assertion type", plant("token.mjs", '    client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",\n', ""), /token\.mjs: .*fields /],
     ["another client_id", plant("token.mjs", "const clientId = `${me.signature_agent}/client`;", "const clientId = `${me.signature_agent}/card`;"), /token\.mjs: .*client_id /],
-    ["another key's signature under this key's kid", plant("token.mjs", "clientAssertion(me.session, {", 'clientAssertion({ ...me.session, d: (await (await import("ludion/diver")).generateEd25519()).privateJwk.d }, {'), /token\.mjs: .*signature does not verify/],
+    ["another key's signature under this key's kid", plant("token.mjs", "clientAssertion(me.session, {", 'clientAssertion({ ...me.session, d: (await (await import("ludion-ai/diver")).generateEd25519()).privateJwk.d }, {'), /token\.mjs: .*signature does not verify/],
   ];
   const missed = [];
   for (const [name, page, why] of planted) {

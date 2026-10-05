@@ -1,4 +1,4 @@
-// The site Worker's two answers for `npx ludion init` (DIV-5, DIV-6): POST /api/init-answer takes one
+// The site Worker's two answers for `npx ludion-ai init` (DIV-5, DIV-6): POST /api/init-answer takes one
 // word and nothing else; GET /badge/<diver_id>.svg draws the id it is asked for, and nothing else.
 import { test } from "node:test";
 import assert from "node:assert/strict";

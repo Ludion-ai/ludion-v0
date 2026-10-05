@@ -1,7 +1,7 @@
 // ONE-1 (+): an empty app gets the Gate and shows its first record within 60 seconds of the install
 // starting — Express, and Next.js as a developer first runs it (`next dev`); the median of 3 runs.
 //
-// The clock runs from `npm install` of the packed `ludion` tarball (as npm would fetch it), through
+// The clock runs from `npm install` of the packed `ludion-ai` tarball (as npm would fetch it), through
 // the lines the README shows (reference/<app>/install, the same overlay GATE-3 counts), the app's own
 // start command and one automated request, to the moment the app's console prints the Gate's
 // first-record line (gate-core firstRecordLine). The empty app's own dependencies are installed
@@ -80,7 +80,7 @@ async function run(app, { plant, waitS = 180 } = {}) {
       const orig = path.join(REF, app, "site", f);
       if (fs.existsSync(orig)) fs.copyFileSync(orig, path.join(dir, f)); else fs.rmSync(path.join(dir, f), { force: true });
     }
-    npm(["uninstall", "--no-audit", "--no-fund", "ludion"], dir);
+    npm(["uninstall", "--no-audit", "--no-fund", "ludion-ai"], dir);
     fs.rmSync(local, { force: true });
     fs.rmSync(path.join(dir, ".next"), { recursive: true, force: true });
   }

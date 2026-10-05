@@ -112,9 +112,9 @@
 | DIV-5 | ± | 0 | `npx ludion init` は1画面を出す：AI の名前、Web（Signature-Agent）と MCP（client_id）で同じ名前、消す一行（revoke）、README に貼るバッジ。Depth・Ballast・Mandate・Pressure・Staple の語と秘密は出ない（英語、日本語、自前のドメイン）。検査器は仕込んだ画面で先に試す | |
 | DIV-6 | − | 0 | init の任意の1問は、答えない限り何も送らない（端末でない、CI、飛ばす、意味のない答え：通信の試み0）。答えたら、一語だけを1回 POST し、Diver の id・名前・連絡先・鍵は送らない | |
 | DIV-7 | ± | 0 | `ludion doctor` は時計を、エージェント自身のオリジンの Date ヘッダーと比べる。合っているか20秒のずれは通り、Date ヘッダーが無ければそう言うだけで落とさない。±30秒（Gate の許す幅、spec §10.4）を越えるずれ（45秒から1日まで。進みも遅れも）は問題として、ずれの秒数と直し方を出す。名簿が Root の文を古いと断ったら、CLI は時計と doctor を指す | |
-| PUB-1 | + | 1 | npm の公開セット（`ludion` と `@ludion/*`）を `npm pack` した tarball だけで、クリーンな環境（新しいディレクトリ、新しい npm キャッシュ、workspace なし）に入る。`ludion` の CLI（`.bin` へのリンク、scan と report はリポジトリの CLI と出力が完全に一致、init と sign）と、gate-node・gate-workers・gate-next を通した自分のエージェント → 自分の Gate → VERIFIED が、公開される名前の import だけで動く | PUB-2 |
+| PUB-1 | + | 1 | npm の公開セット（`ludion-ai` と `@ludion/*`）を `npm pack` した tarball だけで、クリーンな環境（新しいディレクトリ、新しい npm キャッシュ、workspace なし）に入る。`ludion-ai` の CLI（`.bin` の `ludion` へのリンク、scan と report はリポジトリの CLI と出力が完全に一致、init と sign）と、gate-node・gate-workers・gate-next を通した自分のエージェント → 自分の Gate → VERIFIED が、公開される名前の import だけで動く | PUB-2 |
 | PUB-2 | − | 1 | 公開セットの各 tarball に、宣言した `files` と package.json・README・LICENSE 以外が0件（テスト、ベンチ、フィクスチャ、鍵、`.env`、`ludion.json` が0件）。license、repository、engines、スコープ付きの `publishConfig.access: public`、bin の shebang、export 先の同梱、内部依存がセット内の同じ版であること。検査器は先に仕込みで試す | |
-| PUB-3 | + | 1 | `ludion` だけを先に出せる。`ludion` の tarball だけを、`@ludion/*` の取得が全て拒否されるレジストリの下で、クリーンな環境に入れられる（npm に `@ludion` のパッケージが一つもなくても入る）。入った CLI は `.bin` にリンクされ、scan と report はリポジトリの CLI と出力が完全に一致し、init と sign が Web Bot Auth の署名を作る。tarball は `npm publish` と同じ手順（prepack、pack、postpack）で作る | PUB-2 |
+| PUB-3 | + | 1 | `ludion-ai` だけを先に出せる。`ludion-ai` の tarball だけを、`@ludion/*` の取得が全て拒否されるレジストリの下で、クリーンな環境に入れられる（npm に `@ludion` のパッケージが一つもなくても入る）。入った CLI は `.bin` にリンクされ、scan と report はリポジトリの CLI と出力が完全に一致し、init と sign が Web Bot Auth の署名を作る。tarball は `npm publish` と同じ手順（prepack、pack、postpack）で作る | PUB-2 |
 | PUB-4 | ± | 0 | npm への公開は release ワークフローだけ。人が main で起動し、environment `npm` で人が承認し、npm の trusted publishing（OIDC。npm のトークンはどこにも無い）で、公開セットの順に、PUB-1〜3 のあとで出す。npm がまだ知らないパッケージは拒否（最初の版は人が手で出す）。最初の失敗で残りを止める。他のワークフローは公開も OIDC の発行もできない。検査器は仕込んだワークフローで先に試す | |
 
 ### M3 Registry
@@ -176,12 +176,12 @@
 | WEB-4 | + | 1 | ブラウザ版 scan。`/scan` にアクセスログを落とすと恐怖の数字が出る。SCAN のフィクスチャで CLI と数字が完全に一致し、200MB を30秒以内に処理する（ヘッドレス Chromium） | WEB-11 |
 | WEB-5 | − | 1 | リンク切れ0件、コンソールエラー0件、許可リスト外への外部通信0件 | |
 | WEB-6 | − | 1 | scan の間、ログのバイトは1つも外に出ない。カナリアを埋めたログを読ませ、ページ読み込み後の外部リクエストが0件（Playwright で全リクエストを監視する） | |
-| WEB-7 | + | 1 | ドキュメントがテストになっている（Node・Next.js・Workers。FastAPI・WordPress・Python はローンチの後の対応予定で、文書には手順を載せない。人間の決定、2026-10-04）。Gate の入れ方のページ（`/gate`）を、Gate を入れる前の読み手のサイト（参照アプリの site）に、節ごとに書いてあるとおりに当てる（`npm install ludion` は tarball、ページの行と設定）。動かすと、人はページを受け取り、クローラーの名乗りは DECLARED、コンソールに最初の1件の1行が1回。クイックスタートの実行は WEB-10、コードからの署名は WEB-13 | WEB-12 |
+| WEB-7 | + | 1 | ドキュメントがテストになっている（Node・Next.js・Workers。FastAPI・WordPress・Python はローンチの後の対応予定で、文書には手順を載せない。人間の決定、2026-10-04）。Gate の入れ方のページ（`/gate`）を、Gate を入れる前の読み手のサイト（参照アプリの site）に、節ごとに書いてあるとおりに当てる（`npm install ludion-ai` は tarball、ページの行と設定）。動かすと、人はページを受け取り、クローラーの名乗りは DECLARED、コンソールに最初の1件の1行が1回。クイックスタートの実行は WEB-10、コードからの署名は WEB-13 | WEB-12 |
 | WEB-8 | ± | 1 | 登録フォーム。プレビューで送信すると、受け口を通って通知（スタブでよい）まで届く。ハニーポットとレート制限でボットは落ちる | |
 | WEB-9 | + | 1 | デプロイと同じ成果物（`site/edge` を workerd の `wrangler dev` で動かす）で、全ページが英日の対で揃う。テンプレートごとに英日1ページずつの Lighthouse（モバイル）の4項目がすべて95以上（各ページ3回の中央値）。検査器は、仕込んだ劣化ページで先に試す。WEB-1 と違ってデプロイもトークンも要らないので、CI で毎回回る | WEB-5 |
 | WEB-10 | ± | 1 | クイックスタートのページ（`/quickstart`）が書いてあるとおりに動く。ページのブロックを順に、クリーンなディレクトリで実行する（`@ludion/*` は公開セットの tarball）。出力はページのとおり。GPTBot の受領証は DECLARED、ブラウザは UNKNOWN で同じページ。`init` と `sign` の署名付きリクエストは、`init` が書いたディレクトリを持つ Gate で VERIFIED、改ざんしたものは VERIFIED にならない。WEB-7 のうち Express と CLI の部分（WEB-7 は残りのために開いたまま） | |
 | WEB-11 | − | 1 | WEB-4 の検査が噛む。ビルドしたサイトの写しに故障を一つずつ仕込み（scan の worker が重要経路を一つ多く数える、落としたファイルを一つ読まない、見出しに別の数を出す、サンプルを別のログにする、途中で切る）、WEB-4 と同じ比較（`site/test/scan-check.mjs`）がそれぞれを、その名の規則で捕まえる。手を入れない写しは通る | |
-| WEB-12 | ± | 0 | Gate の入れ方のページ（`/gate`、`/ja/gate`）が、GATE-1 と GATE-3 が動かすインストールそのものになっている。Express、Next.js、Workers の各節で、依存は `npm install ludion`、インストールが足すアプリの行はすべてページにあり、ページの行はすべてインストールにある（コメントは読み手のコード）、設定は同じ（`site_id` を除く）。仕込んだページ（行の抜け、古いパッケージ名、余計な行、設定の打ち間違い、別のインストールのコマンド、フラグの抜け、節の抜け、片方の言語だけの変更）と、仕込んだインストール（ページにない行）を捕まえる。WEB-7 のうち `/gate` の部分（WEB-7 は FastAPI、WordPress、Python などのために開いたまま） | |
+| WEB-12 | ± | 0 | Gate の入れ方のページ（`/gate`、`/ja/gate`）が、GATE-1 と GATE-3 が動かすインストールそのものになっている。Express、Next.js、Workers の各節で、依存は `npm install ludion-ai`、インストールが足すアプリの行はすべてページにあり、ページの行はすべてインストールにある（コメントは読み手のコード）、設定は同じ（`site_id` を除く）。仕込んだページ（行の抜け、古いパッケージ名、余計な行、設定の打ち間違い、別のインストールのコマンド、フラグの抜け、節の抜け、片方の言語だけの変更）と、仕込んだインストール（ページにない行）を捕まえる。WEB-7 のうち `/gate` の部分（WEB-7 は FastAPI、WordPress、Python などのために開いたまま） | |
 | WEB-13 | ± | 1 | 「コードから署名する」のページ（`/agent`、`/ja/agent`）が書いてあるとおりに動く。ブロックを順に、公開セットの tarball でクリーンなディレクトリで実行する（`init` はクイックスタートの行）。`ludionFetch` の署名付きリクエストは 200 VERIFIED、目的を付けると受領証に read、`token.mjs` は MCP-1 が Keycloak に送るのと同じ交換（client_id は名前＋`/client`、aud はトークンのエンドポイント、ディレクトリの鍵で署名した短命のアサーション）。英日のコードは同じ。仕込んだページ（古いパッケージ名、違う出力、人を名指す一文、別の aud、アサーションの型の抜け、別の client_id、片方の言語だけの変更）を捕まえる。WEB-7 のうち TypeScript の部分 | |
 
 ### M8 現場（パイロット）
@@ -240,7 +240,7 @@
 
 spec v2.0 の §9（磨く一点）と §20.2（ローンチの条件）に従う。2026-10-04 に v1.0 の順番から置き換えた。
 
-1. ローンチの条件（spec §20.2）を通すオラクル：WEB-4（scan のサンプル）、DIV-1 と ONE-4（init から VERIFIED まで3分）、MCP-1、PILOT-2、SEC-1（gitleaks）、PUB-1〜4（npm の `ludion`）。
+1. ローンチの条件（spec §20.2）を通すオラクル：WEB-4（scan のサンプル）、DIV-1 と ONE-4（init から VERIFIED まで3分）、MCP-1、PILOT-2、SEC-1（gitleaks）、PUB-1〜4（npm の `ludion-ai`）。
 2. 一点（spec §9.3）：ONE の全部、MCP-2、PUR の全部、BLK-1、PRIV-4、PRIV-5、REG-5。
 3. 残り：LOOP-2、WEB-7、GATE-9、LIVE-1〜3。凍結したもの（spec §9.5）のオラクルは、落とさずに回し続けるが、新しくは足さない。
 
@@ -251,7 +251,7 @@ spec v2.0 の §9（磨く一点）と §20.2（ローンチの条件）に従�
 | 入力 | 開くもの | 注意 |
 |---|---|---|
 | main のブランチ保護（PR 必須、`loop` チェック必須、auto-merge を許可） | 自己マージを安全にする | private リポジトリは GitHub Free では使えない。public にするか Team にする |
-| npm の `ludion` と `@ludion`、PyPI の `ludion` の確保 | publish（ask 扱い） | `npx ludion` には無印の `ludion` が要る。2026-09-30 時点で全部空き |
+| npm の `ludion-ai` と `@ludion`、PyPI の `ludion` の確保 | publish（ask 扱い） | npm は `ludion` を似た名前（luxon）の検査で断った。名前は `ludion-ai`、コマンドは `ludion` のまま（docs/adr/2026-10-05-npm-name-ludion-ai.md）。`ludion-ai` 0.0.1 は人間が出した（2026-10-05）。`@ludion` は人間の npm のユーザー名 |
 | `CLOUDFLARE_API_TOKEN`：Workers スクリプトの編集だけ。ゾーンと DNS の権限は付けない | LIVE-1 | canary は `*.workers.dev` に置く。本番に届かない権限そのものが安全境界 |
 | 週1回、本物のエージェントで canary を開く | LIVE-2、GATE-8 のフィクスチャ | ChatGPT agent などに「この URL を開いて」と頼むだけ |
 | `SIGNUP_WEBHOOK_URL` | LP の登録通知 | |

@@ -7,6 +7,6 @@
     "start": "node server.mjs"
   },
   "dependencies": {
-    "ludion": "*"
+    "ludion-ai": "*"
   }
 }

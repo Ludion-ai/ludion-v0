@@ -24,7 +24,7 @@ Gate は、サイトが自分のサーバーで動かす、無料でオープン
 ## エージェントの側：1行で名前と鍵
 
 ```sh
-npx ludion init --name "My Agent" --contact mailto:ops@example.com
+npx ludion-ai init --name "My Agent" --contact mailto:ops@example.com
 ```
 
 1つの画面が出る。
@@ -34,27 +34,27 @@ npx ludion init --name "My Agent" --contact mailto:ops@example.com
 
   Web    Signature-Agent: sig1="https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai"
   MCP    client_id = https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/client
-  消す   npx ludion revoke   （1時間以内に、世界中で通らなくなります）
+  消す   npx ludion-ai revoke   （1時間以内に、世界中で通らなくなります）
 
   README に貼るバッジ：
   [![Ludion ID](https://ludion.ai/badge/dvr-k7q2m6x4pcab3cde.svg)](https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai)
 ```
 
-- **Web**：要求に署名する。`npx ludion sign GET https://example.com/` は、どの HTTP クライアントにも貼れる署名のヘッダーを出す。Node なら `ludion/diver` の `ludionFetch` が、署名、鍵の回転、nonce、本文のダイジェストを引き受ける。
-- **MCP**：同じオリジンの `…/client` を client_id にする。中身は OAuth の client metadata（CIMD）だけで、鍵の一覧は Web と同じ。`redirect_uris` は loopback（`http://127.0.0.1/callback`）、認可サーバーへは Session 鍵の `private_key_jwt` で名乗る（`ludion/diver` の `clientAssertion`）。秘密の文字列は持たない。CIMD を有効にした Keycloak 26.8.0 で、認可まで通ることを確かめている（MCP-1）。
-- **消す**：`npx ludion revoke` で、名簿（Registry）に失効を出す。名簿を購読している Gate には数秒で、そうでない Gate にも名簿の証明（Staple）の寿命（最長1時間）のうちに届く。
+- **Web**：要求に署名する。`npx ludion-ai sign GET https://example.com/` は、どの HTTP クライアントにも貼れる署名のヘッダーを出す。Node なら `ludion-ai/diver` の `ludionFetch` が、署名、鍵の回転、nonce、本文のダイジェストを引き受ける。
+- **MCP**：同じオリジンの `…/client` を client_id にする。中身は OAuth の client metadata（CIMD）だけで、鍵の一覧は Web と同じ。`redirect_uris` は loopback（`http://127.0.0.1/callback`）、認可サーバーへは Session 鍵の `private_key_jwt` で名乗る（`ludion-ai/diver` の `clientAssertion`）。秘密の文字列は持たない。CIMD を有効にした Keycloak 26.8.0 で、認可まで通ることを確かめている（MCP-1）。
+- **消す**：`npx ludion-ai revoke` で、名簿（Registry）に失効を出す。名簿を購読している Gate には数秒で、そうでない Gate にも名簿の証明（Staple）の寿命（最長1時間）のうちに届く。
 - 目的の申告：要求に「何をしに来たか」を一語（`read` か `act`）と一文で添えられる（`Ludion-Purpose`、署名で覆う）。一文にメールアドレス、電話番号、URL、長い数字があれば、送る前に止める。
 
 ## サイトの側：名札を読む関所
 
 ```sh
-npm install ludion
+npm install ludion-ai
 ```
 
 Express なら2行。
 
 ```js
-import { ludion } from "ludion/gate/node";
+import { ludion } from "ludion-ai/gate/node";
 app.use(await ludion());
 ```
 
@@ -88,7 +88,7 @@ app.use(await ludion());
   名指しで止める（`403 blocked_by_site`）。`who` には、Diver の id、署名した相手のホスト、User-Agent の名乗り、`"unnamed"` を書ける。`until` に日時を書けば、その時に解ける。
 
 - **止めるのはサイトだけ。** Ludion のサーバーには、誰かを止める経路がない。判断はサイトの設定の中にだけある。
-- **朝のレポート**（`npx ludion report`）は、見出しの数字が1つ（自動化のうち署名で名乗った割合）、決めることが1つ。クローラーを名乗る送信は「偽物の疑い」、署名して「読むだけ」と言いながら書き込んだ相手は、その言葉と並べて出す。
+- **朝のレポート**（`npx ludion-ai report`）は、見出しの数字が1つ（自動化のうち署名で名乗った割合）、決めることが1つ。クローラーを名乗る送信は「偽物の疑い」、署名して「読むだけ」と言いながら書き込んだ相手は、その言葉と並べて出す。
 - 対応予定（ローンチの後）：FastAPI と WordPress の Gate、Python のエージェント側。
 - Next.js（`proxy.js` の1行）と Cloudflare Workers の入れ方は [ludion.ai/gate](https://ludion.ai/gate)。Gate の拒否には、どれにも説明のページがある：[ludion.ai/e](https://ludion.ai/e)。
 
@@ -100,7 +100,7 @@ app.use(await ludion());
 
 ## ログから始める
 
-[ludion.ai/scan](https://ludion.ai/scan) にアクセスログを落とすと、決済、ログイン、登録、フォームに、署名のない自動化がどれだけ触れたかを数える。ログはブラウザの中で読み、どこにも送らない。nginx、Apache、Caddy、IIS、CloudFront、AWS ALB、Cloudflare Logpush、Vercel、Fastly の形式（gzip も）を読む。手元に `npx ludion scan access.log` でも同じ数字が出る。
+[ludion.ai/scan](https://ludion.ai/scan) にアクセスログを落とすと、決済、ログイン、登録、フォームに、署名のない自動化がどれだけ触れたかを数える。ログはブラウザの中で読み、どこにも送らない。nginx、Apache、Caddy、IIS、CloudFront、AWS ALB、Cloudflare Logpush、Vercel、Fastly の形式（gzip も）を読む。手元に `npx ludion-ai scan access.log` でも同じ数字が出る。
 
 ## いまの状態（2026-10-04）
 

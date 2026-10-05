@@ -5,7 +5,7 @@ The Ludion Diver for Python: a Web Bot Auth (RFC 9421) identity for an agent, an
 **Planned, after the launch.** It is not published to PyPI and not part of the launch, so this page gives
 no install steps. The code here is tested in CI (DIV-1: `init` to VERIFIED in a clean environment, and
 byte-compatibility with the JavaScript CLI), and `ludion.json`, the sealed Root keystore, the directory
-and the card it writes are the same as `npx ludion` writes.
+and the card it writes are the same as `npx ludion-ai` writes.
 
 **Security**
 

@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-// ADR-036: npm gets one package, `ludion`; the CLI's and the Gate's packages travel inside it (BUNDLED,
+// ADR-036: npm gets one package, `ludion-ai` (packages/ludion; ADR 2026-10-05-npm-name-ludion-ai); the CLI's and the Gate's packages travel inside it (BUNDLED,
 // copied into its tarball at prepack) and are private in the repository.
 export const SET = ["ludion"];
 export { VENDORED as BUNDLED } from "../../packages/ludion/vendored.mjs";

@@ -1,10 +1,10 @@
 // ONE-4 (+): an agent the Gate stops gets Ludion-Error and a help link, and from the help page reaches
-// VERIFIED with `npx ludion init` in three minutes (spec §9.3) — in a new environment, three times.
+// VERIFIED with `npx ludion-ai init` in three minutes (spec §9.3) — in a new environment, three times.
 //
 // The site runs the real gate-node middleware with /checkout at Pressure 2. An unsigned agent asks
 // for it and is refused; the clock starts there. The agent follows the Link header to the page it
 // names — the built site's own page — and does what its "Get verified" steps say, as written:
-//   - `npx ludion …` is the packed `ludion` tarball (as npx would fetch it), into an empty directory
+//   - `npx ludion-ai …` is the packed `ludion-ai` tarball (as npx would fetch it), into an empty directory
 //     with an empty npm cache: a new environment each run;
 //   - "publish the public files it wrote at your Signature-Agent origin": the files init wrote are
 //     put where the Gate's key discovery finds that origin (the Gate never sees the agent's disk);
@@ -53,8 +53,8 @@ export function refusalProblems(head, dist) {
   try { page = path.join(dist, `${new URL(link).pathname.replace(/^\//, "")}.html`); } catch { return { problems: [...out, `a help link that is not a URL: ${link}`], steps: [] }; }
   if (!fs.existsSync(page)) return { problems: [...out, `the help page ${link} does not exist`], steps: [] };
   const steps = verifySteps(fs.readFileSync(page, "utf8"));
-  if (!steps.some((c) => /^npx ludion init /.test(c))) out.push(`${link} gives no init step`);
-  if (!steps.some((c) => /^npx ludion sign /.test(c))) out.push(`${link} gives no sign step`);
+  if (!steps.some((c) => /^npx ludion-ai init /.test(c))) out.push(`${link} gives no init step`);
+  if (!steps.some((c) => /^npx ludion-ai sign /.test(c))) out.push(`${link} gives no sign step`);
   return { problems: out, steps };
 }
 
@@ -92,7 +92,7 @@ before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ludion-one4-"));
   fs.mkdirSync(path.join(tmp, "tgz"));
   const files = packAll(path.join(tmp, "tgz"));
-  tarball = files[SET.findIndex((d) => manifest(d).name === "ludion")];
+  tarball = files[SET.findIndex((d) => manifest(d).name === "ludion-ai")];
   docroot = path.join(tmp, "origins");
   // Key discovery: an agent origin's files are whatever the agent published there.
   const fetch = async (url) => {
@@ -126,7 +126,7 @@ async function run(i) {
   assert.deepEqual(why.problems, [], refused);
   assert.match(refused, /^ludion-error: *signature_required/im);
   const cmds = why.steps;
-  const init = cmds.find((c) => /^npx ludion init /.test(c)), sign = cmds.find((c) => /^npx ludion sign /.test(c));
+  const init = cmds.find((c) => /^npx ludion-ai init /.test(c)), sign = cmds.find((c) => /^npx ludion-ai sign /.test(c));
   assert.ok(init && sign, `the page's steps: ${cmds.join(" | ")}`);
   // npx fetches ludion: here, the packed tarball into the new environment.
   fs.writeFileSync(path.join(agent, "package.json"), JSON.stringify({ name: `one4-agent-${i}`, private: true }));
@@ -158,9 +158,9 @@ async function run(i) {
 }
 
 test("ONE-8: the judge reads the commands of a help page's Get verified section, in order (planted page)", () => {
-  const html = '<h2 id="what-happened">x</h2><button data-code="npx ludion scan"></button><h2 id="get-verified-in-3-minutes">G</h2>'
-    + '<button data-code="npx ludion init --name &#x22;A&#x22;"></button><button data-code="npx ludion sign GET https://shop.example/x --curl"></button><h2 id="next">n</h2><button data-code="rm -rf /"></button>';
-  assert.deepEqual(verifySteps(html), ['npx ludion init --name "A"', "npx ludion sign GET https://shop.example/x --curl"]);
+  const html = '<h2 id="what-happened">x</h2><button data-code="npx ludion-ai scan"></button><h2 id="get-verified-in-3-minutes">G</h2>'
+    + '<button data-code="npx ludion-ai init --name &#x22;A&#x22;"></button><button data-code="npx ludion-ai sign GET https://shop.example/x --curl"></button><h2 id="next">n</h2><button data-code="rm -rf /"></button>';
+  assert.deepEqual(verifySteps(html), ['npx ludion-ai init --name "A"', "npx ludion-ai sign GET https://shop.example/x --curl"]);
   assert.deepEqual(verifySteps("<h2 id=\"what-happened\">x</h2>"), [], "a page without the section has no steps");
 });
 
@@ -187,7 +187,7 @@ test("ONE-8: a refusal without a reason, a help link or the steps, and an arriva
     ["let through instead", ok.replace("401 Unauthorized", "200 OK"), /not refused/],
   ];
   const stepless = path.join(dist, "e", "one8-planted.html");
-  fs.writeFileSync(stepless, '<h2 id="what-happened">x</h2><h2 id="get-verified-in-3-minutes">G</h2><button data-code="npx ludion doctor"></button>');
+  fs.writeFileSync(stepless, '<h2 id="what-happened">x</h2><h2 id="get-verified-in-3-minutes">G</h2><button data-code="npx ludion-ai doctor"></button>');
   planted.push(["a help page without the steps", ok.replace("signature_required>", "one8-planted>"), /no init step/]);
   try {
     const missed = planted.filter(([, head, why]) => !refusalProblems(head, dist).problems.some((p) => why.test(p))).map(([n]) => n);

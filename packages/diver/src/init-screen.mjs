@@ -1,4 +1,4 @@
-// What `npx ludion init` shows (spec §9.2, §13.1, DIV-5): one screen — the AI's name, the same name
+// What `npx ludion-ai init` shows (spec §9.2, §13.1, DIV-5): one screen — the AI's name, the same name
 // on the web (Signature-Agent) and on MCP (client_id), the one line that erases it, and a README
 // badge. None of Depth, Ballast, Mandate, Pressure or Staple is on it. Then one optional question
 // (DIV-6): asked only at a terminal, never in CI; skipping it sends nothing; an answer sends one
@@ -42,7 +42,7 @@ export function initScreen({ diverId, origin, lang = "en" }) {
     "",
     `  Web    Signature-Agent: sig1="${origin}"`,
     `  MCP    client_id = ${origin}/client`,
-    `  ${t.erase}  npx ludion revoke   ${t.eraseNote}`,
+    `  ${t.erase}  npx ludion-ai revoke   ${t.eraseNote}`,
     "",
     `  ${t.badge}`,
     `  [![Ludion ID](https://ludion.ai/badge/${diverId}.svg)](${origin})`,

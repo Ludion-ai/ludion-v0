@@ -1,5 +1,5 @@
 {
-  "name": "ludion",
+  "name": "ludion-ai",
   "version": "0.0.1",
   "description": "Ludion: give your AI agent its own key and name (CLI), and the Gate that reads them (Node, Next.js, Cloudflare Workers). Web Bot Auth (RFC 9421) and OAuth CIMD.",
   "keywords": [

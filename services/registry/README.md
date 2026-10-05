@@ -32,10 +32,10 @@ In production, the signing key is made offline and held by a human, in an HSM. P
 ## A Diver talks to it
 
 ```bash
-npx ludion register --registry https://registry.example   # Root: register + approve the session key, then fetch a Staple
-npx ludion staple                                          # refresh the Staple (session key)
-npx ludion rotate                                          # registered: the next key is approved before it is published
-npx ludion revoke --compromised                            # Root: revoke this Diver
+npx ludion-ai register --registry https://registry.example   # Root: register + approve the session key, then fetch a Staple
+npx ludion-ai staple                                          # refresh the Staple (session key)
+npx ludion-ai rotate                                          # registered: the next key is approved before it is published
+npx ludion-ai revoke --compromised                            # Root: revoke this Diver
 ```
 
 From code, use `createRegistryClient` and `createStapleKeeper` from `@ludion/diver`. The keeper refreshes the Staple at half its lifetime.

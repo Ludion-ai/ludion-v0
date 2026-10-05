@@ -1,6 +1,6 @@
 // DIV-1, the TypeScript/JS agent side. Runs inside a clean node:22 container (CI) or, as the
 // documented fallback, in a fresh temp dir with an isolated npm cache and config. It uses only
-// what an agent developer would: the packed tarballs, `npm install`, `npx ludion init`, and
+// what an agent developer would: the packed tarballs, `npm install`, `npx ludion-ai init`, and
 // `ludionFetch` — nothing from the monorepo.
 //
 //   node agent-ts.mjs --gate http://127.0.0.1:PORT --pkgs DIR      (cwd: an empty work dir)
@@ -26,7 +26,7 @@ function run(cmd, args, opts = {}) {
   return r.stdout;
 }
 
-// 1. install the packed `ludion` (the one package on npm, ADR-036) like any npm user
+// 1. install the packed `ludion-ai` (the one package on npm, ADR-036) like any npm user
 let t = performance.now();
 const tarballs = fs.readdirSync(pkgs).filter((f) => f.endsWith(".tgz")).map((f) => path.join(pkgs, f));
 if (!tarballs.length) fail(`no tarballs in ${pkgs}`);
@@ -37,7 +37,7 @@ lap("install", t);
 
 // 2. init: Root sealed with the operator's passphrase, Session key, directory and Card
 t = performance.now();
-const cli = path.join(cwd, "node_modules", "ludion", "bin", "ludion.mjs");
+const cli = path.join(cwd, "node_modules", "ludion-ai", "bin", "ludion.mjs");
 run(process.execPath, [cli, "init", "--name", "DIV-1 TS Agent", "--contact", "mailto:ops@div1.example"]);
 lap("init", t);
 
@@ -51,7 +51,7 @@ lap("publish", t);
 // 4. sign: one line, ludionFetch, against a site running the Gate
 t = performance.now();
 // Imported by package name from the agent's own node_modules, as agent code would.
-fs.writeFileSync(path.join(cwd, "diver.mjs"), 'export { createDiverSigner, ludionFetch } from "ludion/diver";\n');
+fs.writeFileSync(path.join(cwd, "diver.mjs"), 'export { createDiverSigner, ludionFetch } from "ludion-ai/diver";\n');
 const { createDiverSigner, ludionFetch } = await import(pathToFileURL(path.join(cwd, "diver.mjs")).href);
 const store = JSON.parse(fs.readFileSync(path.join(cwd, "ludion.json"), "utf8"));
 const signer = await createDiverSigner({ sessionPrivateJwk: store.session, signatureAgent: store.signature_agent, cimd: true });

@@ -53,7 +53,7 @@ export async function demoConfig({ fetch = globalThis.fetch } = {}) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { ludion } = await import("ludion/gate/node");
+  const { ludion } = await import("ludion-ai/gate/node");
   const gate = await ludion({ config: await demoConfig() });
   const port = Number(process.env.PORT ?? 3000);
   http.createServer((req, res) => gate(req, res, () => demoSite(req, res))).listen(port, () => console.log(`demo site on :${port}`));

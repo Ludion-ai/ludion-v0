@@ -3,7 +3,7 @@ title: コードから署名する
 description: エージェントの名前を Node.js から使う。ludionFetch で署名したリクエスト、目的の申告、MCP のクライアントとしての同じ名前。
 ---
 
-[`npx ludion init`](/ja/quickstart#身元を作る) のあと、エージェントの鍵は `ludion.json` にあります。Node.js からは、`ludion/diver` がその鍵でリクエストごとに署名します。Gate のあるサイトには、ほかの場所と同じ名前で見えます。
+[`npx ludion-ai init`](/ja/quickstart#身元を作る) のあと、エージェントの鍵は `ludion.json` にあります。Node.js からは、`ludion-ai/diver` がその鍵でリクエストごとに署名します。Gate のあるサイトには、ほかの場所と同じ名前で見えます。
 
 対応予定（ローンチの後）：Python でも同じことを。
 
@@ -12,12 +12,12 @@ description: エージェントの名前を Node.js から使う。ludionFetch �
 `init` を実行したディレクトリで：
 
 ```sh
-npm install ludion
+npm install ludion-ai
 ```
 
 ```js title="agent.mjs"
 import fs from "node:fs";
-import { createDiverSigner, ludionFetch } from "ludion/diver";
+import { createDiverSigner, ludionFetch } from "ludion-ai/diver";
 
 const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
 const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
@@ -43,7 +43,7 @@ URL は[クイックスタート](/ja/quickstart)で作ったサイトです（�
 
 ```js title="purpose.mjs"
 import fs from "node:fs";
-import { createDiverSigner, ludionFetch } from "ludion/diver";
+import { createDiverSigner, ludionFetch } from "ludion-ai/diver";
 
 const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
 const signer = await createDiverSigner({ sessionPrivateJwk: me.session, signatureAgent: me.signature_agent });
@@ -69,7 +69,7 @@ node purpose.mjs
 
 ```js title="token.mjs"
 import fs from "node:fs";
-import { clientAssertion } from "ludion/diver";
+import { clientAssertion } from "ludion-ai/diver";
 
 const me = JSON.parse(fs.readFileSync("ludion.json", "utf8"));
 const clientId = `${me.signature_agent}/client`;
@@ -92,4 +92,4 @@ const token = await res.json();
 
 `tokenEndpoint` は認可サーバーのメタデータから、`code`、`redirectUri`、`codeVerifier` はその前の認可の段階から来ます（PKCE。リダイレクトは `http://127.0.0.1/callback` か `http://[::1]/callback` で、ポートは任意）。このやり取りは、Client ID Metadata Document を有効にした Keycloak で、端から端まで確かめています（[MCP-1](https://github.com/Ludion-ai/Ludion/blob/main/docs/MISSION.md#m9-一点spec-v20-93234)）。
 
-`npx ludion revoke` は、その名前をどこでも一度に終わらせます。Web でも、名前を読むすべての認可サーバーでも。
+`npx ludion-ai revoke` は、その名前をどこでも一度に終わらせます。Web でも、名前を読むすべての認可サーバーでも。

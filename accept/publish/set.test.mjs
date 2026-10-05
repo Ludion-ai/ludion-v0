@@ -13,6 +13,6 @@ test("packEntry: npm 11's array and npm 12's object give the same entry; anythin
 
 test("packList: the real npm on this machine, whatever its version, lists the ludion package", () => {
   const l = packList("ludion");
-  assert.equal(l.name, "ludion");
+  assert.equal(l.name, "ludion-ai");
   assert.ok(l.files.includes("package.json"));
 });

@@ -1,4 +1,4 @@
-// `npx ludion doctor` checks what the quickstart tells the reader it checks: the public files are
+// `npx ludion-ai doctor` checks what the quickstart tells the reader it checks: the public files are
 // reachable at the agent's origin, without a redirect, the directory with its media type
 // (application/http-message-signatures-directory+json; many static hosts send an extensionless file as
 // application/octet-stream), holding the current session key, and the card and client documents each
@@ -160,7 +160,7 @@ test("DIV-7: when the Registry refuses a Root statement as stale, the CLI points
     const r = await run(["register", "--registry", `http://127.0.0.1:${stale.address().port}`]);
     assert.notEqual(r.code, 0, r.out);
     assert.match(r.out, /stale_statement/);
-    assert.match(r.out, /clock may be off: \`npx ludion doctor\`/, r.out);
+    assert.match(r.out, /clock may be off: \`npx ludion-ai doctor\`/, r.out);
     const o = await run(["register", "--registry", `http://127.0.0.1:${other.address().port}`]);
     assert.notEqual(o.code, 0, o.out);
     assert.doesNotMatch(o.out, /clock/, o.out);
@@ -171,7 +171,7 @@ test("DIV-7: when the Registry refuses a Root statement as stale, the CLI points
 test("doctor: a Card Host's refusal says what to do — not registered yet (register), or the Registry unavailable (try again); any other 404 says nothing more", async () => {
   const missed = [];
   for (const [name, x, why, not] of [
-    ["unknown to the Card Host", { status: 404, type: "application/json", body: JSON.stringify({ error: "unknown_agent" }) }, /\/card returned 404 \(must be 200, no redirect\) — the Card Host does not know this agent: not registered yet \(run `npx ludion register`\), or revoked/],
+    ["unknown to the Card Host", { status: 404, type: "application/json", body: JSON.stringify({ error: "unknown_agent" }) }, /\/card returned 404 \(must be 200, no redirect\) — the Card Host does not know this agent: not registered yet \(run `npx ludion-ai register`\), or revoked/],
     ["the Registry unavailable", { status: 503, type: "application/json", body: JSON.stringify({ error: "registry_unavailable" }) }, /\/card returned 503 \(must be 200, no redirect\) — the Registry is unavailable right now; try again in a minute/],
     ["a plain 404", { status: 404, type: "text/plain", body: "not found" }, /\/card returned 404 \(must be 200, no redirect\)\n/, /register|unavailable/],
   ]) {

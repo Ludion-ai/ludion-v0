@@ -3,7 +3,7 @@
 // The page "Install the Gate" (site/src/content/docs/gate.mdx) is followed, section by section, on a
 // reader's site that has not installed the Gate yet — reference/<app>/site, the same sites GATE-1 and
 // GATE-3 start from:
-//   - `npm install ludion` is the packed tarball (as npm would fetch it), after the site's own `npm ci`;
+//   - `npm install ludion-ai` is the packed tarball (as npm would fetch it), after the site's own `npm ci`;
 //   - Express: "Add two lines to your server" — the import with the other imports, `app.use(…)` right
 //     after the app is made (before its routes and body parsers);
 //   - Next.js: "Create proxy.js in the project root", the config "the same as for Express", then
@@ -56,7 +56,7 @@ export function followPage(mdx, app) {
     if (b.length !== 1) throw new Error(`${app}: ${b.length} ${lang} blocks`);
     return b[0].code;
   };
-  if (block(section, "sh").trim() !== "npm install ludion") throw new Error(`${app}: the install line is not npm install ludion`);
+  if (block(section, "sh").trim() !== "npm install ludion-ai") throw new Error(`${app}: the install line is not npm install ludion-ai`);
   const config = block(express, "json"); // Next.js: "the same as for Express"
   if (app === "express") {
     const [imp, ...rest] = lines(block(section, "js"));

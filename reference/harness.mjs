@@ -63,7 +63,7 @@ export function pack(pkgs, dest) {
 }
 
 export const APPS = {
-  // The one package on npm (ADR-036): the Gate comes inside `ludion`, as ludion/gate/<runtime>.
+  // The one package on npm (ADR-036): the Gate comes inside `ludion-ai`, as ludion-ai/gate/<runtime>.
   express: { packages: ["ludion"] },
   next: { packages: ["ludion"], build: (dir) => { node(dir, ["node_modules/next/dist/bin/next", "build"], { NEXT_TELEMETRY_DISABLED: "1" }); pinMtimes(path.join(dir, ".next")); },
     built: (dir) => fs.existsSync(path.join(dir, ".next", "BUILD_ID")) },
@@ -138,7 +138,7 @@ export function prepare(app) {
 
 /**
  * A reader's site after following a page (WEB-7): reference/<app>/site with `files` (path → text)
- * written over it, its own `npm ci`, then the page's `npm install ludion` (the packed tarball), then the
+ * written over it, its own `npm ci`, then the page's `npm install ludion-ai` (the packed tarball), then the
  * app's build step. Cached by content in its own directory, as prepare() caches A and B.
  * @param {keyof APPS} app
  * @param {Record<string, string>} files

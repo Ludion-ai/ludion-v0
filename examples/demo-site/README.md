@@ -12,9 +12,9 @@ route an AI may use only with its user's Mandate:
 To run it for the video, on the demo's own host (the human does this):
 
 1. Set `authorities` in `ludion.config.json` to the host it runs on.
-2. `npm install` (needs `ludion` on npm), then `PORT=3000 npm start`. At start it pins the Registry's
+2. `npm install` (needs `ludion-ai` on npm), then `PORT=3000 npm start`. At start it pins the Registry's
    public keys from `https://registry.ludion.ai/.well-known/ludion-keys` (a real site pins them in its
-   file) and subscribes to the revocation stream, so a `npx ludion revoke` shows within seconds.
+   file) and subscribes to the revocation stream, so a `npx ludion-ai revoke` shows within seconds.
 
 The consent page that issues Mandates is frozen (spec §9.5); for now a Mandate comes from a test
 issuance. PRS-5 runs this site and its config end to end.

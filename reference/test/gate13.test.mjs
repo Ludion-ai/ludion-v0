@@ -27,7 +27,7 @@ const INSTALLS = [
   ["every Gate line twice", (i) => edit(server(i), (s) => s.replace(/^(import \{ ludion \}.*\n)/m, "$1$1").replace(/^(app\.use\(await ludion\(\)\);\n)/m, "$1$1")), /application lines changed/],
   ["edits beside the install", (i) => edit(server(i), (s) => s.replace("Reference Shop", "Reference Shop (gated)").replace("No such product", "Not here").replace("Missing credentials", "Missing")), /application lines changed/],
   ["a second config file", (i) => fs.writeFileSync(path.join(i, "wrangler.json"), "{}\n"), /config files/],
-  ["a hand-edited package.json", (i, site) => fs.writeFileSync(path.join(i, "package.json"), fs.readFileSync(path.join(site, "package.json"), "utf8").replace('"dependencies": {', '"dependencies": {\n    "ludion": "0.0.1",')), /dependencies come from npm install/],
+  ["a hand-edited package.json", (i, site) => fs.writeFileSync(path.join(i, "package.json"), fs.readFileSync(path.join(site, "package.json"), "utf8").replace('"dependencies": {', '"dependencies": {\n    "ludion-ai": "0.0.1",')), /dependencies come from npm install/],
   ["a line the README does not show", (i) => edit(server(i), (s) => s.replace("app.use(await ludion());", "app.use(await ludion({ trustProxy: true }));")), /does not show the installed line/],
   ["nothing changed", (i, site) => { for (const f of fs.readdirSync(i)) fs.rmSync(path.join(i, f)); fs.copyFileSync(path.join(site, "server.mjs"), path.join(i, "server.mjs")); }, /changes nothing/],
   ["empty", (i) => { for (const f of fs.readdirSync(i)) fs.rmSync(path.join(i, f)); }, /changes nothing/],
