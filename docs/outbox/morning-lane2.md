@@ -1,21 +1,24 @@
 # 朝の報告（レーン2、2026-10-06）
 
-書いた時刻：（下の「書いた時刻」）。夜間モード：人間に聞かず、spec に一番合う方で進めた。外への書き込み、公開、デプロイ、GitHub の設定変更、外のページの読み込みはしていない（夜間モードの指示が届く前に、#128 に PR のコメントを1つ書いた）。
+書いた時刻：2026-10-05 23:20 JST（このあとも進めたら、ここを書き直す）。夜間モード：人間に聞かず、spec に一番合う方で進めた。外への書き込み、公開、デプロイ、GitHub の設定変更、外のページの読み込みはしていない（夜間モードの指示が届く前に、#128 に PR のコメントを1つ書いた）。
 
 ## 終わったもの
 
 | | 中身 | 状態 |
 |---|---|---|
 | MND-1〜4 | 運営者が Root 鍵で自分のエージェントにかける Mandate（`prn: "self"`）。名簿の発行と取り消し（Root の署名だけ）、CLI の `npx ludion-ai mandate create/list/revoke`、SDK の `mandateFor`、受領証と1時間の集計に委任の判定、help のページ | #128 マージ済み |
-| DEMO-1 | `examples/demo-shop`：店（経路ごとに scope）と、乗っ取られるエージェント。範囲の中は通り、罠のパスワード変更と削除は 403 `mandate_scope`（SDK でも、盗んだ Session 鍵で手で署名しても）、Root の無い作り直しは名簿が 401、revoke で全部 REVOKED。60秒の台本も書き直した | #129（CI 待ち、auto-merge） |
-| MSG-1 | README の冒頭（英日）、トップページ（英日）、show-hn.md、faq.md を3つの問いと「Ludion が防がないもの」で書き直した。言い過ぎの語の検査つき | #132（CI 待ち、auto-merge） |
-| MND-5（任意） | SDK の側のシートベルト：`mandateFor(me, { strict: true })` で、範囲の外の要求は署名も送信もしない（Gate の無いサイトでも） | ブランチ `lane2/mnd5`（push 済み）。PR は2本の枠が空いたら |
+| DEMO-1 | `examples/demo-shop`：店（経路ごとに scope）と、乗っ取られるエージェント。範囲の中は通り、罠のパスワード変更と削除は 403 `mandate_scope`（SDK でも、盗んだ Session 鍵で手で署名しても）、Root の無い作り直しは名簿が 401、revoke で全部 REVOKED。60秒の台本も書き直した | main に入った（#132 が #129 の上に乗っていたので、#132 と一緒に入った。#129 は重複になったので閉じた） |
+| MSG-1 | README の冒頭（英日）、トップページ（英日）、show-hn.md、faq.md を3つの問いと「Ludion が防がないもの」で書き直した。言い過ぎの語の検査つき | #132 マージ済み |
+| MND-5（任意） | SDK の側のシートベルト：`mandateFor(me, { strict: true })` で、範囲の外の要求は署名も送信もしない（Gate の無いサイトでも） | PR（この報告と同じ PR、auto-merge） |
 | CEN-1・2 | census（`/census`、`/ja/census`）と各社への連絡の下書き5通 | **手元だけ**（`lane2/census-local`、push していない）。下の判断の1 |
 
 ## PASS の数
 
 - レーン2の系列（9件）：手元で全部 PASS（MND-1〜5、DEMO-1、CEN-1・2、MSG-1）。main では MND-1〜4 の4件。
-- 全オラクル（手元、`lane2/mnd5` の上）：（下の「全体の scoreboard」）
+- 全オラクル（手元、`lane2/mnd5` の上で `npm run scoreboard`、23:16）：**PASS 106 / FAIL 2 / PENDING 6 / SKIP 1 / 全 115**。
+  - FAIL：LOOP-2（`preview` の secret 待ち、人間）と WEB-1（共有のプレビューが、このブランチのビルドより古い。サイトを変えたので手元では落ちる。CI では `preview` ジョブで回る）。
+  - PENDING：GATE-9、LIVE-1〜3、CEN-1・2（census は別のブランチ）。SKIP：PILOT-2（トークン待ち）。
+- CI（Linux、#132）：MND-1〜4、DEMO-1、MSG-1 が PASS。main の `loop` は緑（赤いのは secret 待ちの `preview` だけ）。
 
 ## 朝に見てほしい判断
 
