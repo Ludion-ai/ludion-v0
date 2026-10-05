@@ -1,6 +1,6 @@
 ---
 title: mandate_required
-description: "HTTP 403. This route asks for a Mandate from the person or company the agent acts for. What happened, why, and how to get verified in about three minutes."
+description: "HTTP 403. This route asks for a Mandate: what the agent may do on this site, signed by the Registry. What happened, why, and how to get verified in about three minutes."
 sidebar:
   order: 7
 ---
@@ -10,27 +10,33 @@ import VerifyPath from "../../../partials/verify-path.en.mdx";
 
 ## What happened
 
-Your signature verified, but this route acts on someone's behalf (a purchase, an account change, a booking) and asks for a *Mandate*: a signed, short-lived delegation from the person or company you act for (the *Principal*). Your request carried none that holds here.
+Your signature verified, but this route does something that needs permission (a purchase, an account change, a booking) and asks for a *Mandate*: a signed, short-lived statement of what you may do on this site. In Ludion Protocol v0 it is the limit your operator puts on you with its Root key; a running agent holds only its session key, so it cannot widen its own. Your request carried none that holds here.
 
 A Mandate that is there counts as none when:
 
 - it is for another site, or for a category this site is not in;
 - it has expired;
-- the Principal has withdrawn it;
+- it has been withdrawn;
 - no `Ludion-Staple` came with it. Whom a Mandate delegates to is checked against the Diver your Staple names.
 
-A Mandate says who you act for (as a pseudonym unique to each site), where, what you may do (`read`, `account`, `post`, `reserve`, `checkout`, `delete`), up to what limit, and until when. It contains no name, address or contact details.
+A Mandate says for whom (`self` when your operator issued it, or a pseudonym unique to each site when a person consented), where, what you may do (`read`, `account`, `post`, `reserve`, `checkout`, `delete`), up to what limit, and until when. It contains no name, address or contact details.
 
 ## Why this site asks
 
-Even a legitimate agent can be steered by a prompt injection. A Mandate lets the site check that this action is within what the Principal actually agreed to, before it happens.
+Even a legitimate agent can be steered by a prompt injection, and a key can be stolen. A Mandate lets the site check that this action is within what was actually allowed, before it happens: a hijacked agent, or someone signing with its stolen session key, still cannot step outside it.
 
 ## How to fix it
 
-- Ask your Principal for a Mandate that covers this site and this action. In Ludion Protocol v0, the Principal consents with a passkey and the Registry issues the Mandate; your agent sends it in the `Ludion-Mandate` header, inside the signature.
+- If you run the agent, put a Mandate on it for this site with your Root key (the Registry takes no other), then attach it with the line the command prints:
+
+  ```sh
+  npx ludion-ai mandate create --site https://shop.example --scope read
+  ```
+
+  Use the site's own origin, and the scopes this route asks for. `--checkout-max`, `--currency` and `--per-day` limit checkouts. Your agent sends the Mandate in the `Ludion-Mandate` header, inside the signature.
 - Always send your Staple with a Mandate, with `Ludion-Staple` inside the same signature.
-- An expired or withdrawn Mandate stays unusable until your Principal consents again.
-- Mandate issuance is not open yet. Until it is, this route stays closed to agents without one.
+- An expired or withdrawn Mandate stays unusable: create a new one.
+- In v0 a Mandate is your operator's own limit, not the consent of the person you act for. That consent page is not open yet.
 
 ## Get verified in 3 minutes
 

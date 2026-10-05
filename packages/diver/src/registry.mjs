@@ -67,6 +67,23 @@ export function createRegistryClient({ url, fetch = globalThis.fetch, now = () =
       const headers = await signer.headersFor({ method: "POST", url: target, headers: { "content-type": "application/json" }, body });
       return post(`/v0/divers/${store.diver_id}/staple`, body, headers);
     },
+    /**
+     * Put a Mandate on this Diver (Root-signed; lane 2 spec §3.2): the site (`aud`, an https origin),
+     * the scope words, the limits, the expiry (Unix seconds; the Registry defaults to 24 h, at most
+     * 7 days). A session key cannot do this: the Registry takes the Root's signature only.
+     */
+    async createMandate(store, rootPrivateJwk, { aud, scope, limits, exp }) {
+      const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
+      const statement = signRootStatement(rootPrivateJwk, "ludion-mandate-self+jwt", {
+        sub: store.diver_id, aud, scope, ...(limits ? { limits } : {}), ...(exp ? { exp } : {}), iat: iat(), nonce,
+      });
+      return post(`/v0/divers/${store.diver_id}/mandates`, JSON.stringify({ statement }));
+    },
+    /** Withdraw a Mandate this Diver's Root put on it (Root-signed). */
+    async revokeMandate(store, rootPrivateJwk, jti) {
+      const statement = signRootStatement(rootPrivateJwk, "ludion-mandate-self-revoke+jwt", { sub: store.diver_id, jti, iat: iat() });
+      return post(`/v0/divers/${store.diver_id}/mandates/${jti}/revoke`, JSON.stringify({ statement }));
+    },
     /** Revoke the whole Diver, or only some session keys (`jkt`) (Root-signed). */
     async revoke(store, rootPrivateJwk, { jkt, reason = "compromised" } = {}) {
       const statement = signRootStatement(rootPrivateJwk, "ludion-revoke+jwt", {

@@ -13,6 +13,8 @@
 //   POST /v0/principals                    register a Principal's passkey
 //   POST /v0/mandates                      issue a Mandate              (the Principal's passkey consent)
 //   POST /v0/mandates/{jti}/revoke         withdraw it                  (the same Principal's passkey)
+//   POST /v0/divers/{id}/mandates          an operator's own limit      (Root-signed statement; prn "self")
+//   POST /v0/divers/{id}/mandates/{jti}/revoke  withdraw it             (Root-signed statement)
 //
 // Off the hot path (spec §9.1, invariants 7 and 8): no Gate ever asks the Registry about a request.
 // Agents carry their state (Staples); Gates hold the Registry's public keys and the revocation list.
@@ -23,6 +25,8 @@
 // Mandates (spec §10.6) are the one place a site is named to the Registry: by the Principal, who
 // consents with a passkey to a delegation for a site (or a category). The Registry keeps the
 // Mandate's hash, whose it is, its Diver and its expiry — never the site, scope or limits (§13.3).
+// An operator may also put a Mandate on its own Diver (lane 2 spec §3.2): a Root-signed request,
+// prn "self". A running agent holds session keys only, so it cannot widen its own limits.
 //
 // Fetch API only (Request → Response): Node, workerd, Deno and Bun run the same code. Crypto: the
 // Registry signs and verifies JWS, passkey signatures and pseudonyms through
@@ -32,7 +36,7 @@
 import { verify as verifyRequestSignature } from "web-bot-auth";
 import { verifierFromJWK } from "web-bot-auth/crypto";
 import { verifyJws, importRegistryKey, signJws, issueStaple, hmacSha256 } from "@ludion/gate-core/staple";
-import { MANDATE_TYP, SCOPES, CHARGE_SCOPE, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, validLimits, audienceHost } from "@ludion/gate-core/mandate";
+import { MANDATE_TYP, SCOPES, CHARGE_SCOPE, SELF, DEFAULT_MANDATE_LIFETIME_S, MAX_MANDATE_LIFETIME_S, validLimits, audienceHost } from "@ludion/gate-core/mandate";
 import { credentialFrom, verifyAssertion, challengeFor, fromB64u, ConsentError } from "./webauthn.mjs";
 
 export const REGISTER_TYP = "ludion-register+jwt";
@@ -45,6 +49,9 @@ export const BALLAST_V0 = ["abuse_response_24h", "revocation_consent", "glass_co
 
 export const MANDATE_REQUEST_TYP = "ludion-mandate-request";
 export const MANDATE_REVOKE_TYP = "ludion-mandate-revoke";
+/** Root-signed statements for an operator's own Mandates (prn "self"). */
+export const SELF_MANDATE_TYP = "ludion-mandate-self+jwt";
+export const SELF_MANDATE_REVOKE_TYP = "ludion-mandate-self-revoke+jwt";
 
 const MAX_STAPLE_LIFETIME_S = 3600;   // spec §10.5
 const STATEMENT_SKEW_S = 300;         // Root statements must be fresh: a captured one cannot be replayed later
@@ -480,6 +487,15 @@ export async function createRegistry(o) {
     const diver = typeof req.sub === "string" ? await store.getDiver(req.sub) : undefined;
     if (!diver) throw new HttpError(404, "unknown_diver", "sub must be a registered Diver");
     if (diver.revoked) throw new HttpError(403, "revoked", "this Diver is revoked");
+    const { limits, exp } = mandateTerms(req);
+    await spend(c);
+
+    const prn = `pw-${base32(await hmacSha256(fromB64u(c.principal.k), enc.encode(req.aud)))}`;
+    return grant(req, { prn, limits, exp, principal: c.principal.id });
+  }
+
+  /** What a Mandate request asks for, checked: the site, the scope, the limits, the expiry. */
+  function mandateTerms(req) {
     if (typeof req.aud !== "string" || (audienceHost(req.aud) == null && !/^cat:[a-z0-9-]{1,32}$/.test(req.aud))) {
       throw new HttpError(400, "bad_audience", 'aud must be a site origin ("https://shop.example") or a category ("cat:ecommerce")');
     }
@@ -498,15 +514,52 @@ export async function createRegistry(o) {
     const t = nowS();
     const exp = req.exp == null ? t + DEFAULT_MANDATE_LIFETIME_S : req.exp;
     if (!Number.isInteger(exp) || exp <= t || exp - t > MAX_MANDATE_LIFETIME_S) throw new HttpError(400, "bad_expiry", "exp must be in the future and at most 7 days away");
-    await spend(c);
+    return { limits, exp };
+  }
 
-    const prn = `pw-${base32(await hmacSha256(fromB64u(c.principal.k), enc.encode(req.aud)))}`;
+  /** Sign a Mandate. Kept: the hash, whose it is, its Diver and expiry. Not the site, the scope or the limits. */
+  async function grant(req, { prn, limits, exp, principal }) {
     const jti = `mdt-${b64u(crypto.getRandomValues(new Uint8Array(12)))}`;
-    const payload = { iss: issuer, sub: req.sub, prn, aud: req.aud, scope: [...req.scope], ...(limits ? { limits } : {}), iat: t, exp, jti };
+    const payload = { iss: issuer, sub: req.sub, prn, aud: req.aud, scope: [...req.scope], ...(limits ? { limits } : {}), iat: nowS(), exp, jti };
     const compact = await signJws(signing.privateKey, signing.kid, MANDATE_TYP, payload);
-    // Kept: the hash, whose it is, its Diver and expiry. Not the site, the scope or the limits.
-    await store.putMandate(jti, { h: b64u(await sha256(enc.encode(compact))), principal: c.principal.id, sub: req.sub, exp });
+    await store.putMandate(jti, { h: b64u(await sha256(enc.encode(compact))), ...(principal ? { principal } : { self: true }), sub: req.sub, exp });
     return json(201, { mandate: compact, jti, exp });
+  }
+
+  /** A Root-signed statement of this Diver, of this typ, fresh. */
+  async function rootStatement(rec, request, typ) {
+    const { statement } = await readJson(request);
+    if (typeof statement !== "string") throw new HttpError(400, "bad_statement");
+    let p;
+    try { ({ payload: p } = await verifyJws(statement, rec.root, { typ })); } catch (e) { throw new HttpError(401, "bad_signature", `not signed by this Diver's Root: ${e.message}`); }
+    fresh(p.iat);
+    if (p.sub !== rec.diver_id) throw new HttpError(400, "bad_subject");
+    return { statement, p };
+  }
+
+  /**
+   * An operator's own limit on its Diver (lane 2 spec §3.2): a statement signed by the Diver's Root,
+   * used once. A session key's signature is refused (it is not the Root), so a running agent — which
+   * holds session keys only — cannot issue itself a wider Mandate. The Mandate's prn is "self".
+   */
+  async function issueSelfMandate(id, request) {
+    const rec = await diverOr404(id);
+    const { statement, p } = await rootStatement(rec, request, SELF_MANDATE_TYP);
+    if (rec.revoked) throw new HttpError(403, "revoked", "this Diver is revoked");
+    const { limits, exp } = mandateTerms(p);
+    if (!await store.useConsent(`self:${await challengeFor(statement)}`, p.iat + CONSENT_HELD_S, nowS())) throw new HttpError(409, "statement_replayed", "this statement was already used");
+    return grant(p, { prn: SELF, limits, exp });
+  }
+
+  /** Withdraw an operator's own Mandate (Root-signed). */
+  async function revokeSelfMandate(id, jti, request) {
+    const rec = await diverOr404(id);
+    const { p } = await rootStatement(rec, request, SELF_MANDATE_REVOKE_TYP);
+    if (p.jti !== jti) throw new HttpError(400, "bad_request", "the statement names another Mandate");
+    const m = await store.getMandate(jti);
+    if (!m) throw new HttpError(404, "unknown_mandate");
+    if (!m.self || m.sub !== id) throw new HttpError(403, "not_your_mandate", "a Diver's Root withdraws only the Mandates it put on itself");
+    return withdraw(jti, m);
   }
 
   async function revokeMandate(jti, request) {
@@ -516,6 +569,11 @@ export async function createRegistry(o) {
     if (!rec) throw new HttpError(404, "unknown_mandate");
     await spend(c);
     if (rec.principal !== c.principal.id) throw new HttpError(403, "not_your_mandate", "only the Principal who gave a Mandate can withdraw it");
+    return withdraw(jti, rec);
+  }
+
+  /** Every Gate hears of a withdrawn Mandate: subscribed ones now (the stream), the rest through the Staple's mrev. */
+  async function withdraw(jti, rec) {
     if (rec.revoked) return json(200, { jti, seq: rec.revoked.seq });
     const entry = await store.appendRevocation(async (seq) => ({
       seq, jws: await signJws(signing.privateKey, signing.kid, REVOCATION_TYP, { iss: issuer, seq, sub: rec.sub, scope: "mandate", mdt: [jti], reason: "withdrawn", iat: nowS() }),
@@ -546,7 +604,9 @@ export async function createRegistry(o) {
     if (m === "POST" && p === "/v0/mandates") return issueMandate(request);
     const mr = /^\/v0\/mandates\/(mdt-[A-Za-z0-9_-]{8,64})\/revoke$/.exec(p);
     if (mr && m === "POST") return revokeMandate(mr[1], request);
-    if (["/v0/divers", "/v0/revocations", "/v0/revocations/stream", "/v0/bulk", "/.well-known/ludion-keys", "/v0/principals", "/v0/mandates"].includes(p) || r || mr) throw new HttpError(405, "method_not_allowed");
+    const sm = /^\/v0\/divers\/(dvr-[a-z2-7]{16})\/mandates(?:\/(mdt-[A-Za-z0-9_-]{8,64})\/revoke)?$/.exec(p);
+    if (sm && m === "POST") return sm[2] ? revokeSelfMandate(sm[1], sm[2], request) : issueSelfMandate(sm[1], request);
+    if (["/v0/divers", "/v0/revocations", "/v0/revocations/stream", "/v0/bulk", "/.well-known/ludion-keys", "/v0/principals", "/v0/mandates"].includes(p) || r || mr || sm) throw new HttpError(405, "method_not_allowed");
     throw new HttpError(404, "not_found");
   }
 

@@ -502,10 +502,14 @@ export const ORACLES = [
   // M10 — the three questions (lane 2's spec, docs/lanes/lane2-spec.md §4): who is this AI, what may it
   // do (the Mandate's scope, held by the site's Gate), how is it stopped (revocation). v0's Mandate is an
   // operator's own limit on its agent (prn "self"). Added PENDING on 2026-10-05.
-  { id: "MND-1", m: "M10", kind: "±", level: 0, title: "a Mandate is issued only on a Root-signed request; one signed by a session key is refused; the SDK never loads the Root at run time" },
-  { id: "MND-2", m: "M10", kind: "±", level: 1, title: "a correctly signed request outside its Mandate's scope gets 403 mandate_scope from the Gate; inside it passes; a mutation that drops the check is caught" },
-  { id: "MND-3", m: "M10", kind: "-", level: 1, title: "a Mandate for another site, another Diver, expired or revoked is no Mandate (403 mandate_required)" },
-  { id: "MND-4", m: "M10", kind: "±", level: 1, title: "per_day holds only at a Gate with a place to count it; a Gate without one refuses a Mandate with per_day" },
+  { id: "MND-1", m: "M10", kind: "±", level: 0, title: "a Mandate is issued only on a Root-signed request; one signed by a session key is refused; the SDK never loads the Root at run time",
+    run: nodeTest(["services/registry/test/mnd.test.mjs"], "^MND-1:", { metric: (out) => (/^# MND-1: (.+)$/m.exec(out) ?? [])[1] }) },
+  { id: "MND-2", m: "M10", kind: "±", level: 1, title: "a correctly signed request outside its Mandate's scope gets 403 mandate_scope from the Gate; inside it passes; a mutation that drops the check is caught",
+    run: nodeTest(["services/registry/test/mnd.test.mjs"], "^MND-2:", { metric: (out) => [...out.matchAll(/^# MND-2: (.+)$/gm)].map((m) => m[1]).join("; ") || undefined }) },
+  { id: "MND-3", m: "M10", kind: "-", level: 1, title: "a Mandate for another site, another Diver, expired or revoked is no Mandate (403 mandate_required)",
+    run: nodeTest(["services/registry/test/mnd.test.mjs"], "^MND-3:", { metric: (out) => (/^# MND-3: (.+)$/m.exec(out) ?? [])[1] }) },
+  { id: "MND-4", m: "M10", kind: "±", level: 1, title: "per_day holds only at a Gate with a place to count it; a Gate without one refuses a Mandate with per_day",
+    run: nodeTest(["services/registry/test/mnd.test.mjs"], "^MND-4:", { metric: (out) => (/^# MND-4: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "MND-5", m: "M10", kind: "±", level: 0, title: "(optional) with a Mandate attached, the SDK does not sign a request outside its scope" },
   { id: "DEMO-1", m: "M10", kind: "±", level: 1, title: "lane 2 spec §3.4's flow passes in CI with a scripted hijack: in-scope browsing and cart pass; the trap page's password change and delete get 403 mandate_scope, also signed directly with the stolen session key; re-issuing the Mandate without the Root is refused; revoke makes everything REVOKED" },
   { id: "CEN-1", m: "M10", kind: "±", level: 1, title: "every census value has a source and the date it was checked; no forbidden evaluative words; the page builds" },

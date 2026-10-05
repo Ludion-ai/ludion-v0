@@ -395,14 +395,26 @@ function decideRoute(cls, route) {
     const p = cls.purpose;
     if (!p?.signed || (req.purpose !== "any" && p.kind !== req.purpose)) return { action: "deny", status: 403, error: "purpose_required" };
   }
-  if (req.scope) {
-    // Overlapping routes can each name a scope: the Mandate must carry every one (PRS-4).
-    const m = cls.mandate;
-    if (!m) return { action: "deny", status: 403, error: "mandate_required" };
-    if (![].concat(req.scope).every((s) => m.scope?.includes(s))) return { action: "deny", status: 403, error: "mandate_scope" };
-  }
+  const verdict = mandateVerdict(cls, req);
+  if (verdict === "required") return { action: "deny", status: 403, error: "mandate_required" };
+  if (verdict === "scope") return { action: "deny", status: 403, error: "mandate_scope" };
   return { action: "allow", exempt: true };
 }
+
+/**
+ * The Mandate's part for a verified request on a route whose requirement names a scope: "ok" (it
+ * carries every scope named), "scope" (a Mandate, but not for all of it), "required" (none that
+ * holds here and now); "none" when the route names no scope. Overlapping routes can each name a
+ * scope: the Mandate must carry every one (PRS-4).
+ */
+export function mandateVerdict(cls, require) {
+  if (!require?.scope) return "none";
+  const m = cls.mandate;
+  if (!m) return "required";
+  return [].concat(require.scope).every((s) => m.scope?.includes(s)) ? "ok" : "scope";
+}
+/** The values a receipt and an hourly count carry for it. */
+export const MANDATE_VERDICTS = Object.freeze(["none", "ok", "required", "scope"]);
 
 export const ERROR_HELP = (code) => `<https://ludion.ai/e/${code}>; rel="help"`;
 

@@ -27,6 +27,8 @@ export const MAX_MANDATE_LIFETIME_S = 7 * 86_400;
 export const DAY_MS = 86_400_000;
 /** The scope a charge needs. */
 export const CHARGE_SCOPE = "checkout";
+/** prn of a Mandate an operator puts on its own agent with its Root (no Principal's consent). */
+export const SELF = "self";
 
 const CATEGORY = /^cat:[a-z0-9-]{1,32}$/;
 
@@ -66,7 +68,9 @@ export async function verifyMandate(compact, ctx) {
   const t = Math.floor(ctx.now / 1000);
   if (typeof p.sub !== "string" || !/^dvr-[a-z2-7]{16}$/.test(p.sub)) throw new MandateError("bad mandate subject", "invalid");
   if (typeof p.jti !== "string" || !/^mdt-[A-Za-z0-9_-]{8,64}$/.test(p.jti)) throw new MandateError("bad mandate id", "invalid");
-  if (typeof p.prn !== "string" || !p.prn.startsWith("pw-")) throw new MandateError("bad principal pseudonym", "invalid");
+  // A Principal's pseudonym for this site, or "self": the operator's own limit on its agent, issued on
+  // a Root-signed request (lane 2 spec §3.2) — no person's consent, and the Mandate says so.
+  if (typeof p.prn !== "string" || !(p.prn === SELF || p.prn.startsWith("pw-"))) throw new MandateError("bad principal pseudonym", "invalid");
   if (!Array.isArray(p.scope) || !p.scope.every((s) => typeof s === "string")) throw new MandateError("bad mandate scope", "invalid");
   if (p.limits != null && (typeof p.limits !== "object" || Array.isArray(p.limits))) throw new MandateError("bad mandate limits", "invalid");
   if (p.scope.includes(CHARGE_SCOPE) && !validLimits(p.limits)) throw new MandateError("a checkout mandate without limits", "invalid");

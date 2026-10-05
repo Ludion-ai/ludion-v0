@@ -2,8 +2,9 @@
 //
 // The key of a count is the route template, the access ("read" or "write": the Gate's own judgment,
 // where a route marked "writes": false is a read — not the method), the class, the decision and the
-// operator (a Diver id or the name the agent gave, else "none"). A batch carries the site and the hour it
-// counts (Unix seconds of the hour's start); no visit's time, IP hash or country is in it. Per-visit
+// operator (a Diver id or the name the agent gave, else "none") and the Mandate's part (ok,
+// required, scope, or none where no route held the request to a Mandate). A batch carries the site
+// and the hour it counts (Unix seconds of the hour's start); no visit's time, IP hash or country is in it. Per-visit
 // records stay on the site (records.mjs). Runtime-neutral: no timers here; the Gate flushes the
 // hours that have closed whenever it inspects a request, and an adapter may also call flush().
 
@@ -11,7 +12,8 @@ export const HOUR_S = 3600;
 export const BATCH_KIND = "ludion.hourly";
 /** Distinct keys one hour may hold; past it, counts go to one "(other)" row (no memory blow-up). */
 export const MAX_ROWS_PER_HOUR = 5000;
-export const ROW_KEYS = ["route", "access", "class", "decision", "operator", "count"];
+export const ROW_KEYS = ["route", "access", "class", "decision", "operator", "mandate", "count"];
+const MANDATE = new Set(["ok", "required", "scope"]);
 export const ACCESS = Object.freeze(["read", "write"]);
 
 const DIVER_ID = /^dvr-[a-z0-9]{8,40}$/;
@@ -58,10 +60,11 @@ export function createHourly({ siteId, now, emit, maxRows = MAX_ROWS_PER_HOUR })
       let rows = hours.get(hour);
       if (!rows) hours.set(hour, (rows = new Map()));
       const access = record.access === "write" ? "write" : "read";
-      let row = { route: record.route, access, class: record.class, decision: record.decision, operator };
+      const mandate = MANDATE.has(record.mandate) ? record.mandate : "none";
+      let row = { route: record.route, access, class: record.class, decision: record.decision, operator, mandate };
       let key = JSON.stringify(row);
       if (!rows.has(key) && rows.size >= maxRows) {
-        row = { route: "(other)", access, class: record.class, decision: record.decision, operator: "(other)" };
+        row = { route: "(other)", access, class: record.class, decision: record.decision, operator: "(other)", mandate };
         key = JSON.stringify(row);
       }
       const have = rows.get(key);
