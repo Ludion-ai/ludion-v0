@@ -48,6 +48,19 @@
 - **`per_day` の意味は変えない**：1日の決済（`charge()`）の回数（PRS-3）。だから `checkout` の Mandate には `--checkout-max` と `--currency` が要る。spec §3.2 の例のコマンド（`--scope read,checkout --per-day 3`）は、そのままでは名簿が拒否する。→ 人間待ち（下）に確認として書いた。
 - **`sub` 違いは今のまま**（SPOOFED、401）。PRS-2 を変えるのは人間の判断。
 
+## 朝に見てほしい判断（夜間モード、2026-10-05 夜〜）
+
+人間が不在のあいだ、spec に一番合う方を選んで進めた。違っていたら、その行を指して戻してください。
+
+1. **MND-3 の `sub` 違い**：spec は 403 `mandate_required`。PRS-2（ラチェット済み）が 401 `invalid_signature`（SPOOFED）に固めているので、そのままにした。MND-3 の行に注記した（下の人間待ちの1）。
+2. **`per_day` は「1日の決済の回数」のまま**（PRS-3）。`checkout` の Mandate は `--checkout-max` と `--currency` を持つ。spec §3.2 の例のコマンドに、この2つを足して使っている（デモも台本も）。
+3. **検証器の対照の更新**：1時間の集計の行に `mandate` を足したので、行のキーを手で並べていた2か所（PRIV-4 の対照の行、SEED-2 の e2e の `ROW`）にも足した。判定そのものは変えていない。
+4. **デモは新しい `examples/demo-shop`**。レーン1の `examples/demo-site`（PRS-5、scope delete）には触っていない。
+5. **台本（`docs/outbox/launch/demo-script.md`）を §3.4 の流れに書き直した**。前の台本の MCP の場面は、spec の流れに無いので外した（MCP-1 は残っている）。
+6. **罠の文は、デモの店の商品レビューに置いた**（攻撃者が書いた体）。不変条件16（ページの中で AI に問いかけない）は Ludion 自身のページの話と読んだ。デモの店のページにだけ置き、README と台本に「仕込んだ攻撃」と書いた。
+7. **`agent.mjs --model`**（録画用、任意）の既定のモデルは `claude-sonnet-5-5`。鍵が無いので一度も動かしていない。CI は `--scripted` だけ。
+8. 夜間モードの指示が届く前に、#128 に PR のコメントを1つ書いた（SEED-2 の対照を変えた説明）。それ以降、外への書き込みはしていない。
+
 ## 人間待ち
 
 - [ ] **判断（MND-3 の `sub` 違い）**：spec は 403 `mandate_required`。今は SPOOFED（401 `invalid_signature`）で、PRS-2（ラチェット済み）が固めている（「A が B の Mandate を運ぶと SPOOFED」）。
@@ -63,6 +76,7 @@
 ## 進み具合（レーン2の系列）
 
 - 手元（`lane2/mnd`、main を取り込んだ上）：MND-1〜4 PASS。DEMO-1、CEN-1・2、MSG-1、MND-5 は PENDING。
+- 手元（`lane2/demo`）：DEMO-1 PASS（10秒。流れ全体と、仕込んだ3つ：アカウントの経路に scope が無い店、失効を購読しない店、Session 鍵の文も受け付ける名簿、を3つとも捕まえる）。
   - 同じ変更で回して PASS：LOOP-1・4・5、CRY-1、STD-1・2、GATE-2・5・7・10〜14、PRIV-1〜5、PRS-1〜5、REG-1〜7、LEAK-1、RPT-1・2、DIV-3〜6、PUB-1〜4、SEC-1、NEUT-1、PUR-1〜4、BLK-1、ONE-3、MCP-4、PILOT-1、WEB-2、WEB-3。
   - PRIV-4 の判定の対照（手で組んだ正しい1時間の行）に `mandate` を足した。判定はそのまま（`ROW_KEYS` と比べる）。spec §3.3 の「1時間ごとの集計に委任の判定を入れる」のため。
 
