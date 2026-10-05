@@ -24,7 +24,7 @@ The Gate is the free, open-source checkpoint a site runs on its own server; the 
 ## For an agent: a name and keys, in one line
 
 ```sh
-npx ludion init --name "My Agent" --contact mailto:ops@example.com
+npx ludion-ai init --name "My Agent" --contact mailto:ops@example.com
 ```
 
 You get one screen:
@@ -34,27 +34,27 @@ Your AI's name: https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai
 
   Web    Signature-Agent: sig1="https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai"
   MCP    client_id = https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai/client
-  Erase  npx ludion revoke   (within 1 hour, it stops working everywhere)
+  Erase  npx ludion-ai revoke   (within 1 hour, it stops working everywhere)
 
   README badge:
   [![Ludion ID](https://ludion.ai/badge/dvr-k7q2m6x4pcab3cde.svg)](https://dvr-k7q2m6x4pcab3cde.agents.ludion.ai)
 ```
 
-- **Web**: sign your requests. `npx ludion sign GET https://example.com/` prints the signature headers for any HTTP client; in Node, `ludionFetch` from `ludion/diver` handles signing, key rotation, nonces and body digests.
-- **MCP**: use `…/client` as your client_id. It is plain OAuth client metadata (CIMD) over the same keys: loopback `redirect_uris` (`http://127.0.0.1/callback`), and the agent authenticates with `private_key_jwt` signed by its session key (`clientAssertion` in `ludion/diver`) — no shared secret. Checked end to end against Keycloak 26.8.0 with CIMD on (MCP-1).
-- **Erase**: `npx ludion revoke` publishes a revocation at the Registry. Gates subscribed to it hear within seconds; every other Gate within the lifetime of the agent's status (its Staple, at most one hour).
+- **Web**: sign your requests. `npx ludion-ai sign GET https://example.com/` prints the signature headers for any HTTP client; in Node, `ludionFetch` from `ludion-ai/diver` handles signing, key rotation, nonces and body digests.
+- **MCP**: use `…/client` as your client_id. It is plain OAuth client metadata (CIMD) over the same keys: loopback `redirect_uris` (`http://127.0.0.1/callback`), and the agent authenticates with `private_key_jwt` signed by its session key (`clientAssertion` in `ludion-ai/diver`) — no shared secret. Checked end to end against Keycloak 26.8.0 with CIMD on (MCP-1).
+- **Erase**: `npx ludion-ai revoke` publishes a revocation at the Registry. Gates subscribed to it hear within seconds; every other Gate within the lifetime of the agent's status (its Staple, at most one hour).
 - **Purpose**: a request can say what it came to do, in one word (`read` or `act`) and one sentence (`Ludion-Purpose`, covered by the signature). A sentence with an email address, a phone number, a URL or a long number is refused before anything is sent.
 
 ## For a site: a checkpoint that reads the name
 
 ```sh
-npm install ludion
+npm install ludion-ai
 ```
 
 On Express, two lines:
 
 ```js
-import { ludion } from "ludion/gate/node";
+import { ludion } from "ludion-ai/gate/node";
 app.use(await ludion());
 ```
 
@@ -87,7 +87,7 @@ and a `ludion.config.json` next to `package.json`:
 
   stops one name (`403 blocked_by_site`). `who` is a Diver id, a signer's host, a name in a User-Agent, or `"unnamed"`; `until` (a date and time) lifts it by itself.
 - **Only the site decides.** Ludion's servers have no path to stop anyone: decisions live in the site's config and nowhere else.
-- **The morning report** (`npx ludion report`) has one headline number — the share of automation that named itself with a signature — and one thing to decide. Writes under a crawler's name are shown as suspected fakes; an agent that signed "read only" and then wrote is shown beside its own words.
+- **The morning report** (`npx ludion-ai report`) has one headline number — the share of automation that named itself with a signature — and one thing to decide. Writes under a crawler's name are shown as suspected fakes; an agent that signed "read only" and then wrote is shown beside its own words.
 - Next.js (one line in `proxy.js`) and Cloudflare Workers: [ludion.ai/gate](https://ludion.ai/gate). Every refusal links to a page that explains it: [ludion.ai/e](https://ludion.ai/e).
 - Planned, after the launch: the Gate for FastAPI and WordPress, and the agent side in Python.
 
@@ -99,7 +99,7 @@ and a `ludion.config.json` next to `package.json`:
 
 ## Start from your logs
 
-Drop an access log on [ludion.ai/scan](https://ludion.ai/scan): it counts how much unsigned automation touched your checkout, login, sign-up and forms. The log is read in your browser and sent nowhere. nginx, Apache, Caddy, IIS, CloudFront, AWS ALB, Cloudflare Logpush, Vercel and Fastly formats are recognised (gzip too). `npx ludion scan access.log` gives the same numbers locally.
+Drop an access log on [ludion.ai/scan](https://ludion.ai/scan): it counts how much unsigned automation touched your checkout, login, sign-up and forms. The log is read in your browser and sent nowhere. nginx, Apache, Caddy, IIS, CloudFront, AWS ALB, Cloudflare Logpush, Vercel and Fastly formats are recognised (gzip too). `npx ludion-ai scan access.log` gives the same numbers locally.
 
 ## Where things stand (2026-10-04)
 
@@ -127,7 +127,7 @@ node examples/e2e.mjs  # an agent, a Gate, VERIFIED, all on 127.0.0.1
 
 | Path | What |
 |---|---|
-| `packages/ludion` | The one package on npm: the CLI, `ludion/diver`, `ludion/gate/{node,next,workers}` |
+| `packages/ludion` | The one package on npm: the CLI, `ludion-ai/diver`, `ludion-ai/gate/{node,next,workers}` |
 | `packages/gate-core` | The Gate: verification, classification, decisions, receipts, purpose. Runtime-neutral |
 | `packages/gate-node`, `gate-next`, `gate-workers` | The Gate for Node servers, Next.js (`proxy.js`) and Cloudflare Workers |
 | `packages/diver` | The agent side: keys, the card and client document, signing, the CLI |
