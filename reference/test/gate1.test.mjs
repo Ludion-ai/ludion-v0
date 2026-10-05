@@ -91,15 +91,15 @@ for (const app of Object.keys(APPS)) {
     const cfgDir = fs.mkdtempSync(path.join(os.tmpdir(), `ludion-gate1-${app}-`));
     const servers = [];
     try {
-      // Distinct ports up front, and wait for every start to settle, so a failed start can't leave the
-      // others running unowned (two ways GATE-1 hung for 30 min in CI, #41).
-      const ports = await freePorts(2 + PRESSURES.length);
-      const up = async (dir, env, port) => { const s = await start(app, dir, port, { env }); servers.push(s); return s; };
-      const started = await Promise.allSettled([up(A, {}, ports[0]), up(A, {}, ports[1]),
-        ...PRESSURES.map(async (p, i) => up(B, await gatedEnv(app, p, cfgDir), ports[2 + i]))]);
-      const failed = started.find((r) => r.status === "rejected");
-      if (failed) throw failed.reason;
-      const [base, control, ...gated] = started.map((r) => r.value);
+      // One server at a time, each port taken just before its start. Ports reserved up front and
+      // released could be taken by another server's own listeners (workerd binds internal ports the OS
+      // picks) before their server bound them; the readiness probe then reached the wrong, ungated
+      // server, and a whole Pressure read "no Ludion-Receipt" (GATE-1 workers P3 in CI, 2026-10-05).
+      // Every started server is in `servers`, so a failed start leaves nothing running (#41).
+      const up = async (dir, env) => { const [port] = await freePorts(1); const s = await start(app, dir, port, { env }); servers.push(s); return s; };
+      const base = await up(A, {}), control = await up(A, {});
+      const gated = [];
+      for (const p of PRESSURES) gated.push(await up(B, await gatedEnv(app, p, cfgDir)));
       const problems = [];
       const assetMaps = PRESSURES.map(() => ({ fwd: new Map(), back: new Map() }));
       const pages = PRESSURES.map(() => []);
@@ -169,6 +169,11 @@ for (const app of Object.keys(APPS)) {
       }
 
       assert.ok(compared >= browserRequests().length * PRESSURES.length - 1, `compared only ${compared} responses`);
+      // A gated server whose Gate never ran says why on its own console ("[ludion] Gate disabled …"):
+      // put its log first, so a red run in CI explains itself (GATE-1 workers P3, 2026-10-05).
+      for (const [i, p] of PRESSURES.entries()) {
+        if (problems.some((x) => x.startsWith(`P${p} `) && x.endsWith("so the Gate did not run"))) problems.unshift(`P${p} server log: ${gated[i].log.slice(-800).replace(/\s+/g, " ")}`);
+      }
       assert.deepEqual(problems, [], `${app}: ${problems.length} problem(s)`);
     } finally {
       await Promise.all(servers.map((s) => s.stop()));
