@@ -42,7 +42,7 @@ export function problems(m, files, read, setManifests) {
   const targets = [m.main, ...Object.values(typeof m.exports === "string" ? { ".": m.exports } : m.exports ?? {})].filter(Boolean);
   for (const t of targets) { const f = String(t).replace(/^\.\//, ""); if (!files.includes(f)) out.push(`export target ${f} not in the tarball`); }
   for (const [dep, range] of Object.entries(m.dependencies ?? {})) {
-    if (!(dep === "ludion" || dep.startsWith("@ludion/"))) continue;
+    if (!(dep === "ludion-ai" || dep === "ludion" || dep.startsWith("@ludion/"))) continue;
     const target = setManifests.find((s) => s.name === dep);
     if (!target) out.push(`depends on ${dep}, which is not in the publish set`);
     else if (range !== target.version) out.push(`depends on ${dep}@${range}, but the set publishes ${target.version}`);
@@ -73,7 +73,7 @@ test("PUB-2: the checker catches what it must (planted package)", () => {
 
 test("PUB-2: every package of the publish set ships only what it declares, and is publishable as is", () => {
   const manifests = SET.map(manifest);
-  assert.ok(manifests.some((m) => m.name === "ludion" && m.bin?.ludion), "the unscoped `ludion` (npx ludion) is in the set");
+  assert.ok(manifests.some((m) => m.name === "ludion-ai" && m.bin?.ludion), "the unscoped `ludion-ai` (npx ludion-ai; its command stays `ludion`) is in the set");
   const report = [];
   for (const dir of SET) {
     const m = manifest(dir), { files } = packList(dir);

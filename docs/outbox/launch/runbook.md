@@ -22,15 +22,15 @@ npm から入れる（リポジトリの中では回さない）。空のディ�
 ```sh
 mkdir /tmp/ludion-d1 && cd /tmp/ludion-d1
 export npm_config_cache=/tmp/ludion-d1/.npm
-npx ludion@latest init --name "Launch Check" --contact mailto:you@example.com
-npx ludion register                    # 名前が名簿に載る（Card Host の名前のとき）
-npx ludion doctor                      # All good（⚠ や ✖ が出たら止まる）
-npx ludion sign GET https://<デモのサイト>/ --curl   # 出た curl に -sI を付けて送る → Ludion-Receipt の class が VERIFIED
+npx ludion-ai@latest init --name "Launch Check" --contact mailto:you@example.com
+npx ludion-ai register                    # 名前が名簿に載る（Card Host の名前のとき）
+npx ludion-ai doctor                      # All good（⚠ や ✖ が出たら止まる）
+npx ludion-ai sign GET https://<デモのサイト>/ --curl   # 出た curl に -sI を付けて送る → Ludion-Receipt の class が VERIFIED
 ```
 
 - 3分以内に VERIFIED まで行くこと（ONE-4、DIV-1 と同じ）。時間を測っておく。
 - `curl -s https://<id>.agents.ludion.ai/card` と `/client` が 200 で、`token_endpoint_auth_method` が `private_key_jwt`（MCP-4）。
-- 終わったら、その名前を `npx ludion revoke` で消す（名簿をきれいに保つ）。
+- 終わったら、その名前を `npx ludion-ai revoke` で消す（名簿をきれいに保つ）。
 
 ### 3. デモのサイトが失効の配信を購読しているか
 
@@ -40,7 +40,7 @@ npx ludion sign GET https://<デモのサイト>/ --curl   # 出た curl に -sI
 curl -sN --max-time 20 https://registry.ludion.ai/v0/revocations/stream | head -5   # 配信が生きている（heartbeat か event が来る）
 ```
 
-- 試す：使い捨ての名前を作って登録する。デモのサイトに署名して VERIFIED を見る。`npx ludion revoke` する。数秒のうちに、同じ署名付きのリクエストが `403` で、受領証は `REVOKED` になる。
+- 試す：使い捨ての名前を作って登録する。デモのサイトに署名して VERIFIED を見る。`npx ludion-ai revoke` する。数秒のうちに、同じ署名付きのリクエストが `403` で、受領証は `REVOKED` になる。
 - 数秒で変わらなければ、購読が切れている。サーバーを再起動して、もう一度。
 
 ### 4. 名簿の守り

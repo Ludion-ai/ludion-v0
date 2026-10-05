@@ -1,6 +1,7 @@
 // WEB-12 (±): the page that shows how to install the Gate (/gate, /ja/gate) is the code GATE-1 and
 // GATE-3 run — Express, Next.js and Cloudflare Workers, in English and Japanese (site/test/gate-page.mjs).
-// The other side: planted pages (a missing line, an old package name, an extra line, a config typo,
+// The other side: planted pages (a missing line, an old package name — @ludion/*, or `ludion`, which npm
+// refused (ADR 2026-10-05-npm-name-ludion-ai) — an extra line, a config typo,
 // another install command, a missing flag, a missing section, a page in one language only) and a
 // planted install (a line the page does not show) are each caught; a page whose only difference is
 // the site's own id is not.
@@ -27,14 +28,16 @@ test("WEB-12: planted pages and a planted install are caught; the site's own id 
   const swap = (page, a, b) => { if (!page.includes(a)) throw new Error(`plant: ${a} not on the page`); return page.replace(a, b); };
   const planted = [
     ["the app.use line left out", swap(en, "app.use(await ludion());\n", ""), /does not show the installed line "app\.use/],
-    ["the old package name", swap(en, 'export { proxy } from "ludion/gate/next";', 'export { proxy } from "@ludion/gate-next";'), /next: the page shows a line the tested install does not have/],
+    ["the old package name", swap(en, 'export { proxy } from "ludion-ai/gate/next";', 'export { proxy } from "@ludion/gate-next";'), /next: the page shows a line the tested install does not have/],
+    ["the name npm refused", swap(en, 'import { ludion } from "ludion-ai/gate/node";', 'import { ludion } from "ludion/gate/node";'), /express: the page shows a line the tested install does not have/],
+    ["installing the name npm refused", swap(en, "npm install ludion-ai\n```\n\nAdd two lines", "npm install ludion\n```\n\nAdd two lines"), /express: the install command/],
     ["an extra line in the Worker", swap(en, "    // your Worker, unchanged\n", "    // your Worker, unchanged\n    ctx.waitUntil(flush());\n"), /workers: the page shows a line the tested install does not have: "ctx\.waitUntil/],
     ["a config typo", swap(en, '"pressure": 0', '"presure": 0'), /express: ludion\.config\.json on the page/],
-    ["another install command", swap(en, "npm install ludion\n```\n\nAdd two lines", "npm install @ludion/gate-node\n```\n\nAdd two lines"), /express: the install command/],
+    ["another install command", swap(en, "npm install ludion-ai\n```\n\nAdd two lines", "npm install @ludion/gate-node\n```\n\nAdd two lines"), /express: the install command/],
     ["the nodejs_compat flag left out", swap(en, 'compatibility_flags = ["nodejs_compat"]\n', ""), /does not show the installed line "compatibility_flags/],
     ["a config line the install does not have", swap(en, "[vars.LUDION]", "[vars.ludion]"), /wrangler\.toml shows a line the tested install does not have/],
     ["the Workers section gone", en.slice(0, en.indexOf("## Cloudflare Workers")) + en.slice(en.indexOf("## When you raise")), /en: 0 sections for workers/],
-    ["the Japanese page behind", swap(ja, 'import { ludion } from "ludion/gate/node";', 'import { ludion } from "@ludion/gate-node";'), /ja express/],
+    ["the Japanese page behind", swap(ja, 'import { ludion } from "ludion-ai/gate/node";', 'import { ludion } from "@ludion/gate-node";'), /ja express/],
   ];
   const missed = planted.filter(([, page, why], i) => !gatePageProblems(page, inst, i === planted.length - 1 ? "ja" : "en").some((p) => why.test(p))).map(([n]) => n);
   assert.deepEqual(missed, []);

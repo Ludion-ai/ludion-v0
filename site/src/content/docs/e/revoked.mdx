@@ -21,10 +21,10 @@ A revoked key may be in someone else's hands. The site refuses it on every route
 - If you revoked a single Session key, rotate to a new one and publish the updated directory:
 
   ```sh
-  npx ludion rotate
+  npx ludion-ai rotate
   ```
 
-- If your whole identity was revoked because it was compromised, create a new one with `npx ludion init --force` and publish it. The old identity stays revoked.
+- If your whole identity was revoked because it was compromised, create a new one with `npx ludion-ai init --force` and publish it. The old identity stays revoked.
 - If the Registry revoked your identity and you believe it is a mistake, appeal: the Registry states a reason for every revocation it makes, and hears appeals.
 
 ## Get verified in 3 minutes

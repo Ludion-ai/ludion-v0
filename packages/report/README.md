@@ -8,10 +8,10 @@ mail, and it makes no network calls.
 
 ```bash
 # the Gate's sink writes one JSON event per line; point the report at that file
-npx ludion report --events gate-events.ndjson --tz Asia/Tokyo --lang ja --format html > report.html
-npx ludion report --events gate-events.ndjson --date 2026-09-29 --tz Asia/Tokyo --lang ja            # plain text
-npx ludion report --events gate-events.ndjson --date 2026-09-29 --format subject                      # a subject line
-npx ludion report --events gate-events.ndjson --date 2026-09-29 --format json                         # the numbers
+npx ludion-ai report --events gate-events.ndjson --tz Asia/Tokyo --lang ja --format html > report.html
+npx ludion-ai report --events gate-events.ndjson --date 2026-09-29 --tz Asia/Tokyo --lang ja            # plain text
+npx ludion-ai report --events gate-events.ndjson --date 2026-09-29 --format subject                      # a subject line
+npx ludion-ai report --events gate-events.ndjson --date 2026-09-29 --format json                         # the numbers
 ```
 
 - `--date` defaults to yesterday in `--tz` (default `UTC`). `--site` is needed when the file holds

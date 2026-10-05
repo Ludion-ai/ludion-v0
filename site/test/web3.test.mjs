@@ -19,7 +19,7 @@ const SECTIONS = {
   ja: ["何が起きたか", "サイトがこれを求める理由", "直し方", "3分で検証済みになる"],
 };
 const MIN_SECTION_CHARS = { en: 120, ja: 60 };
-const PATH_COMMANDS = ["npx ludion init", "npx ludion sign", "npx ludion doctor"];
+const PATH_COMMANDS = ["npx ludion-ai init", "npx ludion-ai sign", "npx ludion-ai doctor"];
 
 /** Every (error → status) decide() returns, over every class and every route/credential shape. */
 function decideErrors() {

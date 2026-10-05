@@ -1,4 +1,4 @@
-// PUB-3 (+, pair PUB-2): `ludion` alone. The CLI goes to npm first, before any @ludion/* package
+// PUB-3 (+, pair PUB-2): `ludion-ai` alone. The CLI goes to npm first, before any @ludion/* package
 // (the human's order, 2026-10-01: @ludion/gate-* waits). So its tarball must install into a clean
 // project (fresh dir, fresh npm cache, no workspace) with every @ludion/* fetch going to a registry
 // that refuses: nothing @ludion may be needed from npm. Then the CLI works as the repo's does: the
@@ -36,18 +36,18 @@ before(async () => {
   fs.writeFileSync(path.join(app, "package.json"), JSON.stringify({ name: "pub3-clean-app", private: true, type: "module" }));
   const nowhere = `http://127.0.0.1:${await closedPort()}/`;
   npm(["install", tarball, "--no-package-lock", "--cache", path.join(tmp, "npm-cache"), "--prefer-online", `--@ludion:registry=${nowhere}`, "--fetch-retries=0"], app, { timeout: 600_000 });
-  cli = path.join(app, "node_modules", "ludion", "bin", "ludion.mjs");
+  cli = path.join(app, "node_modules", "ludion-ai", "bin", "ludion.mjs");
 });
 after(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} });
 
 test("PUB-3: the ludion tarball alone installs with no @ludion/* package on npm, and needs none", () => {
-  const m = JSON.parse(fs.readFileSync(path.join(app, "node_modules", "ludion", "package.json"), "utf8"));
-  assert.deepEqual(Object.keys({ ...m.dependencies, ...m.peerDependencies, ...m.optionalDependencies }).filter((d) => d.startsWith("@ludion/") || d === "ludion"), [],
+  const m = JSON.parse(fs.readFileSync(path.join(app, "node_modules", "ludion-ai", "package.json"), "utf8"));
+  assert.deepEqual(Object.keys({ ...m.dependencies, ...m.peerDependencies, ...m.optionalDependencies }).filter((d) => d.startsWith("@ludion/") || d === "ludion" || d === "ludion-ai"), [],
     "the published manifest names no @ludion package");
   assert.ok(!fs.existsSync(path.join(app, "node_modules", "@ludion")), "nothing @ludion was installed beside it");
   const bin = path.join(app, "node_modules", ".bin", process.platform === "win32" ? "ludion.cmd" : "ludion");
-  assert.ok(fs.existsSync(bin), "`ludion` is linked into node_modules/.bin (what `npx ludion` runs)");
-  const real = fs.realpathSync(path.join(app, "node_modules", "ludion"));
+  assert.ok(fs.existsSync(bin), "`ludion` is linked into node_modules/.bin (what `npx ludion-ai` runs)");
+  const real = fs.realpathSync(path.join(app, "node_modules", "ludion-ai"));
   assert.ok(!real.startsWith(fs.realpathSync(ROOT)), "a copy in the clean app, not a link into the repo");
 });
 

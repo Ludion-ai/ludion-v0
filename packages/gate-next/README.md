@@ -1,17 +1,17 @@
-# ludion/gate/next
+# ludion-ai/gate/next
 
 The Ludion Gate for Next.js 16+, as a `proxy.js`. It verifies Web Bot Auth (RFC 9421) signatures, classifies automated traffic, and applies your Pressure policy. Humans are never affected.
 
 ## Install (60 seconds)
 
 ```sh
-npm install ludion
+npm install ludion-ai
 ```
 
 Create `proxy.js` in the project root. It is one line:
 
 ```js
-export { proxy } from "ludion/gate/next";
+export { proxy } from "ludion-ai/gate/next";
 ```
 
 Put `ludion.config.json` next to your `package.json`:
@@ -35,7 +35,7 @@ Then `next build && next start` as usual. Pressure 0 only observes. Nothing chan
 - **Existing `proxy.js`.** If you already have one, call the Gate from it:
 
   ```js
-  import { createNextGate } from "ludion/gate/next";
+  import { createNextGate } from "ludion-ai/gate/next";
   import { NextResponse } from "next/server";
 
   const gate = createNextGate({ next: () => NextResponse.next() });
@@ -48,7 +48,7 @@ Then `next build && next start` as usual. Pressure 0 only observes. Nothing chan
 
 ## Configuration
 
-The format of `ludion.config.json` is the same as for [`ludion/gate/node`](../gate-node/README.md#configuration).
+The format of `ludion.config.json` is the same as for [`ludion-ai/gate/node`](../gate-node/README.md#configuration).
 
 **Environment variables**
 

@@ -1,7 +1,7 @@
-// PUB-1 (+, pair PUB-2): the npm publish set — `ludion` alone (ADR-036) — installs from its tarball into
+// PUB-1 (+, pair PUB-2): the npm publish set — `ludion-ai` alone (ADR-036, ADR 2026-10-05-npm-name-ludion-ai) — installs from its tarball into
 // a clean project (fresh dir, fresh npm cache, no workspace) and works: the CLI (bin linked, scan equal
-// to the repo's, init + sign, report), and my agent → my Gate → VERIFIED through ludion/gate/node,
-// ludion/gate/workers and ludion/gate/next. Third-party dependencies come from the npm registry.
+// to the repo's, init + sign, report), and my agent → my Gate → VERIFIED through ludion-ai/gate/node,
+// ludion-ai/gate/workers and ludion-ai/gate/next. Third-party dependencies come from the npm registry.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -21,7 +21,7 @@ before(() => {
   fs.mkdirSync(app);
   fs.writeFileSync(path.join(app, "package.json"), JSON.stringify({ name: "pub1-clean-app", private: true, type: "module" }));
   npm(["install", ...tarballs, "--no-package-lock", "--cache", path.join(tmp, "npm-cache"), "--prefer-online"], app, { timeout: 600_000 });
-  cli = path.join(app, "node_modules", "ludion", "bin", "ludion.mjs");
+  cli = path.join(app, "node_modules", "ludion-ai", "bin", "ludion.mjs");
 });
 after(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} });
 
@@ -35,7 +35,7 @@ test("PUB-1: every package of the set is installed from its tarball, at its vers
   }
   assert.ok(!fs.existsSync(path.join(app, "node_modules", "@ludion")), "no @ludion/* package is installed: everything comes inside ludion");
   const bin = path.join(app, "node_modules", ".bin", process.platform === "win32" ? "ludion.cmd" : "ludion");
-  assert.ok(fs.existsSync(bin), "`ludion` is linked into node_modules/.bin (what `npx ludion` runs)");
+  assert.ok(fs.existsSync(bin), "`ludion` is linked into node_modules/.bin (what `npx ludion-ai` runs)");
 });
 
 test("PUB-1: `ludion scan` from the clean install prints exactly what the repo's CLI prints", () => {
@@ -66,10 +66,10 @@ test("PUB-1: `ludion report` from the clean install renders exactly the repo's d
   assert.equal(clean, repo);
 });
 
-test("PUB-1: my agent → my Gate → VERIFIED, through ludion/gate/node, ludion/gate/workers and ludion/gate/next, importing only ludion", () => {
+test("PUB-1: my agent → my Gate → VERIFIED, through ludion-ai/gate/node, ludion-ai/gate/workers and ludion-ai/gate/next, importing only ludion-ai", () => {
   fs.copyFileSync(path.join(ROOT, "accept", "publish", "flow.mjs"), path.join(app, "flow.mjs"));
   const out = execFileSync(process.execPath, ["flow.mjs"], { cwd: app, encoding: "utf8", timeout: 120_000 });
   const oks = out.split("\n").filter((l) => l.startsWith("ok "));
   assert.ok(out.includes("ok flow complete"), out);
-  console.log(`PUB-1: ${SET.join(", ")} from its tarball, ${BUNDLED.length} packages inside; ${oks.length} flow checks`);
+  console.log(`PUB-1: ${SET.map((d) => manifest(d).name).join(", ")} from its tarball, ${BUNDLED.length} packages inside; ${oks.length} flow checks`);
 });

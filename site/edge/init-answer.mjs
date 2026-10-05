@@ -1,4 +1,4 @@
-// POST /api/init-answer: the one optional question `npx ludion init` asks (spec §13.1, DIV-6).
+// POST /api/init-answer: the one optional question `npx ludion-ai init` asks (spec §13.1, DIV-6).
 // The body is one word and nothing else: {"answer": "mcp" | "web" | "revocable" | "other"}. Anything
 // more (a name, an id, any other field) is refused, so no identity can arrive here by mistake. The
 // word goes to the founder's notifier (SIGNUP_WEBHOOK_URL) as one line; nothing is logged or kept.

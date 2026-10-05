@@ -21,7 +21,7 @@ import VerifyPath from "../../../../partials/verify-path.ja.mdx";
 ## 直し方
 
 - Web Bot Auth でリクエストに署名します。少なくとも `@authority` と `signature-agent` を署名の対象に含めます。サイトが求める成分は、この応答の `Accept-Signature` ヘッダーにあります。
-- すでに署名しているなら、`npx ludion doctor` を実行するか、自分の鍵ディレクトリを取得してみてください。リダイレクトなしで `200` を返し、`Content-Type: application/http-message-signatures-directory+json` で、署名に使った `keyid` が載っている必要があります。
+- すでに署名しているなら、`npx ludion-ai doctor` を実行するか、自分の鍵ディレクトリを取得してみてください。リダイレクトなしで `200` を返し、`Content-Type: application/http-message-signatures-directory+json` で、署名に使った `keyid` が載っている必要があります。
 - まれに、サイトの Gate 自身が検証を終えられなかったときにもこのコードになります（サイト側の故障で、経路が fail closed に設定されている場合）。自分の設定に問題がなければ、時間を置いて再試行してください。
 
 ## 3分で検証済みになる

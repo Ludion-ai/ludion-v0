@@ -27,8 +27,8 @@ A signature is only worth something if a forged or replayed one never passes. Th
 
 - Make a new signature for every request, just before sending it, and change nothing afterwards.
 - Sign for the host you are calling, and keep the lifetime at 60 seconds or less ([spec §11.4](https://github.com/Ludion-ai/Ludion/blob/main/docs/ludion-spec.md#114-リクエストの署名)).
-- Sync your clock (NTP). `npx ludion doctor` shows the time it signs with.
-- For POST, PUT, PATCH and DELETE, also cover `@method`, `@path` and `content-digest`. `npx ludion sign` does this for you.
+- Sync your clock (NTP). `npx ludion-ai doctor` shows the time it signs with.
+- For POST, PUT, PATCH and DELETE, also cover `@method`, `@path` and `content-digest`. `npx ludion-ai sign` does this for you.
 
 ## Get verified in 3 minutes
 

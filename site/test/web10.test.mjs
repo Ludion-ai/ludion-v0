@@ -6,7 +6,7 @@
 // it lists; the signed request is VERIFIED).
 //
 // What stands in for the world, and nothing else:
-//   - `npm install ludion` (and any @ludion/* name) and `npx ludion` resolve to the npm publish set's
+//   - `npm install ludion-ai` (and any @ludion/* name) and `npx ludion-ai` resolve to the npm publish set's
 //     tarballs (accept/publish/set.mjs), as they will from npm; everything else comes from the registry.
 //   - `node server.mjs` is started in the background (the reader keeps it running).
 //   - agent.example.com is not ours, so the directory `init` writes is not served there. The signed
@@ -71,7 +71,7 @@ const posix = (p) => p.replace(/\\/g, "/");
 /** Run one shell block as the reader would, with the published names in `npm install` lines pointing at their tarballs. */
 function sh(code, cwd, extraEnv = {}) {
   const script = code.split("\n").map((line) => (/^\s*npm (?:install|i)\b/.test(line)
-    ? line.replace(/(^|\s)(@ludion\/[a-z-]+|ludion)(?=\s|$)/g, (_, sp, name) => `${sp}${installSet(name)}`)
+    ? line.replace(/(^|\s)(@ludion\/[a-z-]+|ludion-ai)(?=\s|$)/g, (_, sp, name) => `${sp}${installSet(name)}`)
     : line)).join("\n");
   const r = spawnSync(bash(), ["-c", script], { cwd, encoding: "utf8", env: { ...env, ...extraEnv }, timeout: 600_000, maxBuffer: 64e6 });
   return { out: r.stdout ?? "", err: r.stderr ?? "", code: r.status };
@@ -159,23 +159,23 @@ test("WEB-10: the quickstart runs as written: the Gate at Pressure 0 classifies,
   const agent = path.join(tmp, "agent");
   fs.mkdirSync(agent);
   fs.writeFileSync(path.join(agent, "package.json"), JSON.stringify({ name: "web10-agent", private: true }));
-  const inst = sh(`npm install --no-package-lock ${installSet("ludion")}`, agent);
-  assert.equal(inst.code, 0, `installing ludion's tarball: ${inst.err.slice(-1500)}`);
+  const inst = sh(`npm install --no-package-lock ${installSet("ludion-ai")}`, agent);
+  assert.equal(inst.code, 0, `installing ludion-ai's tarball: ${inst.err.slice(-1500)}`);
 
   const [init, doctor, sign] = agentBlocks;
-  assert.match(init.code, /^npx ludion init /);
+  assert.match(init.code, /^npx ludion-ai init /);
   const r1 = sh(init.code, agent, { LUDION_ROOT_PASSPHRASE: PASSPHRASE });
   assert.equal(r1.code, 0, `${init.code}: ${r1.err}`);
   for (const f of ["ludion.json", ".well-known/http-message-signatures-directory", "card"]) assert.ok(fs.existsSync(path.join(agent, f)), `init wrote ${f}`);
   const domain = /--domain (\S+)/.exec(init.code)[1];
 
-  assert.equal(doctor.code.trim(), "npx ludion doctor");
+  assert.equal(doctor.code.trim(), "npx ludion-ai doctor");
   const r2 = sh(doctor.code, agent, { LUDION_ROOT_PASSPHRASE: PASSPHRASE });
   // Not yet published (agent.example.com is not ours): doctor must say so, for both files.
   assert.match(r2.out + r2.err, /http-message-signatures-directory unreachable/);
   assert.match(r2.out + r2.err, /\/card unreachable/);
 
-  assert.match(sign.code, /^npx ludion sign GET http:\/\/localhost:3000\/ --curl$/m);
+  assert.match(sign.code, /^npx ludion-ai sign GET http:\/\/localhost:3000\/ --curl$/m);
   const r3 = sh(sign.code, agent, { LUDION_ROOT_PASSPHRASE: PASSPHRASE });
   assert.equal(r3.code, 0, r3.err);
   const command = r3.out.split("\n#")[0].trim();
@@ -185,7 +185,7 @@ test("WEB-10: the quickstart runs as written: the Gate at Pressure 0 classifies,
   assert.equal(receiptClass(sent), "UNVERIFIED", `the quickstart's Gate cannot reach https://${domain} from here:\n${sent}`);
 
   // The same request, at a Gate that has the directory the reader publishes.
-  const { createGate, generateSiteKey } = await import(pathToFileURL(path.join(site, "node_modules", "ludion", "lib", "@ludion", "gate-core", "src", "index.mjs")).href);
+  const { createGate, generateSiteKey } = await import(pathToFileURL(path.join(site, "node_modules", "ludion-ai", "lib", "@ludion", "gate-core", "src", "index.mjs")).href);
   const headers = [...command.matchAll(/-H '([^:]+): ((?:[^']|'\\'')*)'/g)].map((m) => ({ name: m[1], value: m[2].replace(/'\\''/g, "'") }));
   const request = (fields) => ({ kind: "request", method: "GET", targetUri: `http://localhost:${PORT}/`, fields: [{ name: "user-agent", value: "web10" }, ...fields] });
   const directory = JSON.parse(fs.readFileSync(path.join(agent, ".well-known", "http-message-signatures-directory"), "utf8"));

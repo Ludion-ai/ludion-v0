@@ -402,7 +402,7 @@ export const ORACLES = [
   // The launch docs' install steps, run (the human's decision, 2026-10-04: Node, Next.js, Workers; FastAPI,
   // WordPress and Python are planned after the launch): /gate followed section by section on the
   // reference sites before the Gate (reference/harness.mjs prepareFrom), then run as a reader runs them.
-  { id: "WEB-7", m: "M7", kind: "+", level: 1, pair: "WEB-12", property: "launch-docs", title: "docs are tests (Node, Next.js, Workers): /gate followed on a site without the Gate — npm install ludion, the page's lines and config — runs: a person gets the page, a crawler's name is DECLARED, the console's first-visit line once",
+  { id: "WEB-7", m: "M7", kind: "+", level: 1, pair: "WEB-12", property: "launch-docs", title: "docs are tests (Node, Next.js, Workers): /gate followed on a site without the Gate — npm install ludion-ai, the page's lines and config — runs: a person gets the page, a crawler's name is DECLARED, the console's first-visit line once",
     timeoutMs: 1_800_000, run: nodeTest(["site/test/web7.test.mjs"], "^WEB-7", { timeoutMs: 1_780_000, metric: (out) => (/^# WEB-7: (.+)$/m.exec(out) ?? [])[1] }) },
   // The site as it deploys to Workers (site/edge: the build's static files and POST /api/signup), run
   // by wrangler dev in workerd with a webhook stub as the notifier (site/test/edge.mjs); the form is
@@ -425,7 +425,7 @@ export const ORACLES = [
   // The Install-the-Gate page as a test (the /gate part of WEB-7, which stays open for the rest): its
   // Express, Next.js and Workers sections, in both languages, are exactly the reference installs GATE-1
   // and GATE-3 run (site/test/gate-page.mjs); planted pages and a planted install are caught.
-  { id: "WEB-12", m: "M7", kind: "±", level: 0, property: "launch-docs", title: "/gate (en, ja) shows exactly the installs GATE-1 and GATE-3 run — Express, Next.js, Workers: npm install ludion, every installed line shown and nothing else, the same config; planted pages and installs caught",
+  { id: "WEB-12", m: "M7", kind: "±", level: 0, property: "launch-docs", title: "/gate (en, ja) shows exactly the installs GATE-1 and GATE-3 run — Express, Next.js, Workers: npm install ludion-ai, every installed line shown and nothing else, the same config; planted pages and installs caught",
     run: nodeTest(["site/test/web12.test.mjs"], "^WEB-12", { metric: (out) => (/^# WEB-12: (.+)$/m.exec(out) ?? [])[1] }) },
   // The "Sign from code" page as a test (the TypeScript part of WEB-7): its blocks in order in a clean
   // directory with the publish set's tarball — a signed request VERIFIED, a purpose on the receipt, and

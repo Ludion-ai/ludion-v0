@@ -2,7 +2,7 @@
 // GATE-1 and GATE-3 run. For each runtime on the page — Express, Next.js, Cloudflare Workers — the
 // reference install (reference/<app>/install over reference/<app>/site, measured with a real diff by
 // reference/gate3-measure.mjs) is the reader's site after following the section:
-//   - the dependency is `npm install ludion`, the one package (ADR-036);
+//   - the dependency is `npm install ludion-ai`, the one package (ADR-036);
 //   - every application line the install adds is on the page, and every line the page shows is in the
 //     installed app (a comment stands for the reader's own code: "// your Worker, unchanged");
 //   - the config is the same (its keys and values, the site's own `site_id` aside); the Next.js
@@ -66,7 +66,7 @@ export function gatePageProblems(mdx, inst, lang) {
     const { diff, files } = inst[r.app];
     // The dependency.
     const shells = s.blocks.filter((b) => b.lang === "sh").map((b) => b.code.trim());
-    if (shells.length !== 1 || shells[0] !== "npm install ludion") out.push(`${at}: the install command is not \`npm install ludion\` (${JSON.stringify(shells)})`);
+    if (shells.length !== 1 || shells[0] !== "npm install ludion-ai") out.push(`${at}: the install command is not \`npm install ludion-ai\` (${JSON.stringify(shells)})`);
     // The application lines, both ways.
     const shown = s.blocks.filter((b) => b.lang === "js").flatMap((b) => lines(b.code));
     if (!shown.length) out.push(`${at}: no code`);

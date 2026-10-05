@@ -1,17 +1,17 @@
-# ludion/gate/node
+# ludion-ai/gate/node
 
 The Ludion Gate for Node.js servers: Express, Connect, and anything that takes `(req, res, next)` middleware. It verifies Web Bot Auth (RFC 9421) signatures, classifies automated traffic, and applies your Pressure policy. Humans are never affected.
 
 ## Install (60 seconds)
 
 ```sh
-npm install ludion
+npm install ludion-ai
 ```
 
 Add two lines to your server:
 
 ```js
-import { ludion } from "ludion/gate/node";
+import { ludion } from "ludion-ai/gate/node";
 app.use(await ludion());
 ```
 

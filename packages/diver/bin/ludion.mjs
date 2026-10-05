@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 // ludion — the CLI. Three minutes to register, one line to sign, one command to see the fear.
 //
-//   npx ludion init [--name "My Agent" --contact mailto:ops@example.com --domain dvr-xxx.agents.ludion.ai] [--dev]
-//   npx ludion sign <METHOD> <URL> [--body '{"a":1}']     # prints Web Bot Auth headers for curl/httpx/anything
-//   npx ludion rotate [--overlap 300] [--force]            # session key: publish the next one, then (after the overlap) switch
-//   npx ludion register [--registry https://registry.ludion.ai]  # register with the Registry (Root), approve the session key, fetch a Staple
-//   npx ludion staple                                      # fetch a fresh Staple (signed by the session key)
-//   npx ludion revoke [--compromised] [--key <kid>]        # revoke this Diver (or one session key) at the Registry (Root)
-//   npx ludion mandate create --site <origin> --scope read,checkout [--checkout-max N --currency JPY --per-day N] [--expires 24h]
-//   npx ludion mandate list | revoke <jti>                 # the operator's own limits on this agent (Root)
-//   npx ludion doctor                                      # self-check: keys, clock, directory, card
-//   npx ludion scan <access.log|dir|-> [--json]            # log-first Gate: what touched what, unsigned
-//   npx ludion report --events <events.ndjson> [--date D] [--tz Asia/Tokyo] [--lang ja] [--format html]  # the daily report
+//   npx ludion-ai init [--name "My Agent" --contact mailto:ops@example.com --domain dvr-xxx.agents.ludion.ai] [--dev]
+//   npx ludion-ai sign <METHOD> <URL> [--body '{"a":1}']     # prints Web Bot Auth headers for curl/httpx/anything
+//   npx ludion-ai rotate [--overlap 300] [--force]            # session key: publish the next one, then (after the overlap) switch
+//   npx ludion-ai register [--registry https://registry.ludion.ai]  # register with the Registry (Root), approve the session key, fetch a Staple
+//   npx ludion-ai staple                                      # fetch a fresh Staple (signed by the session key)
+//   npx ludion-ai revoke [--compromised] [--key <kid>]        # revoke this Diver (or one session key) at the Registry (Root)
+//   npx ludion-ai mandate create --site <origin> --scope read,checkout [--checkout-max N --currency JPY --per-day N] [--expires 24h]
+//   npx ludion-ai mandate list | revoke <jti>                 # the operator's own limits on this agent (Root)
+//   npx ludion-ai doctor                                      # self-check: keys, clock, directory, card
+//   npx ludion-ai scan <access.log|dir|-> [--json]            # log-first Gate: what touched what, unsigned
+//   npx ludion-ai report --events <events.ndjson> [--date D] [--tz Asia/Tokyo] [--lang ja] [--format html]  # the daily report
 //
 // Keys live in ./ludion.json (v0). The Root private key is sealed there with the operator's
 // passphrase (LUDION_ROOT_PASSPHRASE, or a prompt on a terminal): scrypt + AES-256-GCM, see
@@ -102,8 +102,8 @@ async function init() {
   if (DEV) devBanner();
   out("");
   out(`  Wrote ludion.json (KEEP PRIVATE — ${DEV ? "DEV MODE: Root key in plaintext" : "Root key sealed with your passphrase; the passphrase is not stored"})`);
-  out(`  Wrote .well-known/http-message-signatures-directory, card and client: publish them at ${origin} (or run \`npx ludion register\` once the Registry is live)`);
-  out(`  Next: npx ludion sign GET https://example.com/`);
+  out(`  Wrote .well-known/http-message-signatures-directory, card and client: publish them at ${origin} (or run \`npx ludion-ai register\` once the Registry is live)`);
+  out(`  Next: npx ludion-ai sign GET https://example.com/`);
   // One optional question (DIV-6): only at a terminal, never in CI; skipping sends nothing.
   if (shouldAsk({ force: has("ask"), refuse: has("no-question"), stdinTTY: process.stdin.isTTY, stdoutTTY: process.stdout.isTTY })) {
     await askWhy({ lang, input: process.stdin, output: process.stdout, url: process.env.LUDION_INIT_ANSWER_URL || ANSWER_URL });
@@ -111,7 +111,7 @@ async function init() {
 }
 
 async function loadSigner() {
-  if (!fs.existsSync(STORE)) throw new Error("no ludion.json — run `npx ludion init` first");
+  if (!fs.existsSync(STORE)) throw new Error("no ludion.json — run `npx ludion-ai init` first");
   const store = JSON.parse(fs.readFileSync(STORE, "utf8"));
   if (store.dev) devBanner();
   else if (!isSealedRoot(store.root)) err("⚠ ludion.json holds the Root private key in plaintext (made by an older ludion, or edited by hand). Treat this identity as development-only and create a sealed one with `ludion init --force`.");
@@ -309,7 +309,7 @@ async function mandate() {
 async function cardHostHint(r) {
   let error;
   try { ({ error } = await r.json()); } catch { return ""; }
-  if (error === "unknown_agent") return " — the Card Host does not know this agent: not registered yet (run `npx ludion register`), or revoked";
+  if (error === "unknown_agent") return " — the Card Host does not know this agent: not registered yet (run `npx ludion-ai register`), or revoked";
   if (error === "registry_unavailable") return " — the Registry is unavailable right now; try again in a minute";
   return "";
 }
@@ -353,6 +353,6 @@ if (!commands[cmd]) { out("usage: ludion <init|sign|rotate|register|staple|revok
 commands[cmd]().catch((e) => {
   console.error("✖", e.message);
   // A Root statement more than 5 minutes off the Registry's clock: almost always this machine's clock (DIV-7).
-  if (e?.error === "stale_statement") console.error("  This machine's clock may be off: `npx ludion doctor` compares it with your agent's origin.");
+  if (e?.error === "stale_statement") console.error("  This machine's clock may be off: `npx ludion-ai doctor` compares it with your agent's origin.");
   process.exit(1);
 });

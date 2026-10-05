@@ -14,9 +14,9 @@ import path from "node:path";
 import { SET, ROOT } from "./set.mjs";
 import { plan, refusals, oneVersion, publishAll, WORKFLOW, MIN_NPM } from "../../scripts/release.mjs";
 
-const manifestOf = (dir) => ({ name: dir === "ludion" ? "ludion" : `@ludion/${dir}`, version: "0.0.2" });
+const manifestOf = (dir) => ({ name: dir === "ludion" ? "ludion-ai" : `@ludion/${dir}`, version: "0.0.2" });
 // The driver's behaviour over several packages (order, skip, refusal, stop) on a synthetic set: the
-// real set is `ludion` alone (ADR-036), which plan() holds below.
+// real set is `ludion-ai` alone (packages/ludion, ADR-036), which plan() holds below.
 const DIRS = ["gate-core", "scan", "report", "diver", "ludion", "gate-node", "gate-next", "gate-workers"];
 /** A fake npm: `seen` maps a name to its versions on npm (absent: never published); `breaks` fails a publish. */
 function fakeNpm({ seen = {}, breaks = [], viewDown = [] } = {}) {
