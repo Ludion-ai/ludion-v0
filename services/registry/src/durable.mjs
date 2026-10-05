@@ -6,12 +6,17 @@
 // `storage` is a Durable Object's `ctx.storage` (get/put/list/delete), or anything with that shape.
 
 const REV = (seq) => `rev:${String(seq).padStart(12, "0")}`;
+/** The most keys one storage call is given (the key-value API's batch limit). */
+const BATCH = 128;
+/** How often, at most, the expired rate-limit counters are swept (one listing of all of them). */
+const SWEEP_S = 60;
 
 /** @param {{ get(k: string): Promise<any>, put(k: string|object, v?: any): Promise<void>, list(o: object): Promise<Map<string, any>>, delete(k: string|string[]): Promise<any> }} storage */
 export async function createDurableStore(storage) {
   let seq = (await storage.get("seq")) ?? 0;
   let stapleCount = (await storage.get("stapleCount")) ?? 0;
   let ver = (await storage.get("ver")) ?? 0;
+  let swept = -Infinity;
   return {
     getDiver: (id) => storage.get(`diver:${id}`),
     /** Every change to a Diver takes the next version (the bulk copy's delta, REG-5). */
@@ -54,13 +59,20 @@ export async function createDurableStore(storage) {
       return [...m.values()];
     },
     async countStaple() { stapleCount++; await storage.put("stapleCount", stapleCount); },
-    /** One more in `key`'s fixed window of `windowS`: the count with this one, and when the window ends. */
+    /**
+     * One more in `key`'s fixed window of `windowS`: the count with this one, and when the window ends.
+     * It reads only its own counter (an expired one counts as gone); the expired are swept at most
+     * once a minute, so a busy hour costs one listing a minute, not one per registration.
+     */
     async hit(key, windowS, nowS) {
-      const all = await storage.list({ prefix: "hit:" });
-      const stale = [...all].filter(([, h]) => h.until <= nowS).map(([k]) => k);
-      if (stale.length) await storage.delete(stale);
+      if (nowS - swept >= SWEEP_S) {
+        swept = nowS;
+        const stale = [...(await storage.list({ prefix: "hit:" }))].filter(([, h]) => h.until <= nowS).map(([k]) => k);
+        for (let i = 0; i < stale.length; i += BATCH) await storage.delete(stale.slice(i, i + BATCH));
+      }
       const k = `hit:${key}`;
-      const prev = stale.includes(k) ? undefined : all.get(k);
+      const got = await storage.get(k);
+      const prev = got && got.until > nowS ? got : undefined;
       const h = { n: (prev?.n ?? 0) + 1, until: prev?.until ?? nowS + windowS };
       await storage.put(k, h);
       return h;
