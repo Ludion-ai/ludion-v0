@@ -35,7 +35,7 @@ export async function createDiverSigner(x) {
   /**
    * Compute the headers to add to a request.
    * @param {{ method: string, url: string, headers?: Record<string,string>, body?: string|Uint8Array,
-   *           purpose?: { kind: "read"|"act", note?: string } }} req  purpose: what the agent came to do (spec §11.7);
+   *           purpose?: { kind: "read"|"act", note?: string }, scope?: string }} req  scope: the Mandate scope this request uses (mandateFor, strict); purpose: what the agent came to do (spec §11.7);
    *           a note that names a person, or is too long, throws PurposeError and nothing is signed (PUR-6)
    * @returns {Promise<Record<string,string>>}
    */
@@ -57,7 +57,7 @@ export async function createDiverSigner(x) {
     }
     const staple = x.staple?.();
     if (staple) { headers["ludion-staple"] = staple; additional.push("ludion-staple"); }
-    const mandate = x.mandate?.({ method, url: req.url }); // which site it goes to picks the Mandate (mandateFor)
+    const mandate = x.mandate?.({ method, url: req.url, scope: req.scope }); // the site picks the Mandate; strict mandateFor refuses outside it
     if (mandate) { headers["ludion-mandate"] = mandate; additional.push("ludion-mandate"); }
     if (req.purpose) { headers["ludion-purpose"] = purposeField(req.purpose); additional.push("ludion-purpose"); }
 
@@ -82,17 +82,19 @@ export async function createDiverSigner(x) {
  * the purpose its method implies — a write acts, the rest reads — and no note (PUR-4). A body that
  * cannot be sent twice (a stream) is not retried.
  * @param {string|URL} input
- * @param {RequestInit & { body?: string|Uint8Array, purpose?: { kind: "read"|"act", note?: string } }} [init]
+ * `init.scope` names the Mandate scope the request uses ("checkout"…); with `mandateFor(me, { strict: true })`
+ * a request outside its site's Mandate is never signed or sent (MND-5).
+ * @param {RequestInit & { body?: string|Uint8Array, purpose?: { kind: "read"|"act", note?: string }, scope?: string }} [init]
  * @param {{ signer: Awaited<ReturnType<typeof createDiverSigner>>, fetch?: typeof fetch }} ctx
  */
 export async function ludionFetch(input, init = {}, ctx) {
   if (!ctx?.signer) throw new Error("ludionFetch needs { signer }");
   const url = String(input);
-  const { purpose, ...rest } = init;
+  const { purpose, scope, ...rest } = init;
   const method = (rest.method ?? "GET").toUpperCase();
   const base = {};
   new Headers(rest.headers ?? {}).forEach((v, k) => { base[k] = v; });
-  const send = async (p) => (ctx.fetch ?? globalThis.fetch)(url, { ...rest, method, headers: await ctx.signer.headersFor({ method, url, headers: base, body: rest.body, purpose: p }) });
+  const send = async (p) => (ctx.fetch ?? globalThis.fetch)(url, { ...rest, method, headers: await ctx.signer.headersFor({ method, url, headers: base, body: rest.body, purpose: p, scope }) });
   const res = await send(purpose);
   const resendable = rest.body == null || typeof rest.body === "string" || rest.body instanceof Uint8Array;
   if (!purpose && resendable && res.status === 403 && res.headers.get("ludion-error") === "purpose_required") {

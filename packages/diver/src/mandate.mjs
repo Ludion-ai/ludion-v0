@@ -73,19 +73,53 @@ export function describeMandate(m) {
   return `${m.aud} — ${m.scope.join(", ")}${limits}`;
 }
 
+/** A request the agent's own SDK would not sign: outside the site's Mandate, or naming no scope (MND-5). */
+export class MandateScopeError extends Error {
+  constructor(message, { origin, scope, allowed } = {}) { super(message); this.name = "MandateScopeError"; this.origin = origin; this.scope = scope; this.allowed = allowed; }
+}
+
+/** The scope words a Mandate (compact JWS) carries, read from its payload (the Registry signed it). */
+function scopeOf(compact) {
+  try {
+    const p = JSON.parse(Buffer.from(String(compact).split(".")[1], "base64url").toString("utf8"));
+    return Array.isArray(p.scope) ? p.scope.filter((s) => typeof s === "string") : [];
+  } catch { return []; }
+}
+
+const READS = new Set(["GET", "HEAD"]);
+
 /**
  * The Mandate to carry on a request: the newest one in `store.mandates` for the site the request
  * goes to, not expired and not withdrawn. Reads `store.mandates` only.
+ *
+ * `strict` is the SDK's own seatbelt (MND-5, lane 2 spec §3.7): where the site has a Mandate, a
+ * request must name the scope it uses (`ludionFetch(url, { scope: "checkout" })`; a GET or HEAD
+ * without one is `read`), and one outside the Mandate throws MandateScopeError before anything is
+ * signed or sent — also on a site with no Gate. It binds the agent's own code: someone signing by
+ * hand with a stolen session key is held only by the site's Gate. Sites with no Mandate are not
+ * restricted here.
  * @param {{ mandates?: { aud: string, iat?: number, exp: number, revoked?: object, mandate: string }[] }} store
- * @returns {(req: { url: string }) => string | undefined}
+ * @param {{ now?: () => number, strict?: boolean }} [o]
+ * @returns {(req: { url: string, method?: string, scope?: string }) => string | undefined}
  */
-export function mandateFor(store, { now = () => Date.now() } = {}) {
+export function mandateFor(store, { now = () => Date.now(), strict = false } = {}) {
   return (req) => {
     let origin;
     try { origin = new URL(req.url).origin; } catch { return undefined; }
     const t = Math.floor(now() / 1000);
-    const live = (store.mandates ?? []).filter((m) => m && m.aud === origin && !m.revoked && m.exp > t && typeof m.mandate === "string");
+    const here = (store.mandates ?? []).filter((m) => m && m.aud === origin && typeof m.mandate === "string");
+    const live = here.filter((m) => !m.revoked && m.exp > t);
     live.sort((a, b) => (b.iat ?? 0) - (a.iat ?? 0));
-    return live[0]?.mandate;
+    const m = live[0];
+    // A site the operator limited stays limited: with its Mandate expired or withdrawn, nothing goes.
+    if (strict && here.length && !m) throw new MandateScopeError(`the Mandate for ${origin} has expired or was withdrawn; not signed`, { origin, scope: req.scope, allowed: [] });
+    if (strict && m) {
+      const method = String(req.method ?? "GET").toUpperCase();
+      const scope = req.scope ?? (READS.has(method) ? "read" : null);
+      const allowed = scopeOf(m.mandate);
+      if (!scope) throw new MandateScopeError(`a ${method} to ${origin} names the Mandate scope it uses ({ scope: "${allowed.find((s) => s !== "read") ?? "read"}" }); not signed`, { origin, scope, allowed });
+      if (!allowed.includes(scope)) throw new MandateScopeError(`"${scope}" is outside the Mandate for ${origin} (${allowed.join(", ")}); not signed`, { origin, scope, allowed });
+    }
+    return m?.mandate;
   };
 }
