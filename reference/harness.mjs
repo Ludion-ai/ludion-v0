@@ -12,6 +12,7 @@ import net from "node:net";
 import { createHash } from "node:crypto";
 import { spawn, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { packEntry } from "../accept/publish/set.mjs";
 
 export const REF = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(REF, "..");
@@ -57,7 +58,7 @@ export function pack(pkgs, dest) {
   fs.mkdirSync(dest, { recursive: true });
   return pkgs.map((p) => {
     const out = JSON.parse(npm(["pack", "--json", "--pack-destination", dest], path.join(ROOT, "packages", p)));
-    return path.join(dest, out[0].filename);
+    return path.join(dest, packEntry(out).filename);
   });
 }
 
