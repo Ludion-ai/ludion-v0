@@ -1,0 +1,12 @@
+{
+  "site_id": "site-ludion-demo",
+  "pressure": 0,
+  "authorities": ["demo.ludion.ai"],
+  "routes": [
+    { "match": "/account/delete", "pressure": 2, "require": { "scope": "delete" } }
+  ],
+  "registry": {
+    "issuer": "https://registry.ludion.ai",
+    "revocations": "https://registry.ludion.ai/v0/revocations/stream"
+  }
+}

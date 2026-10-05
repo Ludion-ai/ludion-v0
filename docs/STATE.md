@@ -243,6 +243,12 @@
 
 ## 直近のセッション
 
+- 2026-10-05 昼（Claude Code、1本目、コードフリーズ中。例外は人間の指示の2だけ）：
+  - 記録（#122）：ADR の下書き「Mandate の最初の用途は scope: delete（解約・削除の代理）」（docs/outbox/）。spec-v2-diff.md に3件（§20.4 の仮説、§15 の電話番号、§14.5 の D0）。
+  - 条件付きの追加（期限 10/7）：30分で確かめた。Gate はもう Mandate を検証し、`require.scope` で経路を止める（PRS-2、PRS-4、`delete` は語彙にあった）。だから作った：`examples/demo-site`（動画のデモのサイト。POST /account/delete は scope: delete の Mandate だけ。人間がデプロイする）と、PRS-5（±、L1。デモのサイトの自分の処理と設定を、本物の Gate、名簿、エージェント、ソフトウェアのパスキーで）。同意の画面は作っていない（凍結）。show-hn.md の最初のコメントに一行を足した。本番の名簿と Card Host の準備（DEPLOY.md）は済んでいて、遅らせていない。
+  - 赤の修正（#123）：#121 の CI で GATE-1（workers、P3 だけ）が揺れた。ポートを先に取って放してから6つの wrangler dev を同時に起こすと、workerd の内部のポートが、まだ使われていない予約のポートを取ることがある。1つずつ起こすようにした。
+  - 開いている PR が規則の2本を越えた時間があった（#121、#122、#123）。小さな docs と赤の修正だった。
+
 - 2026-10-05 朝（Claude Code、1本目、コードフリーズ中）：
   - 夜間の Windows（10-04 の夜）が赤：WEB-7（workers）が、詳細が空のまま落ちた。手で回し直すと NEUT-1 が `EPERM … ludion-wrangler-state-…`。原因は参照アプリのハーネスが `wrangler dev` を止めた後、workerd がまだ掴んでいる状態のフォルダを消して投げていたこと。#120 で、消すのを再試行して、だめなら OS に任せる（`removeQuietly`、速いテストで EPERM を仕込む）。詳細が空だったのは、単引用符を含む失敗の文（Windows のパス）を TAP が二重引用符で書き、scoreboard が読めなかったため。それも直した。main で夜間の Windows を回し直して緑（PASS 92 / FAIL 0）。
   - REG-7 をラチェット（96 → 97）。一晩の全オラクルの実行は、機械が眠って SCAN-4 が10時間かかり、その後は全部「no test matched」になった（何も書き込んでいない）。朝に回し直した。

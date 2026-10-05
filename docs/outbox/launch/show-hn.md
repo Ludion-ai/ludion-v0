@@ -75,5 +75,7 @@ What is not done: guarantees (an agent backed by a deposit or insurance), delega
 an agent with limits, and Gates for Python and WordPress — they are on the roadmap, not in this
 launch.
 
+Next: letting your AI cancel accounts for you. Sites verify the user's mandate, not the user's password.
+
 Repo: https://github.com/Ludion-ai/Ludion — happy to answer anything about the protocol choices
 (why RFC 9421 and not mTLS, why CIMD, what "revoked everywhere within the hour" really means).
