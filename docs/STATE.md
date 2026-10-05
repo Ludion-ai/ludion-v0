@@ -1,6 +1,6 @@
 # STATE
 
-最終更新：2026-10-05 深夜（Claude Code、1本目のレーン。夜間モード：LEAK-1、名簿の掃除と丸ごと配布、DIV-7、ラチェット 97 → 107）
+最終更新：2026-10-06 朝（Claude Code、1本目のレーン。夜間モードの終わり。朝の報告は docs/outbox/morning-lane1.md）
 
 ## 現在地
 
@@ -16,6 +16,7 @@
   - **1本目**（このファイル、作業ツリー `C:\Users\haya0\ludion`）：LEAK-1、名簿・Gate・diver の中身、ラチェットの書き込み（レーン2とレーン3のオラクルも、main で PASS したら入れる）。夜間の Windows も見る。
   - **2本目**（`docs/STATE.lane2.md`、`docs/lanes/lane2-spec.md`、作業ツリー `C:\Users\haya0\ludion-lane2`）：3つの問い。MND・DEMO・CEN・MSG。README の冒頭、トップページ、show-hn.md、faq.md、demo-script.md、census、Mandate の新しいファイル。
   - **3本目**（`docs/STATE.lane3.md`、`docs/lanes/lane3-spec.md`、作業ツリー `C:\Users\haya0\ludion-lane3`）：公開と運用。PUB・LOOP。packages/ludion/、.github/workflows/、PUBLISH.md、DEPLOY.md、runbook.md、wrangler の設定、ludion-ai への改名、LOOP-2 の計測。
+  - レーン3へ（2026-10-06 未明）：夜に diver の CLI（`packages/diver/bin/ludion.mjs`）と `doctor.test.mjs` が変わった（#130、#141、#144）。新しい文言は `npx ludion doctor`（時計の手がかり）と `npx ludion register`（Card Host の断り）。テストはこの2つをそのまま照合しているので、改名のときは文言とテストの期待を一緒に直す（緩めるのではなく、名前を合わせる）。
   - プレビューは1つを3本で共有する。誰かが出し直すと、ほかの手元の WEB-1 は「古い」で落ちる。
   - 夜勤（`C:\Users\haya0\ludion-night`、`.loop/NIGHT.md`）は 2026-10-01 08:48 に終わった。もう動かない。
 - **サイト**：プレビュー https://ludion-site-preview.ludion-agents.workers.dev （エージェント用のアカウント `Ludion Agents`、WEB-1 PASS）。本番（ludion.ai）への切り替えは人間（docs/DEPLOY.md §3）。
@@ -121,10 +122,11 @@
 夜間モード（人間が不在の間）に、spec に一番合う方を選んで進めたもの。1行ずつ。
 
 - 2026-10-05 夜：DIV-7（`ludion doctor` の時計）。比べる相手は、エージェント自身のオリジンの Date ヘッダー（doctor がもう取りに行っている3つのファイル）。外の時刻のサービスは足さない。Date ヘッダーが無ければ「比べられなかった」と言うだけで、落とさない。問題にするのは、往復と秒の切り捨ての誤差を引いてもなお ±30秒（spec §10.4）を越える時だけ。
-- 2026-10-05 夜：spec §12.9「初回の鍵の取得中は Pressure 0〜1 なら通す」は、今夜は入れない（コードフリーズ中に Gate の通り道を変えない）。入れると、P0〜1 で初めて来たエージェントの1回目は UNVERIFIED になり、1回目の VERIFIED を前提にしたオラクル（DIV-1、ONE-4、GATE-3 など）の書き直しが要る。今の害は、遅い鍵の一覧を持つエージェント自身の要求が最大 2.75 秒待つことだけ（人間は待たない）。ローンチの後に入れるかを決めてほしい。
-- 2026-10-05 夜：壁（`wall`、Pressure 1）は、摩擦がつながっていないと効かない（Node で `onFriction` が無い時、Next.js と Workers はいつも）。なのに記録とレポートは「既存の摩擦がかかった」と言う。`friction_hook` は設定で受け付けるが使っていない。spec は `friction_hook` の意味を決めていないので、今夜は直さない。案：摩擦がつながっていない Gate は、壁を「通した」として記録し、起動時に1行で警告する（ONE-3 の対に、つながっていない壁を仕込む）。
+- 2026-10-05 夜：spec §12.9「初回の鍵の取得中は Pressure 0〜1 なら通す」は、今夜は入れない（コードフリーズ中に Gate の通り道を変えない）。入れると、P0〜1 で初めて来たエージェントの1回目は UNVERIFIED になり、1回目の VERIFIED を前提にしたオラクル（DIV-1、ONE-4、GATE-3 など）の書き直しが要る。今の害は、遅い鍵の一覧を持つエージェント自身の要求が最大 2.75 秒待つことだけ（人間は待たない）。ローンチの後に入れるかを決めてほしい。試しに入れてみた（P0〜1 で `discoveryDeadline` を0にする1行、PR にはしていない）：全オラクルで15件が落ちた（SEED-2、STD-3、GATE-5、GATE-7、GATE-10、DIV-1〜4、PUB-1、NEUT-1、WEB-13、PILOT-1、ONE-3、BLK-1）。
+- 2026-10-05 夜：壁（`wall`、Pressure 1）は、摩擦がつながっていないと効かない（Node で `onFriction` が無い時、Next.js と Workers はいつも）。なのに記録とレポートは「既存の摩擦がかかった」と言う。`friction_hook` は設定で受け付けるが使っていない。spec は `friction_hook` の意味を決めていないので、今夜は直さない。案：摩擦がつながっていない Gate は、壁を「通した」として記録し、起動時に1行で警告する（ONE-3 の対に、つながっていない壁を仕込む）。見積もり：`decide()` を変えず記録の時だけ変えるなら、影響するテストは少ない。ただ朝のレポートが、もう書いた壁をもう一度勧めるので、レポートにも「壁はあるが、摩擦につながっていない」を出す必要がある。
 - 2026-10-05 夜：Durable Object のキーの一括の操作は128件までとみなし、名簿の掃除を128件ずつにした（#131、#133）。手元の workerd（SQLite の DO）は300件を通した。本番の上限の資料は夜は読めないので、安全な方に倒した。
-- 2026-10-05 夜：REG-7 の「連絡先ごとに1日5件」は、LEAK-1 のあと、名簿が連絡先を持たず確かめもしないので、他人のメールを書いた登録を5回送れば、そのメールの持ち主を1日止められる（自分で作った Root の署名で足りる）。連絡先を書かない登録は止まらない。上限を緩めるのは人間の判断なので、そのままにした。案：連絡先ごとの上限を外す（IP ごとと全体の上限は残す）か、上限を越えた連絡先は数えずに捨てて登録は通す。
+- 2026-10-05 夜：REG-7 の「連絡先ごとに1日5件」は、LEAK-1 のあと、名簿が連絡先を持たず確かめもしないので、他人のメールを書いた登録を5回送れば、そのメールの持ち主を1日止められる（自分で作った Root の署名で足りる）。連絡先を書かない登録は止まらない。#141 のあと、`--contact` を書かない init は連絡先を送らないので、当たるのはメールを書いた登録だけ。上限を緩めるのは人間の判断なので、そのままにした。案：連絡先ごとの上限を外す（IP ごとと全体の上限は残す）か、上限を越えた連絡先は数えずに捨てて登録は通す。
+- 2026-10-06 未明：REG-7 の「IP ごとに1時間10件」は、携帯の CGNAT や会社の NAT の後ろでは足りないかもしれない（HN の当日、同じアドレスから11人目が1時間 429）。数字は `services/registry/wrangler.json` の `REGISTRY_LIMITS`（レーン3の持ち物）。上げるかは人間の判断。
 
 ## 人間待ち
 
@@ -206,7 +208,7 @@
 - 登録フォームは JS がないと送れない（ボタンが押せない）。`<form action>` を置くと WEB-5 のリンクの規則に掛かるため。
 - 鍵の発見の SSRF 対策：Node の上のアダプタ（gate-node、gate-next）は、解決先の全アドレスを確かめて固定する（GATE-6、GATE-12）。gate-core を直接使うコードと Deno は、ホスト名の検査だけ（既定の fetch）。Workers はランタイムの fetch。
 - Session の秘密鍵は v0 の CLI では `ludion.json` に平文で置いている（spec はメモリのみ）。Root は封をした（ADR-019）が、KMS や OS のキーチェーンのバックエンドはまだない。
-- §11.6「P0〜1 では初回の鍵取得を待たない」は未実装。今は timeoutMs の範囲で待つ。
+- spec §12.9「初回の鍵の取得中は Pressure 0〜1 なら通す」は未実装。今は timeoutMs の範囲（既定で最大 2.75 秒）で待つ。入れると15件のオラクルの書き直しが要る（「朝に見てほしい判断」）。
 - サイトが渡す来訪ごとの記録（`records.put`）が遅い非同期だと、その promise は溜まる（背圧がない。既定のメモリの記録は同期）。外への sink は1時間に1回になった（ADR-038）ので、溜まらない。
 - 受領証の経路は、まだ `templatePath` のまま（metadata と scan は `publicTemplatePath`）。
 - `authorities` を設定していない Gate は、P2〜3 で VERIFIED を Gate の故障として扱い、fail_mode に従う（既定は closed、ADR-023）。導入の README に書いた。LIVE-3 で unpinned の VERIFIED をどう数えるかは未決。
@@ -262,6 +264,10 @@
   - 名簿（Durable Object）の掃除：REG-7 の数と使った同意は、自分の鍵だけを読み、期限切れの掃除は1分に1回、128件ずつ（#131、#133）。登録ごとに全部を並べていた（7万2千件で約115 ms、1登録で約350 ms）。
   - 丸ごと配布（REG-5 を強化、#137）：誰でも引けるのに、毎回全員を並べて拇印を作って署名していた。版ごとに1回作り、(版, since) ごとに1分使い回す。誰が引いたかは何も残らない。
   - ラチェット 97 → 104（#134：DIV-7、LEAK-1、MND-1〜4、PRS-5）→ 107（この PR：DEMO-1、MND-5、MSG-1）。全オラクル：PASS 107 / FAIL 1（LOOP-2：preview のトークン）/ PENDING 6（GATE-9、LIVE-1〜3、CEN-1、CEN-2）/ SKIP 1（PILOT-2）。
+  - 本番の init が壊れる所（#141）：`--contact` が無いと init が `mailto:change-me@example.com` を書き、register がそれを送っていた。全員が同じ連絡先になり、REG-7 の連絡先ごとの上限で、その日の6人目からの登録が 429 になる（手元で再現）。書かないなら空に（JS と Python）。REG-7 に、素の init の6人が全員登録できることを足した。名簿が文を「古い」と断ったら、CLI は時計と doctor を指す（DIV-7 を強化）。
+  - 名簿の起動のやり直し（#142）：一度失敗した起動を持ち続けて、オブジェクトが消えるまで全部の要求が失敗していた。
+  - Card Host（#143）：名簿の失敗や不達を「知らないエージェント」（404）と言っていた。503 `registry_unavailable` にした（no-store、Retry-After）。
+  - doctor（#144）：Card Host の断りの名前を読んで、次の一歩を言う（`unknown_agent` は register、`registry_unavailable` は少し待つ）。
   - 教訓（メモリ）：WEB-2 の仕込みの文は MISSION.md を出所に引く。MISSION.md の新しい行に「5分」があると、WEB-2 が赤くなる（#130 で一度）。
 
 - 2026-10-05 夜（Claude Code、1本目）：レーン2とレーン3が立った（docs/lanes/lane2-spec.md、lane3-spec.md）。
