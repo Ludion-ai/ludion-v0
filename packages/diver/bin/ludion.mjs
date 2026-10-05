@@ -246,7 +246,7 @@ async function doctor() {
       const clock = clockReading(r.headers.get("date"), sent, Date.now());
       if (clock) clocks.push(clock);
       const okType = p === "/card" || p === "/client" || (r.headers.get("content-type") ?? "").includes("http-message-signatures-directory+json");
-      if (r.status !== 200) problems.push(`${p} returned ${r.status} (must be 200, no redirect)`);
+      if (r.status !== 200) problems.push(`${p} returned ${r.status} (must be 200, no redirect)${await cardHostHint(r)}`);
       else if (!okType) problems.push(`${p} served with ${r.headers.get("content-type")} — must be application/http-message-signatures-directory+json`);
       else {
         const j = await r.json();
@@ -303,6 +303,15 @@ async function mandate() {
   store.mandates = (store.mandates ?? []).map((m) => (m.jti === jti ? { ...m, revoked: { seq: r.seq, at: new Date().toISOString() } } : m));
   save(store);
   out(`✔ Withdrew ${jti} (entry ${r.seq}). Subscribed Gates refuse it within seconds; every other Gate when the last Staple expires (≤1 h).`);
+}
+
+/** What a Card Host's refusal asks of the operator (its error code), if it says. */
+async function cardHostHint(r) {
+  let error;
+  try { ({ error } = await r.json()); } catch { return ""; }
+  if (error === "unknown_agent") return " — the Card Host does not know this agent: not registered yet (run `npx ludion register`), or revoked";
+  if (error === "registry_unavailable") return " — the Registry is unavailable right now; try again in a minute";
+  return "";
 }
 
 /**
