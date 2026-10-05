@@ -83,9 +83,13 @@ export function standingOf(rec) {
   };
 }
 
+/**
+ * A Diver's public record (what the Card Host builds its documents from, and the bulk copy carries).
+ * No contact: the Registry keeps none (LEAK-1).
+ */
 export async function publicDiverRecord(rec) {
   return {
-    diver_id: rec.diver_id, name: rec.name, contacts: rec.contacts,
+    diver_id: rec.diver_id, name: rec.name,
     root_kid: await okpThumbprint(rec.root),
     keys: (rec.keys ?? []).map((k) => ({ kty: k.kty, crv: k.crv, x: k.x, kid: k.kid })),
   };
@@ -248,10 +252,13 @@ export async function createRegistry(o) {
       if (pauseNew) throw PAUSED();
       await admit(request, contacts);
     }
+    // The contacts were counted (admit, REG-7) and go no further: the Registry keeps no contact (LEAK-1).
+    // A record from before LEAK-1 loses its contacts the next time it is written.
+    const { contacts: _dropped, ...kept } = prev ?? { keys: [], keys_ts: 0, revoked_jkt: [], created: new Date(now()).toISOString() };
     await store.putDiver(id, {
-      ...(prev ?? { keys: [], keys_ts: 0, revoked_jkt: [], created: new Date(now()).toISOString() }),
+      ...kept,
       diver_id: id, root: publicOf(p.root), signature_agent: agent.origin,
-      name: typeof p.name === "string" ? p.name.slice(0, 128) : undefined, contacts, commitments,
+      name: typeof p.name === "string" ? p.name.slice(0, 128) : undefined, commitments,
       contact_verified: !!o.contactsVerified, registered_iat: p.iat,
     });
     return json(prev ? 200 : 201, { diver_id: id, status: "active" });
