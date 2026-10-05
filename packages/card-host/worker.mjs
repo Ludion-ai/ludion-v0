@@ -18,8 +18,11 @@ export function registryLookup(namespace, { suffix = AGENTS_SUFFIX } = {}) {
     const id = host.slice(0, -suffix.length);
     if (!DIVER_ID.test(id)) return undefined;
     const stub = namespace.get(namespace.idFromName("registry"));
+    // Unknown or revoked is the Registry's 404; anything else that is not an answer is the Registry
+    // being unavailable (a throw: the Card Host says 503, not that the agent does not exist).
     const r = await stub.fetch(new Request(`https://registry.internal/__card/${id}`));
-    if (!r.ok) return undefined;
+    if (r.status === 404) return undefined;
+    if (!r.ok) throw new Error(`registry answered ${r.status}`);
     const rec = await r.json();
     return {
       directory: directoryDocument(rec.keys),
