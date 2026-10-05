@@ -50,8 +50,8 @@ GET repos/Ludion-ai/Ludion/environments/npm/deployment-branch-policies
 5. **オラクルの題名は PUB と WEB だけ直した**（registry.mjs と MISSION.md の PUB-1・PUB-3・WEB-7・WEB-12）。DIV-5 と ONE-4 の題名の `npx ludion init` は、レーン1のオラクルなので残した（中身の検査は改名に合わせて通る）。
 6. **持ち主のはっきりしないテストの道具も直した**：`reference/`（参照アプリのインストールの行。GATE-3 が README と照合する）、`clean-room/agent-ts.mjs`（DIV-1）、`examples/demo-site`（PRS-5）。直さないと、名前が `ludion-ai` になった tarball で落ちる。
 7. **WEB-12 と WEB-13 に負の例を足した**：断られた名前（`ludion/gate/node`、`npm install ludion`、`ludion/diver`）のページを捕まえる。強化なので自由の範囲。
-9. **デモのショップ（`https://shop.demo.ludion.ai`、examples/demo-shop）をどこで動かすかが、どの文書にも無い。** show-hn.md の前提と、runbook の前日の確かめに入っている。Node のサーバー（`npm start`、失効の配信を購読し続ける）なので、Workers ではなく常に動く機械が要る。決めずに、人間待ちの9に書いた。
 8. **PUBLISH.md から「初版を手で出す」を外した**：0.0.1 が出たので、trusted publisher はもう設定できる。0.1.0 からは release.yml だけ。§6.1 の4（トークンでの公開を止める）を押すと、手元の `npm publish` は通らなくなる。
+9. **デモのショップ（`https://shop.demo.ludion.ai`、examples/demo-shop）をどこで動かすかが、どの文書にも無い。** show-hn.md の前提と、runbook の前日の確かめに入っている。Node のサーバー（`npm start`、失効の配信を購読し続ける）なので、Workers ではなく常に動く機械が要る。決めずに、人間待ちの9に書いた。
 
 ## 人間待ち（押すボタンだけ。上から）
 
