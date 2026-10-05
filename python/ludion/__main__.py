@@ -36,7 +36,7 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
     i = sub.add_parser("init")
     i.add_argument("--name", default="Unnamed agent")
-    i.add_argument("--contact", default="mailto:change-me@example.com")
+    i.add_argument("--contact", default=None)
     i.add_argument("--domain")
     i.add_argument("--dev", action="store_true")
     i.add_argument("--force", action="store_true")

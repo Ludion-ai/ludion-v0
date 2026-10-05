@@ -79,9 +79,12 @@ async function init() {
   const diverId = diverIdFromRoot(root.publicJwk);
   const domain = flag("domain", `${diverId}.agents.ludion.ai`);
   const origin = `https://${domain}`;
+  // No placeholder: one would be the same mailbox for everyone who skips --contact, and the
+  // Registry's per-contact limit (REG-7) would then refuse every new agent past the first few a day.
+  const contact = flag("contact");
   const store = {
     v: 0, ...(DEV ? { dev: true } : {}), diver_id: diverId, signature_agent: origin,
-    name: flag("name", "Unnamed agent"), contacts: [flag("contact", "mailto:change-me@example.com")],
+    name: flag("name", "Unnamed agent"), contacts: contact ? [contact] : [],
     root: DEV ? root.privateJwk : await sealRootKey(root.privateJwk, passphrase),
     session: session.privateJwk, created: new Date().toISOString(),
   };
@@ -338,4 +341,9 @@ async function report() {
 
 const commands = { init, sign: signCmd, rotate, register, staple: stapleCmd, revoke, mandate, doctor, scan, report };
 if (!commands[cmd]) { out("usage: ludion <init|sign|rotate|register|staple|revoke|mandate|doctor|scan|report> …"); process.exit(1); }
-commands[cmd]().catch((e) => { console.error("✖", e.message); process.exit(1); });
+commands[cmd]().catch((e) => {
+  console.error("✖", e.message);
+  // A Root statement more than 5 minutes off the Registry's clock: almost always this machine's clock (DIV-7).
+  if (e?.error === "stale_statement") console.error("  This machine's clock may be off: `npx ludion doctor` compares it with your agent's origin.");
+  process.exit(1);
+});
