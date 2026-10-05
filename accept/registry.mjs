@@ -232,6 +232,8 @@ export const ORACLES = [
     run: nodeTest(["packages/diver/test/div5.test.mjs"], "^DIV-5:", { metric: (out) => (/^# DIV-5: (.+)$/m.exec(out) ?? [])[1] }) },
   { id: "DIV-6", m: "M2", kind: "-", level: 0, property: "init-question", title: "init's optional question sends nothing unless answered (no terminal, CI, skipped, nonsense: 0 network attempts); an answer is one POST of one word, with no Diver id, name, contact or key",
     run: nodeTest(["packages/diver/test/div5.test.mjs"], "^DIV-6:") },
+  { id: "DIV-7", m: "M2", kind: "±", level: 0, title: "ludion doctor checks the clock against the agent's own origin (its Date header): in step or 20 s off passes, no Date header is said and not failed; more than ±30 s off (45 s, 5 min, a day; ahead or behind) is a problem naming the skew and how to sync",
+    run: nodeTest(["packages/diver/test/doctor.test.mjs"], "^DIV-7:") },
   { id: "PUB-1", m: "M2", kind: "+", level: 1, pair: "PUB-2", property: "published-tarball", title: "npm tarballs alone install into a clean project; ludion CLI and gate-node/workers/next work (my agent → my Gate → VERIFIED)",
     timeoutMs: 900_000, run: nodeTest(["accept/publish/pub1.test.mjs"], "^PUB-1:", { timeoutMs: 880_000,
       metric: (out) => (/^# PUB-1: (.+)$/m.exec(out) ?? [])[1] }) },

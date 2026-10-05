@@ -111,6 +111,7 @@
 | DIV-4 | ± | 1 | 回転しても同じ。Session 鍵を回しても識別子は変わらず、旧鍵はキャッシュが切れた後に通らず、新鍵は通る | |
 | DIV-5 | ± | 0 | `npx ludion init` は1画面を出す：AI の名前、Web（Signature-Agent）と MCP（client_id）で同じ名前、消す一行（revoke）、README に貼るバッジ。Depth・Ballast・Mandate・Pressure・Staple の語と秘密は出ない（英語、日本語、自前のドメイン）。検査器は仕込んだ画面で先に試す | |
 | DIV-6 | − | 0 | init の任意の1問は、答えない限り何も送らない（端末でない、CI、飛ばす、意味のない答え：通信の試み0）。答えたら、一語だけを1回 POST し、Diver の id・名前・連絡先・鍵は送らない | |
+| DIV-7 | ± | 0 | `ludion doctor` は時計を、エージェント自身のオリジンの Date ヘッダーと比べる。合っているか20秒のずれは通り、Date ヘッダーが無ければそう言うだけで落とさない。±30秒（Gate の許す幅、spec §10.4）を越えるずれ（45秒、5分、1日。進みも遅れも）は問題として、ずれの秒数と直し方を出す | |
 | PUB-1 | + | 1 | npm の公開セット（`ludion` と `@ludion/*`）を `npm pack` した tarball だけで、クリーンな環境（新しいディレクトリ、新しい npm キャッシュ、workspace なし）に入る。`ludion` の CLI（`.bin` へのリンク、scan と report はリポジトリの CLI と出力が完全に一致、init と sign）と、gate-node・gate-workers・gate-next を通した自分のエージェント → 自分の Gate → VERIFIED が、公開される名前の import だけで動く | PUB-2 |
 | PUB-2 | − | 1 | 公開セットの各 tarball に、宣言した `files` と package.json・README・LICENSE 以外が0件（テスト、ベンチ、フィクスチャ、鍵、`.env`、`ludion.json` が0件）。license、repository、engines、スコープ付きの `publishConfig.access: public`、bin の shebang、export 先の同梱、内部依存がセット内の同じ版であること。検査器は先に仕込みで試す | |
 | PUB-3 | + | 1 | `ludion` だけを先に出せる。`ludion` の tarball だけを、`@ludion/*` の取得が全て拒否されるレジストリの下で、クリーンな環境に入れられる（npm に `@ludion` のパッケージが一つもなくても入る）。入った CLI は `.bin` にリンクされ、scan と report はリポジトリの CLI と出力が完全に一致し、init と sign が Web Bot Auth の署名を作る。tarball は `npm publish` と同じ手順（prepack、pack、postpack）で作る | PUB-2 |

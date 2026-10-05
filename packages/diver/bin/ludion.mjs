@@ -234,12 +234,14 @@ async function doctor() {
   if (isSealedRoot(store.root)) out(`✔ Root sealed (${store.root.sealed.kdf} + ${store.root.sealed.cipher}), kid ${store.root.kid}`);
   else problems.push(`${store.dev ? "DEV MODE: " : ""}the Root private key is in plaintext on disk`);
   if (!/^dvr-[a-z2-7]{16}$/.test(store.diver_id)) problems.push("diver_id malformed");
-  const skew = Math.abs(Date.now() - Date.now()); // placeholder: compare against a time source in v0.1
-  out(`✔ clock: local time ${new Date().toISOString()} (no external time check yet; signatures allow ±30s)`);
   const origin = store.signature_agent;
+  const clocks = []; // the origin's Date header against this machine's clock, one per response
   for (const p of ["/.well-known/http-message-signatures-directory", "/card", "/client"]) {
     try {
+      const sent = Date.now();
       const r = await fetch(origin + p, { redirect: "manual" });
+      const clock = clockReading(r.headers.get("date"), sent, Date.now());
+      if (clock) clocks.push(clock);
       const okType = p === "/card" || p === "/client" || (r.headers.get("content-type") ?? "").includes("http-message-signatures-directory+json");
       if (r.status !== 200) problems.push(`${p} returned ${r.status} (must be 200, no redirect)`);
       else if (!okType) problems.push(`${p} served with ${r.headers.get("content-type")} — must be application/http-message-signatures-directory+json`);
@@ -255,6 +257,9 @@ async function doctor() {
       }
     } catch (e) { problems.push(`${p} unreachable: ${e.message}`); }
   }
+  // Gates allow a signature's time ±30 s (spec §10.4): a clock further off makes every signature fail.
+  const clock = clockVerdict(clocks, new URL(origin).host);
+  if (clock.problem) problems.push(clock.problem); else out(clock.line);
   if (problems.length) { out(`\n${problems.length} problem(s):`); problems.forEach((p) => out(`  ✖ ${p}`)); process.exitCode = 1; }
   if (warnings.length) { out(`\n${warnings.length} warning(s):`); warnings.forEach((w) => out(`  ⚠ ${w}`)); process.exitCode = 1; }
   if (!problems.length && !warnings.length) out(`\nAll good. Sites running Ludion Gate will see you as VERIFIED (depth 0 until you register).`);
@@ -295,6 +300,28 @@ async function mandate() {
   store.mandates = (store.mandates ?? []).map((m) => (m.jti === jti ? { ...m, revoked: { seq: r.seq, at: new Date().toISOString() } } : m));
   save(store);
   out(`✔ Withdrew ${jti} (entry ${r.seq}). Subscribed Gates refuse it within seconds; every other Gate when the last Staple expires (≤1 h).`);
+}
+
+/**
+ * This machine's clock against a server's Date header (whole seconds): the offset of the middle of
+ * the round trip from the header's second, and how far either way the truth may be.
+ */
+function clockReading(dateHeader, sent, received) {
+  const server = Date.parse(dateHeader ?? "");
+  if (!Number.isFinite(server)) return null;
+  const offsetMs = (sent + received) / 2 - (server + 500);
+  return { offsetMs, errorMs: (received - sent) / 2 + 500 };
+}
+
+/** The clock line, or the problem: off by more than the Gates' ±30 s even at the reading's best. */
+function clockVerdict(readings, host) {
+  if (!readings.length) return { line: `? clock: local time ${new Date().toISOString()} — ${host} sent no Date header to compare with (Gates allow ±30 s)` };
+  const best = readings.reduce((a, b) => (b.errorMs < a.errorMs ? b : a));
+  const s = Math.round(best.offsetMs / 1000);
+  if (Math.abs(best.offsetMs) - best.errorMs > 30_000) {
+    return { problem: `clock: this machine is ${Math.abs(s)} s ${s > 0 ? "ahead of" : "behind"} ${host}; Gates refuse signatures more than 30 s off. Sync the clock (Windows: w32tm /resync; macOS and Linux: turn on NTP; WSL: wsl --shutdown)` };
+  }
+  return { line: `✔ clock: within ${Math.max(1, Math.ceil((Math.abs(best.offsetMs) + best.errorMs) / 1000))} s of ${host} (Gates allow ±30 s)` };
 }
 
 // ---- scan: the log-first Gate (@ludion/scan) ---------------------------------
