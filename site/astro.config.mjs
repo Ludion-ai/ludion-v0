@@ -37,6 +37,7 @@ export default defineConfig({
       sidebar: [
         { slug: "quickstart" },
         { slug: "agent" },
+        { slug: "mandate" },
         { slug: "gate" },
         { label: "Gate errors", translations: { ja: "Gate のエラー" }, items: [{ autogenerate: { directory: "e" } }] },
       ],
