@@ -64,6 +64,17 @@
 10. **トップページの中心を、spec §9 の一点（鍵と名前）から3つの問いに変えた**（レーン2 spec §3.6）。init の1行と、通す・壁・止める、scan への導線は残した。数字は今までどおり出所のリンク付き（WEB-2 PASS）。
 11. **FAQ に足しかけた「Mandate も無料のまま」は消した**（会社の約束になるため）。もとの「Gate、検証、止めるは無料のまま」のまま。
 12. **README の冒頭**は、最初の節（「What Ludion does not prevent」）までを指すと読んだ。その下の節（npx の書き換えなど）はレーン3のもの。
+13. **census は push していない**（作業ツリーのブランチ `lane2/census-local` にだけある。CEN-1・2 は手元で PASS）。リポジトリは公開なので、push や PR だけで、各社の名前と値が、事前連絡より先に外から見える。会社としての発言にあたるので、夜間は出さなかった。朝に「出す」と言われたら、そのまま PR にする。
+14. **census の値の決め方**（`site/src/data/census.json`、方法の節に同じことを書いた）：
+    - データは手元のものだけ：レーン1の事前登録の一覧（各社の公開文書を 2026-10-04 に読んだメモ、`C:\Users\haya0\ludion\docs\outbox\launch\private\registry-preseed.json`）と、GATE-8 で検証した ChatGPT agent の本物の署名（ADR）。夜は外のページを読んでいない。
+    - 載せたのは、人の代わりに動く5つ：ChatGPT agent、ChatGPT-User、Claude-User、Google-Agent、Perplexity-User。クローラー（GPTBot など）は載せない。
+    - **まだ確かめていない**：Claude in Chrome、Comet、Microsoft Copilot（手元に文書が無い）。表には入れず「まだ確かめていないもの」に名前だけ。昼に各社の文書を読んで足す。
+    - ChatGPT agent の「目的」と「止める手段」は不明（運営者のページが 2026-10-04 に 403 で読めなかった。spec の「読めない文書は不明」）。
+    - Google-Agent の「署名」は「一部」（運営者が実験と書いている）。
+    - 「止める手段」：robots.txt に従うと書いてあれば「はい」、「当てはまらないことがある」は「一部」、「概ね従わない」でほかの手段が書かれていなければ「いいえ」。
+    - 「その AI だけを止められるか」：運営者がその名前の IP の範囲か署名の鍵を公開していれば「はい」。
+15. **MND-5 のシートベルトは既定で切ってある**（`mandateFor(me, { strict: true })` で入る）。デモでは Gate が断るところを見せるため。
+16. **各社への連絡の下書き**（`docs/outbox/launch/census-notice-*.md`、5社、census と同じく push していない）は「名簿の名札は、そのドメインのアドレスから返信すれば、そのドメインで確かめて引き渡す」と書いた。その手順はまだ作っていない（Q21 と同じく人間の判断）。
 
 ## 人間待ち
 
@@ -72,27 +83,32 @@
   - 案 B：spec どおり 403 `mandate_required` にする。PRS-2 と GATE-7 の期待を変える（検証器の変更なので人間の承認）。
   - 決まるまで案 A で進める。
 - [ ] **確認（`per_day` と `checkout`）**：spec §3.2 の例は `--scope read,checkout --per-day 3` で、1回の上限と通貨が無い。今の設計（PRS-2、PRS-3）では `checkout` の Mandate は `checkout_max` と通貨を持ち、`per_day` は決済の回数。デモは `--checkout-max` と `--currency` を足して作る。`per_day` を「Mandate を使った回数（経路を問わず）」にしたいなら、PRS-3 の意味が変わるので人間の判断。
+- [ ] **census を出すか**（朝に見てほしい判断の13）：出すなら PR にする。各社への連絡（`docs/outbox/launch/census-notice-*.md` の5通、手元のブランチ）を送るのは人間。公開日は 10/13。
+- [ ] （任意）`agent.mjs --model` を録画で使うなら、`ANTHROPIC_API_KEY`。
 - [ ] **tracecheck.dev へのデプロイ**（`pilots/tracecheck/DEPLOY.md`、15 分）と、手順 0 の数字 2 つ（Workers のプラン、1 日のリクエスト数）。
 - [ ] PILOT-2 のトークン：`TRACECHECK_D1_READ_TOKEN`、`TRACECHECK_ACCOUNT_ID`、`TRACECHECK_D1_ID`。
 - [ ] （任意）毎朝のレポートの Discord の Webhook（`REPORT_WEBHOOK_URL`）。
 - [ ] `SECURITY.md` を読む（`docs/THREATS.md` が無い、`security@ludion.ai` の受信、24時間・72時間・報奨金の約束）。
 
-## 進み具合（レーン2の系列）
+## 進み具合（レーン2の系列、9件）
 
-- 手元（`lane2/mnd`、main を取り込んだ上）：MND-1〜4 PASS。DEMO-1、CEN-1・2、MSG-1、MND-5 は PENDING。
-- #128 で MND-1〜4 が main に入った。
-- 手元（`lane2/msg`）：MSG-1 PASS（6つの文面、仕込んだ10を捕まえる）。トップページを変えたので WEB-2・3・5・8・9 も回して PASS。
-- 手元（`lane2/demo`、#129）：DEMO-1 PASS（10秒。流れ全体と、仕込んだ3つ：アカウントの経路に scope が無い店、失効を購読しない店、Session 鍵の文も受け付ける名簿、を3つとも捕まえる）。
-  - 同じ変更で回して PASS：LOOP-1・4・5、CRY-1、STD-1・2、GATE-2・5・7・10〜14、PRIV-1〜5、PRS-1〜5、REG-1〜7、LEAK-1、RPT-1・2、DIV-3〜6、PUB-1〜4、SEC-1、NEUT-1、PUR-1〜4、BLK-1、ONE-3、MCP-4、PILOT-1、WEB-2、WEB-3。
-  - PRIV-4 の判定の対照（手で組んだ正しい1時間の行）に `mandate` を足した。判定はそのまま（`ROW_KEYS` と比べる）。spec §3.3 の「1時間ごとの集計に委任の判定を入れる」のため。
+| ID | どこで PASS | PR |
+|---|---|---|
+| MND-1〜4 | main | #128（マージ済み） |
+| DEMO-1 | 手元（`lane2/demo`）。流れ全体と、仕込んだ3つ（アカウントの経路に scope が無い店、失効を購読しない店、Session 鍵の文も受け付ける名簿）を捕まえる | #129 |
+| MSG-1 | 手元（`lane2/msg`）。6つの文面、仕込んだ10を捕まえる。新しいトップページで WEB-2・3・5・8・9 も PASS | #132 |
+| MND-5（任意） | 手元（`lane2/mnd5`、push 済み） | 開いている PR が2本のうちは待つ |
+| CEN-1・CEN-2 | 手元だけ（`lane2/census-local`、push していない）。5つのエージェント × 4つの列、全部に出典と日付。WEB-2・3・9 も PASS。WEB-5 は外のリンクを読みに行くので、夜は回していない | 人間の判断待ち（朝に見てほしい判断の13） |
+
+- Mandate の変更と同じ変更で回して PASS：LOOP-1・4・5、CRY-1、STD-1・2、GATE-2・5・7・10〜14、PRIV-1〜5、PRS-1〜5、REG-1〜7、LEAK-1、RPT-1・2、DIV-3〜7、PUB-1〜4、SEC-1、NEUT-1、PUR-1〜4・6・7、BLK-1、ONE-3、MCP-4、PILOT-1、WEB-2・3・5・8・9。
 
 ## 次の一手
 
-1. ✅ #126：spec、STATE、オラクルを PENDING で。
-2. PR（`lane2/mnd`）：Mandate（MND-1〜4）。名簿の Root の発行と取り消し、gate-core の `prn: "self"`、受領証・来訪の記録・1時間の集計に委任の判定、diver の CLI（`mandate create/list/revoke`）と SDK の `mandateFor`、help のページ、ADR（docs/adr/2026-10-05-operator-mandate-signed-by-root.md）。
-3. デモ（DEMO-1）：`examples/demo-shop`（レーン1の `examples/demo-site` と PRS-5 には触らない）、決まった動きの乗っ取りのエージェント、台本。
-4. census（CEN-1・2）：`site/src/data/census.json`、`/census` と `/ja/census`、各社への事前連絡の下書き。
-5. 文面（MSG-1）：README の冒頭（英日）、トップページ、`show-hn.md`、`faq.md`、`demo-script.md`。
+1. #129（DEMO-1）と #132（MSG-1）の CI を見る。赤なら直す。マージされたら MND-5 の PR を出す。
+2. 朝に人間が census を「出す」と言ったら：`lane2/census-local` を main に合わせて PR にする（WEB-5 で外のリンクも確かめる）。各社への連絡は人間が送る。
+3. 昼のうちに（外のページを読める時間に）：Claude in Chrome、Comet、Microsoft Copilot を各社の公開文書で確かめて census に足す。ChatGPT agent のページ（403 だった）を読み直す。
+4. `agent.mjs --model` を、人間の API キーで一度動かす（録画の前に）。
+5. 毎日 main を取り込む。レーン3の改名（`ludion-ai`）が入ったら、レーン2のファイルの残りの `ludion` を見直す。
 
 ## 既知の問題
 
@@ -105,5 +121,6 @@
 
 ## 直近のセッション
 
+- 2026-10-05 深夜（夜間モード）：MND-1〜4（#128、マージ）、DEMO-1（#129）、MSG-1（#132）、MND-5（`lane2/mnd5`）、census（手元だけ）と各社への連絡の下書き（手元だけ）。人間のレーン3の指示で、レーン2のファイルは `ludion-ai` で書いた。
 - 2026-10-05 夜：レーン2 spec を受け取った。`lane2/oracles` は #89 で main に入っていて、未コミットの作業は無かった。main から `lane2/mandate` を切り、spec を `docs/lanes/lane2-spec.md` に置き、§3.1 を確かめた（上）。
 - 2026-10-03〜04：tracecheck.dev の計測（#81）、README（#83）、/scan のサンプル（#82）、クイックスタート（#84）、レーン2のオラクル（WEB-10、WEB-11、PILOT-1、PILOT-2、#89）、SCAN-5・6（#88）。
