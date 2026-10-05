@@ -25,6 +25,7 @@ v0 の Mandate は、利用者（Principal）がパスキーで同意し、名�
 ### 2. SDK と CLI
 
 - `npx ludion-ai mandate create --site <https origin> --scope … [--checkout-max N --currency CCY --per-day N] [--expires 24h]`、`list`、`revoke <jti>`。発行と取り消しのときだけ Root を開く（合言葉）。Mandate は `ludion.json` の `mandates` に置く。
+- SDK の側のシートベルト（MND-5、任意）：`mandateFor(me, { strict: true })`。Mandate のあるサイトへの要求は使う範囲を名乗り（`ludionFetch(url, { scope: "checkout" })`。GET と HEAD は `read`）、範囲の外、範囲を名乗らない書き込み、期限切れや取り消し後の要求は、署名も送信もしない（Gate の無いサイトでも）。既定は切ってある：デモでは、サイトの Gate が断るところを見せるため。縛れるのはエージェント自身のコードだけで、盗んだ Session 鍵で手で署名する者を止めるのはサイトの Gate（DEMO-1）。
 - SDK：`createDiverSigner({ …, mandate: mandateFor(me) })`。`mandate()` は要求（メソッドと URL）を受け取り、行き先のサイトの Mandate を選ぶ。`mandateFor` は `mandates` しか読まない。Root も合言葉も要らない（MND-1 は、合言葉の無いプロセスで CLI が出した1行を動かし、Root を読まないことを確かめる）。
 
 ### 3. 判定は今のまま。受領証と1時間の集計に判定を足す
