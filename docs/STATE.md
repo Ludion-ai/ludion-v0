@@ -1,6 +1,6 @@
 # STATE
 
-最終更新：2026-10-04 夜遅く（Claude Code、1本目のレーン。人間の決定1〜5：LOOP-2 の形、writes: false、WEB-7、証明書、MCP-3）
+最終更新：2026-10-05 夜（Claude Code、1本目のレーン。夜間モード：人間は朝まで不在。LEAK-1 のあと、名簿・Gate・diver の直しとラチェット）
 
 ## 現在地
 
@@ -115,6 +115,14 @@
 - オラクルどうしで共有する状態（参照アプリのキャッシュなど）を、別のオラクルが書き換えたまま去らない。使う側は、使う前に中身が完全かを確かめる。
 - 秘密のファイルはリポジトリの外（`~/.config/ludion/`）に置く。`*.env` は `.gitignore` にある。
 
+## 朝に見てほしい判断
+
+夜間モード（人間が不在の間）に、spec に一番合う方を選んで進めたもの。1行ずつ。
+
+- 2026-10-05 夜：DIV-7（`ludion doctor` の時計）。比べる相手は、エージェント自身のオリジンの Date ヘッダー（doctor がもう取りに行っている3つのファイル）。外の時刻のサービスは足さない。Date ヘッダーが無ければ「比べられなかった」と言うだけで、落とさない。問題にするのは、往復と秒の切り捨ての誤差を引いてもなお ±30秒（spec §10.4）を越える時だけ。
+- 2026-10-05 夜：spec §12.9「初回の鍵の取得中は Pressure 0〜1 なら通す」は、今夜は入れない（コードフリーズ中に Gate の通り道を変えない）。入れると、P0〜1 で初めて来たエージェントの1回目は UNVERIFIED になり、1回目の VERIFIED を前提にしたオラクル（DIV-1、ONE-4、GATE-3 など）の書き直しが要る。今の害は、遅い鍵の一覧を持つエージェント自身の要求が最大 2.75 秒待つことだけ（人間は待たない）。ローンチの後に入れるかを決めてほしい。
+- 2026-10-05 夜：壁（`wall`、Pressure 1）は、摩擦がつながっていないと効かない（Node で `onFriction` が無い時、Next.js と Workers はいつも）。なのに記録とレポートは「既存の摩擦がかかった」と言う。`friction_hook` は設定で受け付けるが使っていない。spec は `friction_hook` の意味を決めていないので、今夜は直さない。案：摩擦がつながっていない Gate は、壁を「通した」として記録し、起動時に1行で警告する（ONE-3 の対に、つながっていない壁を仕込む）。
+
 ## 人間待ち
 
 - [x] **判断（朝のレポートのメールの件名）**：2026-10-04、人間の許可で、件名も見出しの数字1つにした（RPT-1 の件名の検査も合わせた）。
@@ -124,7 +132,9 @@
 - [ ] **本番の名簿と Card Host のデプロイ**（ADR-041）：設定と手順はできた（docs/DEPLOY.md §6。鍵は `node services/registry/bin/keygen.mjs`、秘密はデプロイと同じ一回で入る）。デプロイ、鍵の保管、`*.agents.ludion.ai` の証明書（買うと決めた。ACM のワイルドカード1枚と DNS のワイルドカード1つ、§4）は人間。
 - [ ] **npm の初版**：`ludion` の1本（ADR-036、実装の順の2のあと）を、人間が手で出す。2版目から release ワークフロー。
 - [x] **判断（LOOP-2 と `preview` ジョブ）**：人間の形（2026-10-04 の指示の1）で入れた（docs/adr/2026-10-04-preview-versions-and-split-lighthouse.md）。main への push は毎回、PR は `site/` とビルドの元に触れた時だけ。版ごとの preview URL を測るので、ジョブをまたぐ鍵は要らない。Lighthouse は3台に分けて並列。版の URL に Cloudflare が足す `X-Robots-Tag: noindex` は、live に無いことを確かめてから、その1つだけを外す中継で測る（2026-10-04、人間が承認。条件の「本番が noindex を送らない」は LIVE-4 が夜間に見る）。手元で全体を流して PASS（36ページ、最低 100）。CI での時間は secret が入ってから3回測って報告する。
-- [ ] **CI の `preview` ジョブの secret**（人間がトークンを作って登録すると決めた）：`CLOUDFLARE_PREVIEW_API_TOKEN`（`Ludion Agents` の Workers Scripts の編集だけ）と `CLOUDFLARE_PREVIEW_ACCOUNT_ID`。登録されたら、Claude が main への push の実行で LOOP-2 を3回測って報告する（人間の指示）。それまで `preview-deploy` は赤で、WEB-1 は CI で強制されない。
+- [ ] **CI の `preview` のトークンの範囲**（2026-10-05 夜に見つけた）：secret は 12:15 に入った。ただ `CLOUDFLARE_PREVIEW_API_TOKEN` がゾーン `ludion.ai` を見えるので、デプロイの前の境界の検査が止めている（main の #126 の実行：`refusing to deploy: the token sees 1 zone(s): ludion.ai (docs/DEPLOY.md §5)`）。検査は正しく働いている。緩めない。
+  - 直し方（人間、Cloudflare の画面）：トークンを編集し、Zone の権限の行を全部消す。残すのは Account → Workers Scripts → Edit（`Ludion Agents` だけ）。「Edit Cloudflare Workers」のひな形は、全ゾーンの Workers Routes を足す。GitHub の secret の値は変わらない。
+  - LOOP-2 の3回の計測は、レーン3の担当になった（lane3-spec の8）。
 - [x] 確認（#69、2026-10-02 に人間が確認）：ルートの重なりの読み。「一番厳しいものが勝つ」を、一致する全てのルートの最高の Pressure と、要件の全部を合わせる（Depth は最大、Ballast、scope は全部）と読んだ。一つを選ぶより厳しくなる場合がある。この読みで正しい（Pressure と Depth は最大、Ballast はどれかが求めれば必須、scope は全部）。
 - [x] 確認（#71、2026-10-02 に人間が確認）：「上限付きの Mandate を受け付けない」を、数える上限（`per_day`）のある Mandate の決済を拒否する、と読んだ。`checkout_max` と通貨は記録なしでどの Gate でも効く。正しい。加えて、期間の中で累計する上限（1日の合計金額など）も記録が要り、無ければ拒否。v0 が強制できない上限は、記録があっても拒否する（`unenforceable_limit`、PRS-3）。
 - [x] Codex の検証器の監査（10件）：全部採用。#69（5、6、7、8）、#70（1、2、3、9、10、対の意味）、#71（4）、#73 と #76（4 の実装の CI で見つけたバグ）。追加のオラクル案7件も採用（LOOP-3、LOOP-4、STD-5、PRS-3、GATE-11、GATE-12、PRS-4）。
@@ -141,7 +151,6 @@
 - [ ] **ローンチの下書き**（docs/outbox/launch/、英語）：Show HN の本文と最初のコメント（tracecheck の数字は空欄）、想定問答、60秒のデモの台本。出すのと録るのは人間。
 - [ ] **名簿の事前登録の10件**（spec §14.2）：データは手元の作業ツリーにだけある（`docs/outbox/launch/private/registry-preseed.json`、.gitignore。公開のリポジトリに入れると公開になるため）。各社の公開文書から 2026-10-04 に確かめた。Q21（各社へ事前に連絡するか）は人間の判断。
 - [ ] **Workers Paid にするか**（お金、人間）：DEPLOY.md §7.3。Free は1日 100,000 リクエスト（越えると Error 1027）で、HN の当日にサイト、名簿、Card Host が分け合う。
-- [ ] **CI の preview の secret が入ったら**：Claude が main への push を3回回して、10分に収まるかを報告する（2026-10-04 の夜の時点で、まだ入っていない）。
 - [ ] **旧資源の削除**（docs/DEPLOY.md §1.3、Ludion の16件だけ）。消す前に：
   - 提供元で秘密を失効させる：`ludion-api` の OpenAI と楽天のキー、`ludion-fallback-relay` の `PROVIDER_API_KEY`、`ludion` の GitHub OAuth アプリ。Worker を消してもキーは生きている。
   - D1 3つ、KV 2つ、R2 2つの中身を書き出す。提出物や登録者の情報なら、残すか消すかを決める。
@@ -183,10 +192,9 @@
 
 ## 既知の問題
 
-- 壁（`friction`）を実際に当てるのは gate-node の `onFriction` だけ。Next.js と Workers の Gate は、判定（`friction`）を記録して通す。サイトの摩擦につなぐ口はまだない。
+- 壁（`friction`）を実際に当てるのは gate-node の `onFriction` だけ。`onFriction` の無い Node、Next.js、Workers の Gate は、判定（`friction`）を記録して通す。サイトの摩擦につなぐ口はまだない。そのとき朝のレポートは「既存の摩擦がかかった」と数える（実際は通っている）。`friction_hook` は受け付けるが使っていない。
 - 目的の一文（note）は、サイトの記録（既定はメモリ、7日）にしか残らない。サイトの手元の `ludion report` は、その記録を読めるときだけ「言ったことと、やったこと」を出す。1時間の件数だけでは出ない。
 - GATE-8（案 A）：Gate は寿命1時間まで受け入れ、60秒を超える署名には nonce を求める。本物の ChatGPT agent の2件は nonce が別々だったが、同じ1時間の窓で同じ署名を使い回すかは未確認。使い回すなら、2回目以降はリプレイ（SPOOFED）になる。LIVE-2 で連続した本物の要求を取れたら確かめる。nonce キャッシュはプロセスごとなので、複数のインスタンスでは1時間のうちに別のインスタンスへ送り直せる（前は90秒）。
-- `ludion doctor` の時計チェックは未実装（ローカル時刻を表示するだけ）。
 - 署名された本文（GATE-11）：Node の読み取りは IncomingMessage の `complete`（他のストリームは内部の `_readableState.ended`）に頼る。HTTP/2 の互換 API と Fastify では確かめていない。chunked で0バイトの本文は、Node では `'end'` が先に出る。本文の上限 1 MiB は gate-node だけ変えられる。
 - WEB-9 が CI でときどき落ちた（2026-10-01：Windows で3回、Linux で1回）。原因の監査項目は取れていない。各ページ3回の中央値に変えた（閾値は95のまま）。それでも落ちたら、#74 の詳細で原因を見る。
 - GATE-1 は、2026-10-02 には毎回落ちていた：GATE-3 が共有の Next.js のキャッシュの `.next` を時計の中で建て直し、途中で止まったまま「準備済み」の印だけが残った。`prepare()` が使う前にビルドを確かめて建て直し、GATE-3 も去る前に建て直すようにした（`reference/test/harness.test.mjs` に降ろした）。
@@ -196,13 +204,13 @@
 - 鍵の発見の SSRF 対策：Node の上のアダプタ（gate-node、gate-next）は、解決先の全アドレスを確かめて固定する（GATE-6、GATE-12）。gate-core を直接使うコードと Deno は、ホスト名の検査だけ（既定の fetch）。Workers はランタイムの fetch。
 - Session の秘密鍵は v0 の CLI では `ludion.json` に平文で置いている（spec はメモリのみ）。Root は封をした（ADR-019）が、KMS や OS のキーチェーンのバックエンドはまだない。
 - §11.6「P0〜1 では初回の鍵取得を待たない」は未実装。今は timeoutMs の範囲で待つ。
-- sink の promise は溜まり続ける。背圧がない。
+- サイトが渡す来訪ごとの記録（`records.put`）が遅い非同期だと、その promise は溜まる（背圧がない。既定のメモリの記録は同期）。外への sink は1時間に1回になった（ADR-038）ので、溜まらない。
 - 受領証の経路は、まだ `templatePath` のまま（metadata と scan は `publicTemplatePath`）。
 - `authorities` を設定していない Gate は、P2〜3 で VERIFIED を Gate の故障として扱い、fail_mode に従う（既定は closed、ADR-023）。導入の README に書いた。LIVE-3 で unpinned の VERIFIED をどう数えるかは未決。
 - nonce キャッシュを独立した多数の署名者で埋めると、その間は新しい署名が VERIFIED にならない（DoS であって、すり抜けではない）。
 - 設定が壊れているときの挙動がランタイムで違う：Next.js と Workers は素通し、Node は起動時に止まる（ADR-022）。
 - Next.js の `redirects()` は proxy より前に走る。Gate はそこで答えたリクエストを見ない。
-- nonce キャッシュは容量超過で古い順に捨てる。自前の鍵で大量に送れば、被害者の nonce を追い出せる。プロセスをまたがない。GATE-7 のコーパス候補。
+- nonce キャッシュはプロセスをまたがない（期限内の nonce は追い出さない。満杯なら新しい署名を VERIFIED にしない。上の DoS の項）。
 - 署名が 2 つあるリクエストは LabelRequired で丸ごと SPOOFED になる。他の RFC 9421 プロファイル（例：Visa TAP）との共存は STD-3 で検討する。
 - scan で未カバーの部分：
   - 公開 IP レンジによる名乗りの偽装（SPOOFED）の検出。レンジ一覧を同梱する必要がある。
@@ -242,6 +250,11 @@
   - web-bot-auth@0.2.0 のパーサが registry-03 に準拠しているか
 
 ## 直近のセッション
+
+- 2026-10-05 夜（Claude Code、1本目、夜間モード）：
+  - LEAK-1 は #127 で main に入った（CI で PASS。29 の保存値・応答・名札・丸ごと配布のどこにも連絡先は無い）。
+  - DIV-7（±、L0）：`ludion doctor` が時計を、エージェント自身のオリジンの Date ヘッダーと比べる。±30秒を越えると問題（ずれの秒数と直し方）、20秒は通る、Date ヘッダーが無ければ言うだけ。比べない doctor は落ちる。既知の問題から消した。
+  - CI の preview のトークンがゾーンを見えて、境界の検査で止まっている（人間待ちに書いた）。
 
 - 2026-10-05 夜（Claude Code、1本目）：レーン2とレーン3が立った（docs/lanes/lane2-spec.md、lane3-spec.md）。
   - レーン2：README の冒頭、トップページ、show-hn.md、faq.md、demo-script.md、census、Mandate の新しいファイル（MND・DEMO・CEN・MSG）。
