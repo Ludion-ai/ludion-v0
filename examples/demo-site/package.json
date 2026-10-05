@@ -1,0 +1,12 @@
+{
+  "name": "ludion-demo-site",
+  "private": true,
+  "type": "module",
+  "description": "The launch video's demo site: the Gate, and POST /account/delete only with the user's Mandate (scope delete).",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "ludion": "*"
+  }
+}

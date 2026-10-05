@@ -316,6 +316,10 @@ export const ORACLES = [
   // Expectations computed from the rule route by route, never from forPath(); and over real HTTP.
   { id: "PRS-4", m: "M5", kind: "±", level: 1, title: "overlapping routes: the strictest wins (highest Pressure, every requirement), whatever the order; a leading /** at P0 never lowers /checkout",
     run: nodeTest(["packages/gate-core/test/prs4.test.mjs"], "^PRS-4:") },
+  // Mandate's first use (the human's decision, 2026-10-05): closing an account. The demo site's own handler
+  // and config, end to end: only its user's Mandate (scope delete, this site) gets an AI through.
+  { id: "PRS-5", m: "M5", kind: "±", level: 1, title: "the demo site's POST /account/delete: only an AI with its user's Mandate (scope delete, this site) closes the account the Mandate names; no Mandate, another site, withdrawn → mandate_required; another scope → mandate_scope; another agent's carry refused; people untouched; planted Gates caught",
+    timeoutMs: 300_000, run: nodeTest(["services/registry/test/prs5.test.mjs"], "^PRS-5", { timeoutMs: 280_000, metric: (out) => (/^# PRS-5: (.+)$/m.exec(out) ?? [])[1] }) },
   // The same portable suite on Node, Deno (no permissions) and workerd, against the npm-packed
   // packages; pinned runtimes in accept/neutral/runtime, installed in the OS temp dir (ADR-027).
   { id: "NEUT-1", m: "M5", kind: "+", level: 1, pair: "NEUT-2", property: "neutrality", title: "gate-core and Card Host pass the same suite on ≥2 independent runtimes",
