@@ -1,6 +1,6 @@
 # STATE（レーン 3：公開と運用）
 
-最終更新：2026-10-06 朝（Claude Code、レーン3。作業ツリーは `C:\Users\haya0\ludion-lane3`、ブランチは `lane3/` で始める）
+最終更新：2026-10-06 朝、#146 と #147 のマージの後（Claude Code、レーン3。作業ツリーは `C:\Users\haya0\ludion-lane3`、ブランチは `lane3/` で始める）
 
 ## 担当
 
@@ -16,15 +16,15 @@
 
 | 項目（spec の番号） | 状態 |
 |---|---|
-| 1 改名 `ludion` → `ludion-ai` | PR `lane3/npm-name-ludion-ai`。手元で PUB-1〜4、WEB-3・7・10・12・13、ONE-1・4・8、DIV-1・5、GATE-1・3・13、PRS-5、WEB-2・5・11、LOOP-1・5 が PASS（rebase の前）。rebase の後の結果は下の「直近のセッション」 |
-| 2 PUBLISH.md | 同じ PR。0.0.1 は出た、0.1.0 は本番の後に release.yml から、Prevent self-review は使わない |
+| 1 改名 `ludion` → `ludion-ai` | **済み**（#146、main の bdafcc9）。手元で PUB-1〜4、WEB-3・7・10・12・13、ONE-1・4・8、DIV-1・5、GATE-1・3・13、PRS-5、WEB-2・5・11、LOOP-1・5 が PASS（rebase の前）。rebase の後の結果は下の「直近のセッション」 |
+| 2 PUBLISH.md | **済み**（#146）。0.0.1 は出た、0.1.0 は本番の後に release.yml から、Prevent self-review は使わない |
 | 3 environment `npm` | **設定済み**（2026-10-05 22:24 JST、`gh api`）。下の「朝に見てほしい判断」の1 |
 | 4 npm の Trusted Publisher | コマンドを用意した（下の「人間待ち」と PUBLISH.md §6.1） |
 | 5 プレビューの secret | secret はもう入っている。赤いのはトークンの範囲（ゾーンが見える）。2行は下の「人間待ち」 |
 | 6 押すボタンの一覧 | 下の「人間待ち」 |
-| 7 DEPLOY.md | 次 |
+| 7 DEPLOY.md | **済み**（#147、main の 3c674ef。§0「上から順に」の5段、各段に `node scripts/prod-check.mjs <段>`。朝の報告も同じ PR） |
 | 8 LOOP-2 | トークンの範囲が直ったら、main への push を3回測る |
-| 9 runbook.md | 改名だけ済み（この PR）。3つの問いへの書き直しは次 |
+| 9 runbook.md | PR `lane3/runbook`：3つの問いを前日に1つずつ確かめる、`ludion-ai`、PowerShell で動く形、確かめは prod-check |
 | 10 LIVE-1〜3 | 人間が本番を立てた後 |
 
 ### environment `npm` の読み出し（2026-10-05 22:38 UTC、`gh api`）
@@ -51,6 +51,7 @@ GET repos/Ludion-ai/Ludion/environments/npm/deployment-branch-policies
 6. **持ち主のはっきりしないテストの道具も直した**：`reference/`（参照アプリのインストールの行。GATE-3 が README と照合する）、`clean-room/agent-ts.mjs`（DIV-1）、`examples/demo-site`（PRS-5）。直さないと、名前が `ludion-ai` になった tarball で落ちる。
 7. **WEB-12 と WEB-13 に負の例を足した**：断られた名前（`ludion/gate/node`、`npm install ludion`、`ludion/diver`）のページを捕まえる。強化なので自由の範囲。
 8. **PUBLISH.md から「初版を手で出す」を外した**：0.0.1 が出たので、trusted publisher はもう設定できる。0.1.0 からは release.yml だけ。§6.1 の4（トークンでの公開を止める）を押すと、手元の `npm publish` は通らなくなる。
+9. **デモのショップ（`https://shop.demo.ludion.ai`、examples/demo-shop）をどこで動かすかが、どの文書にも無い。** show-hn.md の前提と、runbook の前日の確かめに入っている。Node のサーバー（`npm start`、失効の配信を購読し続ける）なので、Workers ではなく常に動く機械が要る。決めずに、人間待ちの9に書いた。
 
 ## 人間待ち（押すボタンだけ。上から）
 
@@ -73,12 +74,12 @@ GET repos/Ludion-ai/Ludion/environments/npm/deployment-branch-policies
 6. **本番を立てる**（docs/DEPLOY.md。レーン3が「上から順に押すだけ」に仕上げ中）：ACM → 証明書 → DNS → 名簿と Card Host → ludion.ai を main から出し直す。
 7. **npm の 0.1.0**：本番が立った後。版を上げる PR は Claude が作る。Actions → release → Run workflow（dry run → 承認 → 本番 → 承認）。PUBLISH.md §6.2。
 8. （お金）Workers Paid にするか。DEPLOY.md §7.3。
+9. **デモのショップの置き場所を決める**（`shop.demo.ludion.ai`。常に動く Node のサーバーと、DNS の1行）。決まれば、手順を DEPLOY.md に足す（レーン3）。
 
 ## 次の一手
 
-1. 改名の PR を出す（auto-merge）。CI の `loop` を見る。
-2. DEPLOY.md を「上から順に押すだけ」に（spec の7）。各段に確かめるコマンドを1つ。
-3. runbook.md を3つの問いに（spec の9）。
+1. runbook の PR（`lane3/runbook`）の CI を見る。
+2. 夜間の Windows と main の CI を見る（改名の後の最初の夜間）。
 4. preview のトークンが直ったら LOOP-2（spec の8）。本番が立ったら LIVE-1〜3（spec の10）。
 
 ## 直近のセッション
