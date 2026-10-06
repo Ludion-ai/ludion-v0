@@ -1,6 +1,6 @@
 # STATE（レーン 3：公開と運用）
 
-最終更新：2026-10-06 朝（Claude Code、レーン3。作業ツリーは `C:\Users\haya0\ludion-lane3`、ブランチは `lane3/` で始める）
+最終更新：2026-10-06 朝、#146 と #147 のマージの後（Claude Code、レーン3。作業ツリーは `C:\Users\haya0\ludion-lane3`、ブランチは `lane3/` で始める）
 
 ## 担当
 
@@ -16,15 +16,15 @@
 
 | 項目（spec の番号） | 状態 |
 |---|---|
-| 1 改名 `ludion` → `ludion-ai` | PR `lane3/npm-name-ludion-ai`。手元で PUB-1〜4、WEB-3・7・10・12・13、ONE-1・4・8、DIV-1・5、GATE-1・3・13、PRS-5、WEB-2・5・11、LOOP-1・5 が PASS（rebase の前）。rebase の後の結果は下の「直近のセッション」 |
-| 2 PUBLISH.md | 同じ PR。0.0.1 は出た、0.1.0 は本番の後に release.yml から、Prevent self-review は使わない |
+| 1 改名 `ludion` → `ludion-ai` | **済み**（#146、main の bdafcc9）。手元で PUB-1〜4、WEB-3・7・10・12・13、ONE-1・4・8、DIV-1・5、GATE-1・3・13、PRS-5、WEB-2・5・11、LOOP-1・5 が PASS（rebase の前）。rebase の後の結果は下の「直近のセッション」 |
+| 2 PUBLISH.md | **済み**（#146）。0.0.1 は出た、0.1.0 は本番の後に release.yml から、Prevent self-review は使わない |
 | 3 environment `npm` | **設定済み**（2026-10-05 22:24 JST、`gh api`）。下の「朝に見てほしい判断」の1 |
 | 4 npm の Trusted Publisher | コマンドを用意した（下の「人間待ち」と PUBLISH.md §6.1） |
 | 5 プレビューの secret | secret はもう入っている。赤いのはトークンの範囲（ゾーンが見える）。2行は下の「人間待ち」 |
 | 6 押すボタンの一覧 | 下の「人間待ち」 |
-| 7 DEPLOY.md | PR #147（§0「上から順に」の5段、各段に `node scripts/prod-check.mjs <段>`。朝の報告も同じ PR） |
+| 7 DEPLOY.md | **済み**（#147、main の 3c674ef。§0「上から順に」の5段、各段に `node scripts/prod-check.mjs <段>`。朝の報告も同じ PR） |
 | 8 LOOP-2 | トークンの範囲が直ったら、main への push を3回測る |
-| 9 runbook.md | PR `lane3/runbook`（#146 の後に出す）：3つの問いを前日に1つずつ確かめる、`ludion-ai`、PowerShell で動く形、確かめは prod-check |
+| 9 runbook.md | PR `lane3/runbook`：3つの問いを前日に1つずつ確かめる、`ludion-ai`、PowerShell で動く形、確かめは prod-check |
 | 10 LIVE-1〜3 | 人間が本番を立てた後 |
 
 ### environment `npm` の読み出し（2026-10-05 22:38 UTC、`gh api`）
@@ -78,9 +78,8 @@ GET repos/Ludion-ai/Ludion/environments/npm/deployment-branch-policies
 
 ## 次の一手
 
-1. 改名の PR を出す（auto-merge）。CI の `loop` を見る。
-2. #146 が入ったら、runbook の PR（`lane3/runbook`）を main の上に載せ直して出す（`git rebase --onto origin/main lane3/npm-name-ludion-ai`）。
-3. #147（DEPLOY.md）の CI を見る。
+1. runbook の PR（`lane3/runbook`）の CI を見る。
+2. 夜間の Windows と main の CI を見る（改名の後の最初の夜間）。
 4. preview のトークンが直ったら LOOP-2（spec の8）。本番が立ったら LIVE-1〜3（spec の10）。
 
 ## 直近のセッション
